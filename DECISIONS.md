@@ -1,6 +1,6 @@
 # Decision trail
 
-Local only. No git until the personal GitHub login exists. One entry per decision that shaped the work, newest at the bottom.
+One entry per decision that shaped the work, newest at the bottom. Current state and next steps live in `PROGRESS.md`.
 
 ## 2026-09-11
 
@@ -18,8 +18,13 @@ Local only. No git until the personal GitHub login exists. One entry per decisio
 - First cloud build (2026-09-11) failed on 7 root causes, all in the app, none in the engine. The big one: SwiftUI exports its own `Path`, so the app declares `typealias Path = LifeEngine.Path` and never draws with SwiftUI's. `Notifier` needed `@Observable` to travel through `.environment`. `Objective` needed a public init. Settings body was too big for the type checker and became five small views. Second build was green across all three jobs; the Simulator screenshot shows onboarding. Artifacts land in `artifacts/`, gitignored.
 - Three Today-screen mockups in `design/` as static HTML so the owner reacts to something on the phone before any SwiftUI exists.
 
+## 2026-09-12
+
+- `splice login` on the Linux laptop fails twice over. First, Arch's CA bundle lacks Apple Root CA, which `gsa.apple.com` chains to. Fixed with `~/.config/splice/ca/AppleRootCA.pem` and a `splice()` wrapper in `~/.bashrc` that sets `SSL_CERT_DIR`. Second, Apple's GrandSlam login POST answers with an HTTP 503 page, splice parses it as a plist, gets null, and segfaults (`coredumpctl list splice`). That is a splice bug plus an Apple-side rejection of the emulated anisette data, and nothing on the laptop is left to configure.
+- First install moves to Xcode on the Mac. Splice on macOS would run the same login code against the same account, so the 503 may follow. Xcode signs in through Apple's own auth stack and handles device registration, Developer Mode, and the trust dialog. Cost: a free Apple ID signs for 7 days, so refreshes need the Mac again until the Linux pipeline works. Experience First. The point of the prototype weeks is living with the Today screen, not the pipeline.
+- `PROGRESS.md` added as the first file to read in a session. It holds what the app is, status, and the session log. This file keeps the why. The workflow no longer runs on markdown-only pushes, so progress commits stop burning macOS runner minutes.
+
 ## Checkpoints that need the owner
 
-- Personal GitHub login, then `git init` and push. Blocks the first cloud build.
-- iPhone plugged into the laptop once for Splice pairing. Blocks the first install.
-- Mac availability for the design week (Xcode Previews, Icon Composer). Optional; the plan works without it.
+- Mac with Xcode, the iPhone, and a USB cable in one place. Blocks the first install.
+- Every 7 days after that, the same, until Splice works on the laptop.
