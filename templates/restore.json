@@ -1,0 +1,21 @@
+{
+  "id": "restore",
+  "title": "Something to restore or fix",
+  "path": {
+    "name": "The thing I want working again",
+    "identity": "Restorer",
+    "glyph": "wrench.and.screwdriver",
+    "role": "craft",
+    "milestones": [
+      "I know exactly what it needs",
+      "It works again",
+      "I have used it for something real"
+    ],
+    "nodes": [
+      { "kind": "quest", "title": "Look it over and write down what is wrong", "cue": { "days": "weekend", "window": "any" } },
+      { "kind": "quest", "title": "Get the parts or supplies", "cue": { "days": "any", "window": "any" }, "after": "Look it over and write down what is wrong" },
+      { "kind": "quest", "title": "Do the first repair", "cue": { "days": "weekend", "window": "any" }, "after": "Get the parts or supplies" },
+      { "kind": "practice", "title": "Use it for ten minutes", "cue": { "days": "any", "window": "evening" } }
+    ]
+  }
+}

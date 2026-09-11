@@ -1,0 +1,74 @@
+{
+  "paths": [
+    {
+      "name": "Guitar",
+      "identity": "Guitarist",
+      "glyph": "guitars",
+      "role": "hobby",
+      "milestones": [
+        "It is clean",
+        "It holds tune",
+        "I can play one full song again"
+      ],
+      "nodes": [
+        { "kind": "quest", "title": "Clean body and fretboard", "cue": { "days": "weekend", "window": "any" } },
+        { "kind": "quest", "title": "Change the strings", "cue": { "days": "weekend", "window": "any" }, "after": "Clean body and fretboard" },
+        { "kind": "quest", "title": "Tune and check intonation", "cue": { "days": "weekend", "window": "any" }, "after": "Change the strings" },
+        { "kind": "quest", "title": "Pick one song to relearn", "cue": { "days": "any", "window": "any" } },
+        { "kind": "practice", "title": "15 min chord changes", "cue": { "days": "any", "window": "evening" } }
+      ]
+    },
+    {
+      "name": "Magic",
+      "identity": "Magician",
+      "glyph": "wand.and.stars",
+      "role": "hobby",
+      "milestones": [
+        "I can do the double lift cleanly every time",
+        "I performed three tricks for friends in one sitting",
+        "I have one trick nobody around me has seen"
+      ],
+      "nodes": [
+        { "kind": "practice", "title": "Practice the double lift", "cue": { "days": "any", "window": "evening" } },
+        { "kind": "quest", "title": "Learn the French drop", "cue": { "days": "any", "window": "evening" } },
+        { "kind": "quest", "title": "Perform one trick for someone this week", "cue": { "days": "weekend", "window": "any" } },
+        { "kind": "quest", "title": "Choose the next trick to learn", "cue": { "days": "any", "window": "any" }, "after": "Learn the French drop" }
+      ]
+    },
+    {
+      "name": "Lab",
+      "identity": "Tinkerer",
+      "glyph": "laptopcomputer",
+      "role": "lab",
+      "milestones": [
+        "The laptop runs one service I use every day",
+        "I can rebuild it from a script",
+        "It built and installed an iPhone app without a Mac"
+      ],
+      "nodes": [
+        { "kind": "quest", "title": "Write down the three ideas I keep having", "cue": { "days": "any", "window": "evening" } },
+        { "kind": "quest", "title": "Install Splice and pair the iPhone once", "cue": { "days": "weekend", "window": "any" } },
+        { "kind": "quest", "title": "Keep the lid-closed laptop awake", "cue": { "days": "weekend", "window": "any" } },
+        { "kind": "practice", "title": "One hour of tinkering", "cue": { "days": "weekend", "window": "any" } }
+      ]
+    },
+    {
+      "name": "The car question",
+      "identity": "Someone deciding",
+      "glyph": "car",
+      "role": "decision",
+      "deadline": "2026-10-31",
+      "milestones": [
+        "I have written what I want from a car in three sentences",
+        "I know the real monthly cost",
+        "I have decided, and I am at peace with it"
+      ],
+      "nodes": [
+        { "kind": "quest", "title": "Write what I want from a car in three sentences", "cue": { "days": "weekend", "window": "morning" } },
+        { "kind": "quest", "title": "Work out the real monthly cost", "cue": { "days": "any", "window": "evening" } },
+        { "kind": "quest", "title": "Talk to one friend who bought one recently", "cue": { "days": "any", "window": "any" } },
+        { "kind": "quest", "title": "Decide, and write one line about why", "cue": { "days": "weekend", "window": "morning" }, "after": "Work out the real monthly cost" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+# Move to .github/workflows/build.yml once the repo exists.
+# Public repo: macOS minutes are free. Private repo: they count 10x against the monthly allowance.
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  engine-tests:
+    name: Engine tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: swift test
+        working-directory: Engine
+        run: swift test
+
+  simulator:
+    name: Build, run in Simulator, screenshot
+    runs-on: macos-15
+    needs: engine-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone 1")))')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Build for Simulator
+        run: |
+          xcodebuild build \
+            -project LifeIsAGame.xcodeproj -scheme LifeIsAGame \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO | xcpretty || true
+          test -d build/sim/Build/Products/Debug-iphonesimulator/LifeIsAGame.app
+      - name: Install, launch, screenshot
+        run: |
+          APP=build/sim/Build/Products/Debug-iphonesimulator/LifeIsAGame.app
+          xcrun simctl install "${{ steps.sim.outputs.udid }}" "$APP"
+          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.mystery.LifeIsAGame
+          sleep 4
+          xcrun simctl io "${{ steps.sim.outputs.udid }}" screenshot screenshot.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulator-screenshot
+          path: screenshot.png
+
+  device-ipa:
+    name: Unsigned .ipa for Splice
+    runs-on: macos-15
+    needs: engine-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.0.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build for device, signing disabled
+        run: |
+          xcodebuild build \
+            -project LifeIsAGame.xcodeproj -scheme LifeIsAGame \
+            -sdk iphoneos -configuration Release \
+            -derivedDataPath build/device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Package .ipa
+        run: |
+          APP=$(find build/device/Build/Products -maxdepth 2 -name "*.app" | head -n 1)
+          mkdir -p Payload && cp -R "$APP" Payload/
+          zip -qr LifeIsAGame-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LifeIsAGame-unsigned-ipa
+          path: LifeIsAGame-unsigned.ipa

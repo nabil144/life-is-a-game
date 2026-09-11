@@ -1,0 +1,21 @@
+{
+  "id": "skill",
+  "title": "A skill to learn piece by piece",
+  "path": {
+    "name": "The skill I am building",
+    "identity": "Apprentice",
+    "glyph": "sparkles",
+    "role": "hobby",
+    "milestones": [
+      "I can do the first piece without looking anything up",
+      "I have shown it to someone",
+      "I know what the next three pieces are"
+    ],
+    "nodes": [
+      { "kind": "quest", "title": "Pick the first piece to learn", "cue": { "days": "any", "window": "any" } },
+      { "kind": "quest", "title": "Find one good source for it", "cue": { "days": "any", "window": "evening" }, "after": "Pick the first piece to learn" },
+      { "kind": "practice", "title": "Practice the current piece for 15 minutes", "cue": { "days": "any", "window": "evening" } },
+      { "kind": "quest", "title": "Show it to one person", "cue": { "days": "weekend", "window": "any" } }
+    ]
+  }
+}

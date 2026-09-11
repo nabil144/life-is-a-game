@@ -1,0 +1,55 @@
+name: LifeIsAGame
+options:
+  bundleIdPrefix: com.mystery
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "26.0"
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+
+packages:
+  LifeEngine:
+    path: Engine
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: true
+
+targets:
+  LifeIsAGame:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: templates
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: LifeEngine
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Life is a Game
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.mystery.LifeIsAGame.refresh]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mystery.LifeIsAGame
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+
+  LifeIsAGameTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [App/Tests]
+    dependencies:
+      - target: LifeIsAGame

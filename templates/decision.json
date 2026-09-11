@@ -1,0 +1,22 @@
+{
+  "id": "decision",
+  "title": "A decision with a deadline",
+  "path": {
+    "name": "The decision I keep postponing",
+    "identity": "Someone deciding",
+    "glyph": "signpost.right.and.left",
+    "role": "decision",
+    "deadline": "2026-12-31",
+    "milestones": [
+      "I have written down what I actually want from this",
+      "I know the real cost, in money and in time",
+      "I have decided, and I am at peace with it"
+    ],
+    "nodes": [
+      { "kind": "quest", "title": "Write what I want from this in three sentences", "cue": { "days": "weekend", "window": "morning" } },
+      { "kind": "quest", "title": "Find out the real cost", "cue": { "days": "any", "window": "evening" } },
+      { "kind": "quest", "title": "Talk to one person who made this choice", "cue": { "days": "any", "window": "any" } },
+      { "kind": "quest", "title": "Decide, and write one line about why", "cue": { "days": "weekend", "window": "morning" }, "after": "Find out the real cost" }
+    ]
+  }
+}

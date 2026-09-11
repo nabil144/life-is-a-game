@@ -1,0 +1,20 @@
+{
+  "id": "lab",
+  "title": "A machine or project to tinker on",
+  "path": {
+    "name": "My lab",
+    "identity": "Tinkerer",
+    "glyph": "cpu",
+    "role": "lab",
+    "milestones": [
+      "It runs one thing I use every day",
+      "I broke it and fixed it myself",
+      "Someone else has used what I built"
+    ],
+    "nodes": [
+      { "kind": "quest", "title": "Write down the three ideas I keep having", "cue": { "days": "any", "window": "evening" } },
+      { "kind": "quest", "title": "Try the smallest idea end to end", "cue": { "days": "weekend", "window": "any" }, "after": "Write down the three ideas I keep having" },
+      { "kind": "practice", "title": "One hour of tinkering", "cue": { "days": "weekend", "window": "any" } }
+    ]
+  }
+}
