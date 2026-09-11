@@ -126,7 +126,7 @@ struct MilestoneList: View {
                 } label: {
                     HStack(spacing: 14) {
                         Image(systemName: m.tickedOn == nil ? "circle" : "circle.fill")
-                            .foregroundStyle(m.tickedOn == nil ? .secondary : .green)
+                            .foregroundStyle(m.tickedOn == nil ? Color.secondary : Color.green)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.text).foregroundStyle(.primary)
                             Text(m.tickedOn.map { "ticked \($0.description)" } ?? "tap when true")

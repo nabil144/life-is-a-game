@@ -14,58 +14,115 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Notifications") {
-                    if authorized {
-                        Label("Objectives can find you", systemImage: "checkmark.circle").foregroundStyle(.green)
-                    } else {
-                        Button("Allow notifications") { Task { authorized = await notifier.requestPermission() } }
-                    }
-                    Picker("Morning objectives at", selection: $morningHour) {
-                        ForEach(6..<13, id: \.self) { Text("\($0):00").tag($0) }
-                    }
-                    Picker("Evening objectives at", selection: $eveningHour) {
-                        ForEach(16..<23, id: \.self) { Text("\($0):00").tag($0) }
-                    }
-                }
-                Section("Today screen (prototype weeks)") {
-                    Picker("Style", selection: $style) {
-                        ForEach(TodayStyle.allCases) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.inline)
-                }
-                Section("Coming up") {
-                    let up = store.upcoming()
-                    if up.isEmpty { Text("Nothing planned yet.").foregroundStyle(.secondary) }
-                    ForEach(up, id: \.self) { o in
-                        if let (p, n) = store.node(o.nodeID) {
-                            HStack {
-                                Text(o.day.description).font(.caption.monospaced()).foregroundStyle(.secondary)
-                                Text("\(p.identity): \(n.title)")
-                                Spacer()
-                                Text(o.window.rawValue).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                Section("Paths as JSON") {
-                    Button("Export paths") {
-                        if let data = try? store.exportBundle() {
-                            let url = FileManager.default.temporaryDirectory.appendingPathComponent("paths.json")
-                            try? data.write(to: url)
-                            exportURL = url
-                        }
-                    }
-                    if let url = exportURL { ShareLink(item: url) { Label("Share paths.json", systemImage: "square.and.arrow.up") } }
-                }
+                notificationsSection
+                styleSection
+                upcomingSection
+                exportSection
                 Section {
-                    Text("One objective a day. Progress that cannot be lost.").font(.footnote).foregroundStyle(.secondary)
+                    Text("One objective a day. Progress that cannot be lost.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Settings")
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .task { authorized = await notifier.authorized() }
-            .onChange(of: morningHour) { _, _ in Task { await LifeIsAGameApp.replan(store: store, notifier: notifier) } }
-            .onChange(of: eveningHour) { _, _ in Task { await LifeIsAGameApp.replan(store: store, notifier: notifier) } }
+            .onChange(of: morningHour) { _, _ in replan() }
+            .onChange(of: eveningHour) { _, _ in replan() }
+        }
+    }
+
+    private func replan() {
+        Task { await LifeIsAGameApp.replan(store: store, notifier: notifier) }
+    }
+
+    private var notificationsSection: some View {
+        Section("Notifications") {
+            if authorized {
+                Label("Objectives can find you", systemImage: "checkmark.circle")
+                    .foregroundStyle(.green)
+            } else {
+                Button("Allow notifications") {
+                    Task { authorized = await notifier.requestPermission() }
+                }
+            }
+            HourPicker(title: "Morning objectives at", hours: 6..<13, selection: $morningHour)
+            HourPicker(title: "Evening objectives at", hours: 16..<23, selection: $eveningHour)
+        }
+    }
+
+    private var styleSection: some View {
+        Section("Today screen (prototype weeks)") {
+            Picker("Style", selection: $style) {
+                ForEach(TodayStyle.allCases) { s in
+                    Text(s.label).tag(s)
+                }
+            }
+            .pickerStyle(.inline)
+        }
+    }
+
+    private var upcomingSection: some View {
+        let up = store.upcoming()
+        return Section("Coming up") {
+            if up.isEmpty {
+                Text("Nothing planned yet.").foregroundStyle(.secondary)
+            }
+            ForEach(up, id: \.self) { o in
+                UpcomingRow(objective: o)
+            }
+        }
+    }
+
+    private var exportSection: some View {
+        Section("Paths as JSON") {
+            Button("Export paths") { exportPaths() }
+            if let url = exportURL {
+                ShareLink(item: url) {
+                    Label("Share paths.json", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
+    }
+
+    private func exportPaths() {
+        guard let data = try? store.exportBundle() else { return }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("paths.json")
+        try? data.write(to: url)
+        exportURL = url
+    }
+}
+
+private struct HourPicker: View {
+    let title: String
+    let hours: Range<Int>
+    @Binding var selection: Int
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            ForEach(Array(hours), id: \.self) { h in
+                Text("\(h):00").tag(h)
+            }
+        }
+    }
+}
+
+private struct UpcomingRow: View {
+    @Environment(Store.self) private var store
+    let objective: Objective
+
+    var body: some View {
+        if let (p, n) = store.node(objective.nodeID) {
+            HStack {
+                Text(objective.day.description)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                Text("\(p.identity): \(n.title)")
+                Spacer()
+                Text(objective.window.rawValue)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

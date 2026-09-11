@@ -162,6 +162,14 @@ public struct Objective: Hashable, Sendable {
     public var nodeID: UUID
     public var kind: ObjectiveKind
 
+    public init(day: Day, window: Window, pathID: UUID, nodeID: UUID, kind: ObjectiveKind) {
+        self.day = day
+        self.window = window
+        self.pathID = pathID
+        self.nodeID = nodeID
+        self.kind = kind
+    }
+
     public var asSurfacing: Surfacing {
         Surfacing(day: day, pathID: pathID, nodeID: nodeID, kind: kind)
     }

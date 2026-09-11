@@ -2,6 +2,9 @@ import Foundation
 import Observation
 import LifeEngine
 
+/// SwiftUI also exports a `Path` (the drawing shape). This app never draws one, so the engine's Path wins module-wide.
+typealias Path = LifeEngine.Path
+
 struct LogEntry: Codable, Identifiable, Hashable {
     var id = UUID()
     var day: Day

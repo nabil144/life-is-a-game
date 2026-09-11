@@ -23,7 +23,7 @@ struct RootView: View {
             CaptureView(request: req)
         }
         .onAppear {
-            notifier.openCapture = { nodeID in
+            notifier.openCapture = { (nodeID: UUID) in
                 if let (path, node) = store.node(nodeID) {
                     captureFor = CaptureRequest(pathID: path.id, prefill: "Part of: \(node.title)")
                 }

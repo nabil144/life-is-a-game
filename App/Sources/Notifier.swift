@@ -1,8 +1,10 @@
 import Foundation
+import Observation
 import UserNotifications
 import LifeEngine
 
 /// Owns the UNUserNotificationCenter side. Schedules one notification per planned day and turns action taps into store responses.
+@Observable
 @MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let category = "objective"
@@ -13,9 +15,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         case done, later, tooBig, keep, letGo
     }
 
-    let store: Store
+    @ObservationIgnored let store: Store
     /// Set by the root view so a "Too big" tap can open Capture prefilled.
-    var openCapture: ((UUID) -> Void)?
+    @ObservationIgnored var openCapture: ((UUID) -> Void)?
 
     init(store: Store) {
         self.store = store
