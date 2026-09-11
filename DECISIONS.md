@@ -15,6 +15,7 @@ Local only. No git until the personal GitHub login exists. One entry per decisio
 - Cues in phase 1 are time and date only (weekday, weekend, morning, evening, a date). Place and event cues wait for phase 2.
 - Build pipeline is GitHub Actions macOS runners plus Splice on the Linux laptop. The workflow lives at `.github/workflows/build.yml`.
 - Repo is public at github.com/nabil144/life-is-a-game (personal account, 2026-09-11). Public because GitHub bills macOS runners at 10x on private repos. The laptop keeps the work GitHub account (nabil-end) untouched: personal has its own SSH key (`id_ed25519_personal`), its own `github-personal` host alias, its own `gh` account entry, and the git identity is set per repo, not globally. `testdata/owner-paths.json` carries the owner's four example paths in the open, judged harmless (hobby names).
+- First cloud build (2026-09-11) failed on 7 root causes, all in the app, none in the engine. The big one: SwiftUI exports its own `Path`, so the app declares `typealias Path = LifeEngine.Path` and never draws with SwiftUI's. `Notifier` needed `@Observable` to travel through `.environment`. `Objective` needed a public init. Settings body was too big for the type checker and became five small views. Second build was green across all three jobs; the Simulator screenshot shows onboarding. Artifacts land in `artifacts/`, gitignored.
 - Three Today-screen mockups in `design/` as static HTML so the owner reacts to something on the phone before any SwiftUI exists.
 
 ## Checkpoints that need the owner
