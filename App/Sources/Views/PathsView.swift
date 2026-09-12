@@ -11,7 +11,13 @@ struct PathsView: View {
         NavigationStack {
             List {
                 if store.activePaths.isEmpty {
-                    ContentUnavailableView("Name one thing you want to evolve.", systemImage: "leaf")
+                    ContentUnavailableView {
+                        Label("Name one thing you want to evolve.", systemImage: "leaf")
+                    } description: {
+                        Text("Or restore a copy from Files.")
+                    } actions: {
+                        RestoreFileButton()
+                    }
                 }
                 ForEach(store.activePaths) { p in
                     NavigationLink(value: p.id) { PathRow(path: p) }

@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var captureFor: CaptureRequest?
     @AppStorage(Prefs.keyPromptSeenKey) private var keyPromptSeen = false
     @State private var keyPrompt = false
+    @State private var mirrorPrompt = false
 
     var body: some View {
         Group {
@@ -27,12 +28,11 @@ struct RootView: View {
         .sheet(isPresented: $keyPrompt, onDismiss: { keyPromptSeen = true }) {
             NavigationStack { KeySetupView(prompt: true) }
         }
+        .sheet(isPresented: $mirrorPrompt, onDismiss: offerKeyIfNeeded) { KeepCopySheet() }
         .onChange(of: store.world.onboarded, initial: true) { _, onboarded in
-            guard onboarded, !keyPromptSeen, Talk.state.reason != nil else { return }
-            Task {
-                try? await Task.sleep(for: .seconds(0.8))
-                keyPrompt = true
-            }
+            guard onboarded else { return }
+            offerMirrorIfNeeded()
+            if !mirrorPrompt { offerKeyIfNeeded() }
         }
         .onAppear {
             notifier.openCapture = { (nodeID: UUID) in
@@ -41,6 +41,18 @@ struct RootView: View {
                 }
             }
         }
+    }
+
+    private func offerMirrorIfNeeded() {
+        let seen = UserDefaults.standard.bool(forKey: Mirror.promptSeenKey)
+        if !store.world.paths.isEmpty, !store.keepsACopy, !seen {
+            mirrorPrompt = true
+        }
+    }
+
+    private func offerKeyIfNeeded() {
+        guard store.world.onboarded, !keyPromptSeen, Talk.state.reason != nil else { return }
+        keyPrompt = true
     }
 }
 

@@ -19,7 +19,7 @@ struct SettingsView: View {
                 styleSection
                 talkSection
                 upcomingSection
-                exportSection
+                dataSection
                 Section {
                     Text("One objective a day. Progress that cannot be lost.")
                         .font(.footnote)
@@ -97,20 +97,32 @@ struct SettingsView: View {
         }
     }
 
-    private var exportSection: some View {
-        Section("Paths as JSON") {
-            Button("Export paths") { exportPaths() }
+    private var dataSection: some View {
+        Section {
+            if store.keepsACopy {
+                Label("A copy lives in Files. New installs can pick that folder and come back.", systemImage: "checkmark.icloud")
+                    .foregroundStyle(.secondary)
+                Button("Forget the folder", role: .destructive) { store.forgetCopy() }
+            } else {
+                KeepCopyButton()
+            }
+            Button("Save a copy now") { exportWorld() }
             if let url = exportURL {
                 ShareLink(item: url) {
-                    Label("Share paths.json", systemImage: "square.and.arrow.up")
+                    Label("Share world.json", systemImage: "square.and.arrow.up")
                 }
             }
+            RestoreFileButton()
+        } header: {
+            Text("Your data")
+        } footer: {
+            Text("Cmd+R keeps what is on the phone. Deleting the app, or installing it under a new name, does not. The Files copy is the one that survives.")
         }
     }
 
-    private func exportPaths() {
-        guard let data = try? store.exportBundle() else { return }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("paths.json")
+    private func exportWorld() {
+        guard let data = try? store.exportWorld() else { return }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("world.json")
         try? data.write(to: url)
         exportURL = url
     }

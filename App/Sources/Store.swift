@@ -23,20 +23,72 @@ struct World: Codable {
     var onboarded = false
 }
 
+/// A Files folder the owner picked once. The bookmark dies with the app, the file does not.
+enum Mirror {
+    static let bookmarkKey = "worldMirrorBookmark"
+    static let promptSeenKey = "mirrorPromptSeen"
+    static let fileName = "world.json"
+
+    static func folder() -> URL? {
+        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale) else {
+            return nil
+        }
+        if stale { try? remember(url) }
+        return url
+    }
+
+    static func remember(_ url: URL) throws {
+        let data = try url.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
+        UserDefaults.standard.set(data, forKey: bookmarkKey)
+    }
+
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: bookmarkKey)
+    }
+
+    static func access<T>(_ url: URL, _ body: (URL) throws -> T) rethrows -> T {
+        let ok = url.startAccessingSecurityScopedResource()
+        defer { if ok { url.stopAccessingSecurityScopedResource() } }
+        return try body(url)
+    }
+}
+
+enum WorldFile {
+    enum Kind { case world(World), bundle(PathBundle) }
+    enum ParseError: Error { case unrecognized }
+
+    static func parse(_ data: Data) throws -> Kind {
+        let dec = JSONFiles.decoder()
+        if let world = try? dec.decode(World.self, from: data) { return .world(world) }
+        if let bundle = try? dec.decode(PathBundle.self, from: data) { return .bundle(bundle) }
+        throw ParseError.unrecognized
+    }
+}
+
 @Observable
 final class Store {
     private(set) var world = World()
     let planner = Planner()
     private let fileURL: URL
     private let photosURL: URL
+    private let injectedMirror: URL?
+    private(set) var copyGeneration = 0
 
-    init(directory: URL? = nil) {
+    var keepsACopy: Bool {
+        _ = copyGeneration
+        return (injectedMirror ?? Mirror.folder()) != nil
+    }
+
+    init(directory: URL? = nil, mirrorDirectory: URL? = nil) {
         let base = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("LifeIsAGame", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         fileURL = base.appendingPathComponent("world.json")
         photosURL = base.appendingPathComponent("photos", isDirectory: true)
         try? FileManager.default.createDirectory(at: photosURL, withIntermediateDirectories: true)
+        injectedMirror = mirrorDirectory
         load()
     }
 
@@ -47,32 +99,88 @@ final class Store {
     // MARK: Persistence
 
     /// A file that does not decode is moved aside, never overwritten. The data outlives the bug.
+    /// If the sandbox is empty, a Files copy is the next place to look.
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
-        do {
-            world = try JSONFiles.decoder().decode(World.self, from: data)
-        } catch {
-            let aside = fileURL.deletingLastPathComponent()
-                .appendingPathComponent("world.broken-\(Int(Date().timeIntervalSince1970)).json")
-            try? FileManager.default.moveItem(at: fileURL, to: aside)
-            print("world.json did not decode, kept at \(aside.lastPathComponent): \(error)")
+        if let data = try? Data(contentsOf: fileURL) {
+            do {
+                world = try JSONFiles.decoder().decode(World.self, from: data)
+                return
+            } catch {
+                let aside = fileURL.deletingLastPathComponent()
+                    .appendingPathComponent("world.broken-\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.moveItem(at: fileURL, to: aside)
+                print("world.json did not decode, kept at \(aside.lastPathComponent): \(error)")
+            }
+        }
+        if let data = readMirror() {
+            do {
+                world = try JSONFiles.decoder().decode(World.self, from: data)
+                try? data.write(to: fileURL, options: .atomic)
+            } catch {
+                print("mirror world.json did not decode: \(error)")
+            }
         }
     }
 
     private func save() {
         guard let data = try? JSONFiles.encoder().encode(world) else { return }
         try? data.write(to: fileURL, options: .atomic)
+        writeMirror(data)
     }
 
-    func exportBundle() throws -> Data {
-        let drafts = world.paths.map { p in
-            PathDraft(name: p.name, identity: p.identity, glyph: p.glyph, role: p.role, deadline: p.deadline,
-                      milestones: p.milestones.map(\.text),
-                      nodes: p.nodes.filter(\.isOpen).map { n in
-                          .init(kind: n.kind, title: n.title, cue: n.cue, after: n.after.flatMap { p.node($0)?.title })
-                      })
+    private func mirrorFolder() -> URL? { injectedMirror ?? Mirror.folder() }
+
+    private func writeMirror(_ data: Data) {
+        guard let folder = mirrorFolder() else { return }
+        let write = { try? data.write(to: folder.appendingPathComponent(Mirror.fileName), options: .atomic) }
+        if injectedMirror != nil { write(); return }
+        Mirror.access(folder) { _ in write() }
+    }
+
+    private func readMirror() -> Data? {
+        guard let folder = mirrorFolder() else { return nil }
+        let read = { try? Data(contentsOf: folder.appendingPathComponent(Mirror.fileName)) }
+        if injectedMirror != nil { return read() }
+        return Mirror.access(folder) { _ in read() }
+    }
+
+    func exportWorld() throws -> Data {
+        try JSONFiles.encoder().encode(world)
+    }
+
+    /// Full world if the file has one, otherwise a PathBundle of drafts. Replaces on world, appends on bundle.
+    func importData(_ data: Data) throws {
+        switch try WorldFile.parse(data) {
+        case .world(let w):
+            world = w
+            if !world.paths.isEmpty { world.onboarded = true }
+            save()
+        case .bundle(let b):
+            let added = try b.paths.map { try $0.begun(on: today) }
+            world.paths.append(contentsOf: added)
+            if !world.paths.isEmpty { world.onboarded = true }
+            save()
         }
-        return try JSONFiles.encoder().encode(PathBundle(paths: drafts))
+    }
+
+    /// Remember a Files folder and write there on every save. If the phone is empty and the folder already has a world, restore it.
+    func keepACopy(in folder: URL) throws {
+        let adopt = {
+            if self.injectedMirror == nil { try Mirror.remember(folder) }
+            self.copyGeneration += 1
+            if self.world.paths.isEmpty, let data = try? Data(contentsOf: folder.appendingPathComponent(Mirror.fileName)) {
+                try self.importData(data)
+            } else {
+                self.save()
+            }
+        }
+        if injectedMirror != nil { try adopt(); return }
+        try Mirror.access(folder) { _ in try adopt() }
+    }
+
+    func forgetCopy() {
+        Mirror.forget()
+        copyGeneration += 1
     }
 
     // MARK: Lookups

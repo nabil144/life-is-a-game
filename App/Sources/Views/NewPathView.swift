@@ -192,6 +192,8 @@ struct OnboardingView: View {
                 Text("Begin").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent).controlSize(.large).padding(.horizontal, 24)
+            RestoreFileButton(title: "I already have a copy")
+                .padding(.horizontal, 24)
             Text("One notification a day at most. Never the same one twice in a week.")
                 .font(.footnote).foregroundStyle(.secondary).padding(.bottom, 24)
         }
