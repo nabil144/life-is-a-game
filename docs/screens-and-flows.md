@@ -1,6 +1,6 @@
 # Screens and flows
 
-Six screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
+Eight screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
 
 ## Screen inventory
 
@@ -9,9 +9,11 @@ Six screens. Navigation is a tab bar with two tabs, Today and Paths. Everything 
 | Today | Show today's one objective, or the reason there is none. Done / Not now / Too big. | Tab, notification tap, widget tap | Capture sheet, Path detail |
 | Paths | List of Paths with glyph, identity, milestone progress as ticks, quiet state (evolved, paused). | Tab | Path detail, Capture (new Path) |
 | Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Edit in place. | Paths list, Today card title | Capture (new node), Celebration |
+| New path | Name and one milestone, then Begin. Templates in a one-tap menu. Identity, kind, glyph, and first quests under a collapsed More row. | Plus on Paths, onboarding | Paths |
+| Talk a path | Same result as New path, by conversation. The on-device model asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when the Settings toggle is on and the model is available. | Plus on Paths | Paths, or Type it instead |
 | Capture | One text field. Which Path, quest or practice, when could you do this (cue chips). Three taps to save. | Plus button anywhere | Back to caller |
 | Celebration | Full-screen moment when a milestone is ticked. Glyph animates, identity label, the milestone sentence. One button. | Ticking a milestone | Path detail |
-| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, JSON export (phase 2). | Gear on Paths | Back |
+| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, JSON export (phase 2). | Gear on Paths | Back |
 
 ## Onboarding flow
 
@@ -24,11 +26,10 @@ flowchart TD
   Template -->|Decision with a deadline| Fill
   Template -->|Machine or project to tinker on| Fill
   Template -->|Blank| Empty[Empty Path]
-  Fill --> Identity["Who are you on this Path? (identity label)"]
-  Empty --> Identity
-  Identity --> Quests["Write 3 quests, each with a cue"]
-  Quests --> Milestone["Write 1 milestone as a sentence"]
-  Milestone --> Notify["Allow notifications so objectives can find you"]
+  Fill --> Milestone["Write 1 milestone as a sentence"]
+  Empty --> Milestone
+  Milestone --> More["Optional under More: identity, kind, glyph, first quests"]
+  More --> Notify["Allow notifications so objectives can find you"]
   Notify --> Today[Today screen with first objective or a 'tomorrow' note]
 ```
 
@@ -58,6 +59,18 @@ flowchart LR
   Which --> Kind["Quest or Practice (segmented)"]
   Kind --> When["When could you do this? chips: weekend, weekday, morning, evening, anytime, a date"]
   When --> Save[Save]
+```
+
+## Talk flow
+
+```mermaid
+flowchart LR
+  Plus[Plus on Paths, toggle on] --> Open["Fixed opening line: What is the thing? Say it however it comes."]
+  Open --> Say[User types]
+  Say --> Model["Model returns the path so far plus one question"]
+  Model --> Card["Card updates, every line editable"]
+  Card --> Say
+  Card -->|name and one milestone present| Begin[Begin saves through the same path as the form]
 ```
 
 ## Path lifecycle

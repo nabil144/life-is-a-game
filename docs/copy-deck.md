@@ -80,15 +80,35 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 ## New path
 
 - Header: New path
+- Section header: Name it, then one milestone
 - Name placeholder: What are you evolving?
-- Identity label: Who are you on this path?
-- Identity placeholder: e.g. Guitarist, Tinkerer, Someone deciding
+- Milestone placeholder: A sentence that will be true, e.g. It holds tune
+- Add milestone: Add another milestone
+- Template menu: Start from an example
+- Templates: Something to restore or fix · A skill to learn piece by piece · A decision with a deadline · A machine or project to tinker on
+- Template note: Examples are yours to edit or delete.
+- More row: More
+- Identity placeholder: Who are you on this path? e.g. Guitarist
 - Role label: What kind of path is this?
 - Role options: A hobby · A craft · A decision · A lab · Work
-- Template picker header: Start from an example
-- Templates: Something to restore or fix · A skill to learn piece by piece · A decision with a deadline · A machine or project to tinker on · Blank
-- Template note: Examples are yours to edit or delete.
 - Deadline label (decision only): Decide by
+- Glyph label: Glyph
+- Quests header inside More: First quests
+- Quest placeholder: Something small
+- Add quest: Add a quest
+- Add practice: Add a practice
+- More footer: All of this is optional. Quests can be added from the path any time.
+- Save: Begin
+
+## Talk a path
+
+- Header: New path
+- Opening line (fixed, not from the model): What is the thing? Say it however it comes.
+- Composer placeholder: Say it however it comes
+- Card headers: Milestones · Quests and practices
+- Trouble line: Could not take that in. Say it another way, or press Begin with what is here.
+- Exit to form: Type it instead
+- Save: Begin
 
 ## Celebration
 
@@ -121,6 +141,13 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Morning window: Morning objectives at
 - Evening window: Evening objectives at
 - Quiet days: Quiet days
+- New paths section: New paths
+- Talk toggle: Create paths by talking
+- Talk footer: On this phone only. The model asks, you answer, it writes down your words.
+- Talk unavailable, device: This iPhone cannot run the on-device model. The form stays.
+- Talk unavailable, Apple Intelligence off: Turn on Apple Intelligence in iOS Settings to create paths by talking.
+- Talk unavailable, downloading: The on-device model is still downloading. Try again later.
+- Talk unavailable, other: The on-device model is not available right now.
 - Export (phase 2): Export paths as JSON
 - Import (phase 2): Import paths from JSON
 - About: One objective a day. Progress that cannot be lost.
