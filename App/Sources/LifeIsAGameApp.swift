@@ -14,7 +14,7 @@ enum Prefs {
 
 @main
 struct LifeIsAGameApp: App {
-    static let refreshTaskID = "com.mystery.LifeIsAGame.refresh"
+    static let refreshTaskID = "com.nabil.LifeIsAGame.refresh"
 
     @State private var store: Store
     @State private var notifier: Notifier

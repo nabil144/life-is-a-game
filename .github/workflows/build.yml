@@ -56,7 +56,7 @@ jobs:
         run: |
           APP=build/sim/Build/Products/Debug-iphonesimulator/LifeIsAGame.app
           xcrun simctl install "${{ steps.sim.outputs.udid }}" "$APP"
-          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.mystery.LifeIsAGame
+          xcrun simctl launch "${{ steps.sim.outputs.udid }}" com.nabil.LifeIsAGame
           sleep 4
           xcrun simctl io "${{ steps.sim.outputs.udid }}" screenshot screenshot.png
       - uses: actions/upload-artifact@v4

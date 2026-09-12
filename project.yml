@@ -1,6 +1,6 @@
 name: LifeIsAGame
 options:
-  bundleIdPrefix: com.mystery
+  bundleIdPrefix: com.nabil
   deploymentTarget:
     iOS: "26.0"
   xcodeVersion: "26.0"
@@ -39,11 +39,11 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [fetch]
-        BGTaskSchedulerPermittedIdentifiers: [com.mystery.LifeIsAGame.refresh]
+        BGTaskSchedulerPermittedIdentifiers: [com.nabil.LifeIsAGame.refresh]
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mystery.LifeIsAGame
+        PRODUCT_BUNDLE_IDENTIFIER: com.nabil.LifeIsAGame
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
 

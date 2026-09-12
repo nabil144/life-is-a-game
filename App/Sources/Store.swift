@@ -46,10 +46,17 @@ final class Store {
 
     // MARK: Persistence
 
+    /// A file that does not decode is moved aside, never overwritten. The data outlives the bug.
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let w = try? JSONFiles.decoder().decode(World.self, from: data) else { return }
-        world = w
+        guard let data = try? Data(contentsOf: fileURL) else { return }
+        do {
+            world = try JSONFiles.decoder().decode(World.self, from: data)
+        } catch {
+            let aside = fileURL.deletingLastPathComponent()
+                .appendingPathComponent("world.broken-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: fileURL, to: aside)
+            print("world.json did not decode, kept at \(aside.lastPathComponent): \(error)")
+        }
     }
 
     private func save() {
