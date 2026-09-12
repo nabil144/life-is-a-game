@@ -31,7 +31,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R; turn on the toggle in Settings and create a Path by talking. Report what the model asked and whether the card matched what was said.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. The bundle id is `com.nabil.LifeIsAGame` now, so the build lands on the app that holds the first Path. Delete the second, empty "Life is a Game" icon. Then Paths, plus, "Talk it through instead". Report what the model asked and whether the card matched what was said.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -44,6 +44,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-12. Tried `splice login` on Linux. Fixed the TLS root, hit the 503 crash, gave up on Linux for the first install. Added this file. Next: Xcode on the Mac.
 - 2026-09-12. Xcode on the Mac worked (iOS platform download, developer agreement acceptance, Developer Mode, Run). App runs on the phone. Owner created the first Path and found the form heavy, asked for a chat-style LLM-guided creation flow. Next: decide on that (form trim, chat prototype, cloud or on-device model).
 - 2026-09-12. Decided and built. Form trimmed, paths by talking on device (Foundation Models, iPhone 15 Pro), iOS 26 target, decisions in `DECISIONS.md`. Five commits, CI green. Next: pull on the Mac, run, try the talk flow on the phone.
+- 2026-09-12. Owner ran it. Three reports: first Path gone (second app from a reverted bundle id, data still on the phone in the first icon), no chat found (toggle buried in Settings), quests not editable (never were). Fixed all three, bundle id pinned to `com.nabil`, Store keeps undecodable files, form offers the talk, nodes tap to edit. Next: pull, run, delete the empty icon, talk a path.
 
 ## How to keep this file true
 
