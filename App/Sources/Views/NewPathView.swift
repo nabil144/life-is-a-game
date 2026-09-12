@@ -89,12 +89,10 @@ struct NewPathView: View {
                     } footer: {
                         Text("On this phone only. The model asks, you answer, it writes down your words.")
                     }
-                case .off(let reason):
+                case .off(let reason), .never(let reason):
                     Section {
                         Label(reason, systemImage: "apple.intelligence").foregroundStyle(.secondary)
                     }
-                case .never:
-                    EmptyView()
                 }
                 Section {
                     TextField("What are you evolving?", text: $draft.name)

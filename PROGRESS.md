@@ -45,7 +45,12 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-12. Xcode on the Mac worked (iOS platform download, developer agreement acceptance, Developer Mode, Run). App runs on the phone. Owner created the first Path and found the form heavy, asked for a chat-style LLM-guided creation flow. Next: decide on that (form trim, chat prototype, cloud or on-device model).
 - 2026-09-12. Decided and built. Form trimmed, paths by talking on device (Foundation Models, iPhone 15 Pro), iOS 26 target, decisions in `DECISIONS.md`. Five commits, CI green. Next: pull on the Mac, run, try the talk flow on the phone.
 - 2026-09-12. Owner ran it. Three reports: first Path gone (second app from a reverted bundle id, data still on the phone in the first icon), no chat found (toggle buried in Settings), quests not editable (never were). Fixed all three, bundle id pinned to `com.nabil`, Store keeps undecodable files, form offers the talk, nodes tap to edit. Next: pull, run, delete the empty icon, talk a path.
+- 2026-09-12. Owner pressed Cmd+R without pulling and saw the old build. Added a visible build number in Settings (0.3 (3)) and the release ritual above. New path form always shows either the Talk row or one reason line. Next: pull, regenerate, run, confirm "Version 0.3 (3)" in Settings.
 
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.
+
+## Release ritual
+
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 3.

@@ -24,6 +24,9 @@ struct SettingsView: View {
                     Text("One objective a day. Progress that cannot be lost.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
+                        .font(.footnote.monospaced())
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Settings")
