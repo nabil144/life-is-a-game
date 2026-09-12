@@ -28,12 +28,12 @@ struct AtlasView: View {
                 AtlasSky()
                 Canvas { ctx, _ in
                     for node in layout.nodes {
-                        var path = Path()
-                        path.move(to: layout.center)
-                        path.addQuadCurve(to: node.at, control: AtlasLayout.bend(from: layout.center, to: node.at))
+                        var branch = SwiftUI.Path()
+                        branch.move(to: layout.center)
+                        branch.addQuadCurve(to: node.at, control: AtlasLayout.bend(from: layout.center, to: node.at))
                         let todayBranch = node.path.id == today
                         ctx.stroke(
-                            path,
+                            branch,
                             with: .color(Color.accentColor.opacity(todayBranch ? 0.7 : 0.28)),
                             style: StrokeStyle(lineWidth: todayBranch ? 3 : 1.6, lineCap: .round)
                         )
@@ -92,13 +92,13 @@ struct AtlasView: View {
                 Image(systemName: "leaf")
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
+                    .symbolEffect(.pulse, options: .repeating, isActive: true)
             }
             .shadow(color: Color.accentColor.opacity(0.35), radius: 16)
             Text("You")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
-        .symbolEffect(.pulse, options: .repeating, isActive: true)
     }
 
     private func pathOrb(_ path: Path, at point: CGPoint, today: Bool) -> some View {
