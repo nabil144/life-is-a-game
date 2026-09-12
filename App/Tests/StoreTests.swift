@@ -20,6 +20,25 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(store.world.history.filter { $0.day > store.today }.count, second.count)
     }
 
+    func testUpdatePathKeepsNodesAndTicks() throws {
+        let store = makeStore()
+        var path = try PathDraft(name: "Guitar", identity: "Guitarist", glyph: "guitars", role: .hobby, milestones: ["It holds tune"],
+                                 nodes: [.init(kind: .quest, title: "Change the strings")]).begun(on: store.today)
+        path.milestones[0].tickedOn = store.today
+        store.add(path)
+        let nodeID = store.paths[0].nodes[0].id
+        var edited = store.paths[0]
+        edited.name = "The guitar"
+        edited.identity = "Player"
+        edited.milestones[0].text = "It stays in tune"
+        store.update(edited)
+        XCTAssertEqual(store.paths[0].name, "The guitar")
+        XCTAssertEqual(store.paths[0].identity, "Player")
+        XCTAssertEqual(store.paths[0].milestones[0].text, "It stays in tune")
+        XCTAssertEqual(store.paths[0].milestones[0].tickedOn, store.today)
+        XCTAssertEqual(store.paths[0].nodes[0].id, nodeID)
+    }
+
     func testDoneWritesALogEntry() throws {
         let store = makeStore()
         let path = try PathDraft(name: "A", identity: "A", glyph: "star", role: .hobby, milestones: ["m"],

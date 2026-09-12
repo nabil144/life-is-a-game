@@ -8,18 +8,23 @@ struct PathDetailView: View {
     @State private var celebrate: Milestone?
     @State private var newMilestone = ""
     @State private var editing: Node?
+    @State private var editingPath = false
 
     var body: some View {
         if let path = store.path(pathID) {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Image(systemName: path.glyph).font(.system(size: 40))
-                        Text(path.name).font(.largeTitle.bold())
-                        Text("\(path.identity) · \(path.role.rawValue) · surfaces \(roleWindowText(path.role))")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                        if path.isEvolved {
-                            Text("This path has evolved. It will stay here, quiet.").font(.footnote).foregroundStyle(.green).padding(.top, 4)
+                    Button { editingPath = true } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Image(systemName: path.glyph).font(.system(size: 40))
+                            Text(path.name).font(.largeTitle.bold()).foregroundStyle(.primary)
+                            Text("\(path.identity) · \(path.role.rawValue) · surfaces \(roleWindowText(path.role))")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Text("Tap to change this path.")
+                                .font(.caption).foregroundStyle(.tint)
+                            if path.isEvolved {
+                                Text("This path has evolved. It will stay here, quiet.").font(.footnote).foregroundStyle(.green).padding(.top, 4)
+                            }
                         }
                     }
                     .listRowBackground(Color.clear)
@@ -63,12 +68,18 @@ struct PathDetailView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button { capture = CaptureRequest(pathID: pathID) } label: { Image(systemName: "plus") }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Edit") { editingPath = true }
+                }
             }
             .fullScreenCover(item: $celebrate) { m in
                 CelebrationView(path: path, milestone: m)
             }
             .sheet(item: $editing) { n in
                 NodeEditView(pathID: pathID, node: n)
+            }
+            .sheet(isPresented: $editingPath) {
+                PathEditView(path: path)
             }
         }
     }

@@ -62,6 +62,8 @@ extension Role {
         case .work: "laptopcomputer"
         }
     }
+
+    static let glyphs = ["star", "guitars", "wand.and.stars", "laptopcomputer", "car", "book", "figure.run", "paintpalette", "camera", "hammer", "leaf", "music.note", "cpu", "wrench.and.screwdriver", "signpost.right.and.left", "sparkles"]
 }
 
 struct NewPathView: View {
@@ -75,7 +77,6 @@ struct NewPathView: View {
     @State private var deadline = Date().addingTimeInterval(60 * 60 * 24 * 60)
     @State private var more = false
     let templates = Templates.all()
-    let glyphs = ["star", "guitars", "wand.and.stars", "laptopcomputer", "car", "book", "figure.run", "paintpalette", "camera", "hammer", "leaf", "music.note", "cpu", "wrench.and.screwdriver", "signpost.right.and.left", "sparkles"]
 
     var body: some View {
         NavigationStack {
@@ -136,7 +137,7 @@ struct NewPathView: View {
                         }
                         Picker("Glyph", selection: $draft.glyph) {
                             Label("Follows the kind", systemImage: draft.role.glyph).tag("")
-                            ForEach(glyphs, id: \.self) { Image(systemName: $0).tag($0) }
+                            ForEach(Role.glyphs, id: \.self) { Image(systemName: $0).tag($0) }
                         }
                         .pickerStyle(.navigationLink)
                         ForEach(draft.nodes.indices, id: \.self) { i in
