@@ -7,9 +7,17 @@ enum Prefs {
     static let eveningKey = "eveningHour"
     static let todayStyleKey = "todayStyle"
     static let talkKey = "talkPaths"
+    static let providerKey = "talkProvider"
+    static let modelKey = "talkModel"
+    static let keyPromptSeenKey = "keyPromptSeen"
 
     static var morningHour: Int { UserDefaults.standard.object(forKey: morningKey) as? Int ?? 10 }
     static var eveningHour: Int { UserDefaults.standard.object(forKey: eveningKey) as? Int ?? 19 }
+    static var provider: Provider { UserDefaults.standard.string(forKey: providerKey).flatMap(Provider.init(rawValue:)) ?? .openAI }
+    static var model: String {
+        let m = UserDefaults.standard.string(forKey: modelKey) ?? ""
+        return m.isEmpty ? provider.defaultModel : m
+    }
 }
 
 @main

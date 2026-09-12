@@ -68,7 +68,7 @@ struct NewPathView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    var talk: Talk.State = .never("")
+    var talk: Talk.State?
     var talkInstead: () -> Void = {}
 
     @State private var draft: PathDraft = { var d = PathDraft.blank; d.milestones = [""]; return d }()
@@ -87,12 +87,18 @@ struct NewPathView: View {
                             Label("Talk it through instead", systemImage: "bubble.left.and.text.bubble.right")
                         }
                     } footer: {
-                        Text("On this phone only. The model asks, you answer, it writes down your words.")
+                        Text("Your own key, your own model. It asks, you answer, it writes down your words.")
                     }
-                case .off(let reason), .never(let reason):
+                case .off(let reason):
                     Section {
-                        Label(reason, systemImage: "apple.intelligence").foregroundStyle(.secondary)
+                        NavigationLink {
+                            KeySetupView()
+                        } label: {
+                            Label(reason, systemImage: "key").foregroundStyle(.secondary)
+                        }
                     }
+                case nil:
+                    EmptyView()
                 }
                 Section {
                     TextField("What are you evolving?", text: $draft.name)

@@ -1,42 +1,29 @@
 import SwiftUI
-import FoundationModels
 import LifeEngine
 
-/// The on-device model, and the one-line reason when it cannot answer.
+/// Whether a path can be talked through. Ready when a key is saved for the chosen provider.
 enum Talk {
-    /// `ready` opens the chat. `off` is something the person can change. `never` is this hardware.
     enum State {
-        case ready
+        case ready(CloudPathModel)
         case off(String)
-        case never(String)
 
         var reason: String? {
             switch self {
             case .ready: nil
-            case .off(let s), .never(let s): s
+            case .off(let s): s
             }
         }
     }
 
     static var state: State {
-        switch SystemLanguageModel.default.availability {
-        case .available:
-            .ready
-        case .unavailable(.deviceNotEligible):
-            .never("This iPhone cannot run the on-device model. The form stays.")
-        case .unavailable(.appleIntelligenceNotEnabled):
-            .off("Turn on Apple Intelligence in iOS Settings to create paths by talking.")
-        case .unavailable(.modelNotReady):
-            .off("The on-device model is still downloading. Try again later.")
-        case .unavailable:
-            .off("The on-device model is not available right now.")
-        @unknown default:
-            .off("The on-device model is not available right now.")
+        let provider = Prefs.provider
+        guard let key = KeyStore.read(provider.rawValue) else {
+            return .off("Add an API key in Settings to create paths by talking.")
         }
+        return .ready(CloudPathModel(provider: provider, key: key, model: Prefs.model))
     }
 
     static let opening = "What is the thing? Say it however it comes."
-    static let trouble = "Could not take that in. Say it another way, or press Begin with what is here."
 
     static let instructions = """
         You help a person write down a path: something they want to get better at or finish, for their own reasons. \
@@ -47,46 +34,9 @@ enum Talk {
         and small quests (things finishable in one sitting) or practices (things they return to). \
         Good questions: what would be true when this has moved? what is one small thing you could do on a free evening? \
         is this a hobby, a craft, a decision with a deadline, a lab to tinker in, or work? \
-        Once there is a name, one milestone, and one quest, ask only whether there is anything else.
+        Once there is a name, one milestone, and one quest, ask only whether there is anything else. \
+        Every reply carries the whole path so far, and only what the person has said.
         """
-}
-
-/// What the model fills in each turn. The whole path so far, then the next question.
-@Generable(description: "The path so far and the next question")
-struct Turn {
-    @Guide(description: "The path so far, only from what the person said")
-    var path: Sketch
-    @Guide(description: "One short question. Once there is a name, a milestone, and a quest, ask only if there is anything else")
-    var question: String
-}
-
-@Generable(description: "A path a person is evolving, in their words")
-struct Sketch {
-    @Guide(description: "What they are evolving, in their words, two to six words")
-    var name: String
-    @Guide(description: "Who they are on this path, one or two words like Guitarist. Empty until it is clear")
-    var identity: String
-    var kind: Kind
-    @Guide(description: "Sentences that will be true when this has moved, their words", .maximumCount(4))
-    var milestones: [String]
-    @Guide(description: "Small things they could do in one sitting, their words", .maximumCount(5))
-    var quests: [String]
-    @Guide(description: "Things they return to regularly, their words", .maximumCount(3))
-    var practices: [String]
-
-    @Generable(description: "hobby for their own joy, craft to get good at, decision with a deadline, lab to tinker in, work")
-    enum Kind: String {
-        case hobby, craft, decision, lab, work
-    }
-
-    var draft: PathDraft {
-        PathDraft(
-            name: name, identity: identity, glyph: "", role: Role(rawValue: kind.rawValue) ?? .hobby, deadline: nil,
-            milestones: milestones,
-            nodes: quests.map { .init(kind: .quest, title: $0) }
-                + practices.map { .init(kind: .practice, title: $0, cue: Cue(window: .evening)) }
-        )
-    }
 }
 
 extension PathDraft {
@@ -113,8 +63,8 @@ struct NewPathSheet: View {
 
     var body: some View {
         let state = Talk.state
-        if case .ready = state, talking ?? talk {
-            TalkPathView(typeInstead: { talking = false })
+        if case .ready(let model) = state, talking ?? talk {
+            TalkPathView(model: model, typeInstead: { talking = false })
         } else {
             NewPathView(talk: state, talkInstead: { talking = true })
         }
@@ -124,9 +74,11 @@ struct NewPathSheet: View {
 struct TalkPathView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
+    let model: any PathModel
     let typeInstead: () -> Void
 
-    @State private var session = LanguageModelSession(instructions: Talk.instructions)
+    @State private var history: [ChatMessage] = []
+    @State private var responding = false
     @State private var lines = [Line(mine: false, text: Talk.opening)]
     @State private var input = ""
     @State private var draft = PathDraft.blank
@@ -149,7 +101,7 @@ struct TalkPathView: View {
                             ForEach(lines) { line in
                                 Bubble(line: line)
                             }
-                            if session.isResponding {
+                            if responding {
                                 ProgressView().padding(.horizontal, 8)
                             }
                             if let trouble {
@@ -191,7 +143,7 @@ struct TalkPathView: View {
                 Button(action: send) {
                     Image(systemName: "arrow.up.circle.fill").font(.title)
                 }
-                .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || session.isResponding)
+                .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || responding)
             }
             Button("Type it instead", action: typeInstead)
                 .font(.footnote)
@@ -202,22 +154,31 @@ struct TalkPathView: View {
 
     private func send() {
         let said = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !said.isEmpty, !session.isResponding else { return }
+        guard !said.isEmpty, !responding else { return }
         input = ""
         trouble = nil
-        let first = lines.count == 1
         let prompt = draft == heard
             ? said
             : said + "\n\nThe person edited the path by hand. Build on this version:\n" + draft.spoken
         lines.append(Line(mine: true, text: said))
+        history.append(ChatMessage(role: .user, text: prompt))
+        responding = true
         Task {
+            defer { responding = false }
             do {
-                let turn = try await session.respond(to: prompt, generating: Turn.self, includeSchemaInPrompt: first).content
+                let turn = try await model.respond(history)
+                if let echo = try? JSONEncoder().encode(turn) {
+                    history.append(ChatMessage(role: .assistant, text: String(decoding: echo, as: UTF8.self)))
+                }
                 draft = turn.path.draft
                 heard = draft
                 lines.append(Line(mine: false, text: turn.question))
+            } catch let e as TalkError {
+                history.removeLast()
+                trouble = e.sentence
             } catch {
-                trouble = Talk.trouble
+                history.removeLast()
+                trouble = TalkError.unreadable.sentence
             }
         }
     }

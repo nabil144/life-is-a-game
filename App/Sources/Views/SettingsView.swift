@@ -69,15 +69,19 @@ struct SettingsView: View {
 
     private var talkSection: some View {
         Section {
-            if let reason = Talk.state.reason {
-                Text(reason).foregroundStyle(.secondary)
-            } else {
+            let ready = Talk.state.reason == nil
+            NavigationLink {
+                KeySetupView()
+            } label: {
+                Label(ready ? "\(Prefs.provider.label), \(Prefs.model)" : "Add an API key", systemImage: "key")
+            }
+            if ready {
                 Toggle("Start new paths by talking", isOn: $talk)
             }
         } header: {
             Text("New paths")
         } footer: {
-            Text("Either way, the New path screen offers the other. On this phone only. The model asks, you answer, it writes down your words.")
+            Text("Your own key, your own model. The model asks, you answer, it writes down your words. Either way, the New path screen offers the other.")
         }
     }
 
