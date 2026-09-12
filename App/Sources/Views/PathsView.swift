@@ -37,7 +37,7 @@ struct PathsView: View {
                     Button { settings = true } label: { Image(systemName: "gearshape") }
                 }
             }
-            .sheet(isPresented: $newPath) { NewPathView() }
+            .sheet(isPresented: $newPath) { NewPathSheet() }
             .sheet(isPresented: $settings) { SettingsView() }
         }
     }

@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.morningKey) private var morningHour = 10
     @AppStorage(Prefs.eveningKey) private var eveningHour = 19
     @AppStorage(Prefs.todayStyleKey) private var style: TodayStyle = .objectiveAndPaths
+    @AppStorage(Prefs.talkKey) private var talk = false
     @State private var authorized = false
     @State private var exportURL: URL?
 
@@ -16,6 +17,7 @@ struct SettingsView: View {
             Form {
                 notificationsSection
                 styleSection
+                talkSection
                 upcomingSection
                 exportSection
                 Section {
@@ -59,6 +61,20 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.inline)
+        }
+    }
+
+    private var talkSection: some View {
+        Section {
+            if let reason = Talk.unavailableReason {
+                Text(reason).foregroundStyle(.secondary)
+            } else {
+                Toggle("Create paths by talking", isOn: $talk)
+            }
+        } header: {
+            Text("New paths")
+        } footer: {
+            Text("On this phone only. The model asks, you answer, it writes down your words.")
         }
     }
 

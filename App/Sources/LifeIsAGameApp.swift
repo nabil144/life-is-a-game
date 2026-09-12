@@ -6,6 +6,7 @@ enum Prefs {
     static let morningKey = "morningHour"
     static let eveningKey = "eveningHour"
     static let todayStyleKey = "todayStyle"
+    static let talkKey = "talkPaths"
 
     static var morningHour: Int { UserDefaults.standard.object(forKey: morningKey) as? Int ?? 10 }
     static var eveningHour: Int { UserDefaults.standard.object(forKey: eveningKey) as? Int ?? 19 }
