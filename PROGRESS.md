@@ -21,17 +21,20 @@ Done.
 - `Engine/` Swift package with the surfacing planner. 20 tests, 0 failures, run on the Linux laptop with `cd Engine && ../swift.sh test`.
 - `App/` SwiftUI skeleton with onboarding, Today screen in three switchable styles, JSON storage, local notifications.
 - Repo public at github.com/nabil144/life-is-a-game. GitHub Actions builds green on all three jobs (engine tests, Simulator screenshot, unsigned `.ipa`).
+- First install on the iPhone, from Xcode on the Mac, 2026-09-12. Free Apple ID, so the signature lasts 7 days. Refresh by plugging the phone into the Mac and pressing Run again. Steps in `README.md`.
+- New path form trimmed to a name and one milestone. Identity, kind, glyph, and first quests sit under a collapsed More row with defaults. Templates are a one-tap menu.
+- Paths by talking. `App/Sources/Views/TalkPathView.swift`, Apple's on-device Foundation Models, behind the Settings toggle "Create paths by talking" (default off). Deployment target is iOS 26. CI green on all three jobs after the change; the conversation itself has not run on a real phone yet.
 
 Blocked.
 
-- First install on the iPhone. `splice login` on the Linux laptop fails. The Apple Root CA gap is fixed (wrapper in `~/.bashrc`), but Apple's login endpoint returns HTTP 503 and splice segfaults on the reply. Decision on 2026-09-12: do the first install from Xcode on the Mac instead. Steps in `README.md`.
+- Nothing.
 
 Next.
 
-1. On the Mac, install from Xcode and open the app on the phone.
-2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R; turn on the toggle in Settings and create a Path by talking. Report what the model asked and whether the card matched what was said.
+2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
-4. File the 503 null-deref against Splice so the Linux pipeline can take over refreshes later.
+4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
 
 ## Session log
 
@@ -39,6 +42,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-11. Spec, mockups, engine, app skeleton, CI. Two cloud builds, second green. Next: install on the phone.
 - 2026-09-12. Tried `splice login` on Linux. Fixed the TLS root, hit the 503 crash, gave up on Linux for the first install. Added this file. Next: Xcode on the Mac.
+- 2026-09-12. Xcode on the Mac worked (iOS platform download, developer agreement acceptance, Developer Mode, Run). App runs on the phone. Owner created the first Path and found the form heavy, asked for a chat-style LLM-guided creation flow. Next: decide on that (form trim, chat prototype, cloud or on-device model).
+- 2026-09-12. Decided and built. Form trimmed, paths by talking on device (Foundation Models, iPhone 15 Pro), iOS 26 target, decisions in `DECISIONS.md`. Five commits, CI green. Next: pull on the Mac, run, try the talk flow on the phone.
 
 ## How to keep this file true
 
