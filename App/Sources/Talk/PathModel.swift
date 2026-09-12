@@ -2,7 +2,7 @@ import Foundation
 import LifeEngine
 
 /// What the model fills in each turn. The whole path so far, then the next question.
-struct Turn: Codable {
+struct Turn: Codable, Sendable {
     var path: Sketch
     var question: String
 
@@ -32,7 +32,7 @@ struct Turn: Codable {
     }
 }
 
-struct Sketch: Codable {
+struct Sketch: Codable, Sendable {
     var name: String
     var identity: String
     var kind: String
@@ -50,8 +50,8 @@ struct Sketch: Codable {
     }
 }
 
-struct ChatMessage {
-    enum Role: String { case user, assistant }
+struct ChatMessage: Sendable {
+    enum Role: String, Sendable { case user, assistant }
     var role: Role
     var text: String
 }
@@ -75,7 +75,7 @@ enum TalkError: Error {
     }
 }
 
-protocol PathModel {
+protocol PathModel: Sendable {
     func respond(_ messages: [ChatMessage]) async throws -> Turn
 }
 
