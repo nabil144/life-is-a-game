@@ -14,7 +14,7 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 
 ## Non-goals for phase 1
 
-- No accounts, cloud, sync, sharing, or App Store.
+- No accounts, cloud sync the app runs, sharing, or App Store. The owner may keep a copy of their world in Files (iCloud Drive is a folder they pick, not an account we run).
 - No work task management. Work is a role the user may choose, not a feature.
 - No XP, points, coins, HP, levels, streaks, leaderboards, avatars, pets, or shop.
 - No preset trees. Templates are editable examples, not curricula.
@@ -66,4 +66,4 @@ Count of Done actions and milestones ticked. Not opens, not nodes authored. One 
 
 ## Platform
 
-iOS 26 or later, Swift, SwiftUI, one JSON document for storage, UserNotifications, `URLSession` to OpenAI or Anthropic with the owner's key in the keychain. Free Apple ID for now. Built on GitHub Actions macOS runners, installed from Xcode on a Mac until Splice works from the Linux laptop.
+iOS 26 or later, Swift, SwiftUI, one JSON document for storage (Application Support, plus a Files folder the owner picks so a reinstall can come back), UserNotifications, `URLSession` to OpenAI or Anthropic with the owner's key in the keychain. Free Apple ID for now. Built on GitHub Actions macOS runners, installed from Xcode on a Mac until Splice works from the Linux laptop.

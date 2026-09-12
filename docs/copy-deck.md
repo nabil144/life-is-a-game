@@ -136,6 +136,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Screen 1 header: Life is a game.
 - Screen 1 body: Not with points. With paths you write yourself, and one objective a day that finds you when the moment is right.
 - Screen 1 button: Begin
+- Screen 1 restore: I already have a copy
 - Screen 2 header: Name one thing you want to evolve.
 - Screen 3 header: Who are you on this path?
 - Screen 4 header: Write three quests.
@@ -188,8 +189,18 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Rate limit: The model is busy. Wait a moment and send again.
 - Refused: `The model could not answer. {reason}`
 - Unreadable: Could not read the model's answer. Say it again, or press Begin with what is here.
-- Export (phase 2): Export paths as JSON
-- Import (phase 2): Import paths from JSON
+- Data section: Your data
+- Keep a copy: Keep a copy in Files
+- Keep a copy, done: A copy lives in Files. New installs can pick that folder and come back.
+- Forget folder: Forget the folder
+- Save a copy now: Save a copy now
+- Share: Share world.json
+- Restore: Restore from a file
+- Keep-copy sheet title: Keep a copy
+- Keep-copy sheet body: The phone forgets this app when it is deleted or installed under a new name. A folder in Files does not. Pick one. iCloud Drive is safest. Every change writes there. After a new install, pick the same folder and the paths come back.
+- Keep-copy sheet button: Pick a folder
+- Keep-copy sheet skip: Later
+- Data footer: Cmd+R keeps what is on the phone. Deleting the app, or installing it under a new name, does not. The Files copy is the one that survives.
 - About: One objective a day. Progress that cannot be lost.
 
 ## Errors and edge states

@@ -14,13 +14,15 @@ Nine screens. Navigation is a tab bar with two tabs, Today and Paths. Everything
 | Model | Provider, key, model name, Test, Save, Remove key. Key in the keychain. | Settings, "Add an API key" on New path, once as a sheet after onboarding when no key is saved (Later skips) | Back |
 | Capture | One text field. Which Path, quest or practice, when could you do this (cue chips). Three taps to save. | Plus button anywhere | Back to caller |
 | Celebration | Full-screen moment when a milestone is ticked. Glyph animates, identity label, the milestone sentence. One button. | Ticking a milestone | Path detail |
-| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, JSON export (phase 2). | Gear on Paths | Back |
+| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, keep a copy in Files, save world.json, restore from a file. | Gear on Paths | Back |
 
 ## Onboarding flow
 
 ```mermaid
 flowchart TD
-  Launch[First launch] --> Ask["Name one thing you want to evolve"]
+  Launch[First launch] --> Have{"Already have a copy?"}
+  Have -->|Restore from a file| Today
+  Have -->|No| Ask["Name one thing you want to evolve"]
   Ask --> Template{"Start from a template?"}
   Template -->|Restore or fix| Fill[Prefilled Path, editable]
   Template -->|Learn piece by piece| Fill
