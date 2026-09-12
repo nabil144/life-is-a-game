@@ -68,6 +68,9 @@ struct NewPathView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    var talk: Talk.State = .never("")
+    var talkInstead: () -> Void = {}
+
     @State private var draft: PathDraft = { var d = PathDraft.blank; d.milestones = [""]; return d }()
     @State private var deadline = Date().addingTimeInterval(60 * 60 * 24 * 60)
     @State private var more = false
@@ -77,6 +80,22 @@ struct NewPathView: View {
     var body: some View {
         NavigationStack {
             Form {
+                switch talk {
+                case .ready:
+                    Section {
+                        Button(action: talkInstead) {
+                            Label("Talk it through instead", systemImage: "bubble.left.and.text.bubble.right")
+                        }
+                    } footer: {
+                        Text("On this phone only. The model asks, you answer, it writes down your words.")
+                    }
+                case .off(let reason):
+                    Section {
+                        Label(reason, systemImage: "apple.intelligence").foregroundStyle(.secondary)
+                    }
+                case .never:
+                    EmptyView()
+                }
                 Section {
                     TextField("What are you evolving?", text: $draft.name)
                     ForEach(draft.milestones.indices, id: \.self) { i in

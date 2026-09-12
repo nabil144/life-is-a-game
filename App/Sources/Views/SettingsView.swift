@@ -66,15 +66,15 @@ struct SettingsView: View {
 
     private var talkSection: some View {
         Section {
-            if let reason = Talk.unavailableReason {
+            if let reason = Talk.state.reason {
                 Text(reason).foregroundStyle(.secondary)
             } else {
-                Toggle("Create paths by talking", isOn: $talk)
+                Toggle("Start new paths by talking", isOn: $talk)
             }
         } header: {
             Text("New paths")
         } footer: {
-            Text("On this phone only. The model asks, you answer, it writes down your words.")
+            Text("Either way, the New path screen offers the other. On this phone only. The model asks, you answer, it writes down your words.")
         }
     }
 

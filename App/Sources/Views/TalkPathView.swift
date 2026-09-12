@@ -4,20 +4,34 @@ import LifeEngine
 
 /// The on-device model, and the one-line reason when it cannot answer.
 enum Talk {
-    static var unavailableReason: String? {
+    /// `ready` opens the chat. `off` is something the person can change. `never` is this hardware.
+    enum State {
+        case ready
+        case off(String)
+        case never(String)
+
+        var reason: String? {
+            switch self {
+            case .ready: nil
+            case .off(let s), .never(let s): s
+            }
+        }
+    }
+
+    static var state: State {
         switch SystemLanguageModel.default.availability {
         case .available:
-            nil
+            .ready
         case .unavailable(.deviceNotEligible):
-            "This iPhone cannot run the on-device model. The form stays."
+            .never("This iPhone cannot run the on-device model. The form stays.")
         case .unavailable(.appleIntelligenceNotEnabled):
-            "Turn on Apple Intelligence in iOS Settings to create paths by talking."
+            .off("Turn on Apple Intelligence in iOS Settings to create paths by talking.")
         case .unavailable(.modelNotReady):
-            "The on-device model is still downloading. Try again later."
+            .off("The on-device model is still downloading. Try again later.")
         case .unavailable:
-            "The on-device model is not available right now."
+            .off("The on-device model is not available right now.")
         @unknown default:
-            "The on-device model is not available right now."
+            .off("The on-device model is not available right now.")
         }
     }
 
@@ -92,16 +106,17 @@ extension PathDraft {
     }
 }
 
-/// Picks the New path surface. The toggle only opens the chat when the on-device model can answer.
+/// Picks the New path surface. The Settings toggle decides which opens first; both offer the other.
 struct NewPathSheet: View {
     @AppStorage(Prefs.talkKey) private var talk = false
-    @State private var typing = false
+    @State private var talking: Bool?
 
     var body: some View {
-        if talk && !typing && Talk.unavailableReason == nil {
-            TalkPathView(typeInstead: { typing = true })
+        let state = Talk.state
+        if case .ready = state, talking ?? talk {
+            TalkPathView(typeInstead: { talking = false })
         } else {
-            NewPathView()
+            NewPathView(talk: state, talkInstead: { talking = true })
         }
     }
 }
