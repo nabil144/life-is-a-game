@@ -57,6 +57,7 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var styleSection: some View {
         Section("Today screen (prototype weeks)") {
             Picker("Style", selection: $style) {
