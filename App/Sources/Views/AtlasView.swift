@@ -47,7 +47,7 @@ struct AtlasView: View {
                 ForEach(layout.nodes, id: \.path.id) { node in
                     pathOrb(node.path, at: node.at, today: node.path.id == today)
                     if scale > 1.25 {
-                        ForEach(Array(node.milestones.enumerated()), id: \.element.id) { _, sat in
+                        ForEach(node.milestones, id: \.milestone.id) { sat in
                             milestonePip(sat.milestone, at: sat.at, pathID: node.path.id)
                                 .transition(.scale.combined(with: .opacity))
                         }
