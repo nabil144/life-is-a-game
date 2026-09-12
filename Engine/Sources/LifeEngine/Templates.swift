@@ -1,8 +1,8 @@
 import Foundation
 
 /// The authoring shape. Blockers reference titles, not ids, so a human or an agent can write it by hand.
-public struct PathDraft: Codable, Sendable {
-    public struct NodeDraft: Codable, Sendable {
+public struct PathDraft: Codable, Equatable, Sendable {
+    public struct NodeDraft: Codable, Equatable, Sendable {
         public var kind: NodeKind
         public var title: String
         public var cue: Cue
