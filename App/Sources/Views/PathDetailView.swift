@@ -7,6 +7,7 @@ struct PathDetailView: View {
     @Binding var capture: CaptureRequest?
     @State private var celebrate: Milestone?
     @State private var newMilestone = ""
+    @State private var editing: Node?
 
     var body: some View {
         if let path = store.path(pathID) {
@@ -66,6 +67,9 @@ struct PathDetailView: View {
             .fullScreenCover(item: $celebrate) { m in
                 CelebrationView(path: path, milestone: m)
             }
+            .sheet(item: $editing) { n in
+                NodeEditView(pathID: pathID, node: n)
+            }
         }
     }
 
@@ -73,22 +77,31 @@ struct PathDetailView: View {
     func nodeSection(_ title: String, path: Path, kind: NodeKind) -> some View {
         let nodes = path.nodes.filter { $0.kind == kind && $0.state != .notTaken }
         if !nodes.isEmpty {
-            Section(title) {
+            Section {
                 ForEach(nodes) { n in
-                    HStack {
-                        Image(systemName: kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise")
-                            .foregroundStyle(n.isDone ? .green : .secondary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(n.title).strikethrough(n.isDone)
-                            Text(nodeMeta(n, in: path)).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if store.todaysObjective()?.nodeID == n.id { Text("today").font(.caption.bold()).foregroundStyle(.tint) }
-                        if n.state == .paused {
-                            Button("Reopen") { store.respond(.reopen, nodeID: n.id) }.font(.caption)
+                    Button { editing = n } label: {
+                        HStack {
+                            Image(systemName: kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise")
+                                .foregroundStyle(n.isDone ? .green : .secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(n.title).strikethrough(n.isDone).foregroundStyle(.primary)
+                                Text(nodeMeta(n, in: path)).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if store.todaysObjective()?.nodeID == n.id { Text("today").font(.caption.bold()).foregroundStyle(.tint) }
+                            if n.state == .paused {
+                                Button("Reopen") { store.respond(.reopen, nodeID: n.id) }.font(.caption).buttonStyle(.borderless)
+                            }
                         }
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button("Let it go", role: .destructive) { store.respond(.letGo, nodeID: n.id) }
+                    }
                 }
+            } header: {
+                Text(title)
+            } footer: {
+                if kind == .quest { Text("Tap one to change it. Swipe to let it go. Plus adds another.") }
             }
         }
     }

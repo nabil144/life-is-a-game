@@ -124,6 +124,17 @@ final class Store {
         }
     }
 
+    func updateNode(_ node: Node, in pathID: UUID) {
+        let day = today
+        mutate { w in
+            guard let p = w.paths.firstIndex(where: { $0.id == pathID }),
+                  let n = w.paths[p].nodes.firstIndex(where: { $0.id == node.id }) else { return }
+            var node = node
+            node.touchedOn = day
+            w.paths[p].nodes[n] = node
+        }
+    }
+
     func tickMilestone(_ milestoneID: UUID, in pathID: UUID) {
         let day = today
         mutate { w in

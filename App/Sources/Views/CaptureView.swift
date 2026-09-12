@@ -10,10 +10,7 @@ struct CaptureView: View {
     @State private var title = ""
     @State private var pathID: UUID?
     @State private var kind: NodeKind = .quest
-    @State private var days: DaysCue = .any
-    @State private var window: Window = .any
-    @State private var pickDate = false
-    @State private var date = Date()
+    @State private var cue = Cue.anytime
     @State private var after: UUID?
 
     var body: some View {
@@ -41,22 +38,7 @@ struct CaptureView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("When could you do this?") {
-                    Picker("Days", selection: $days) {
-                        Text("Anytime").tag(DaysCue.any)
-                        Text("Weekend").tag(DaysCue.weekend)
-                        Text("Weekday").tag(DaysCue.weekday)
-                    }
-                    .pickerStyle(.segmented)
-                    Picker("Time", selection: $window) {
-                        Text("Any").tag(Window.any)
-                        Text("Morning").tag(Window.morning)
-                        Text("Evening").tag(Window.evening)
-                    }
-                    .pickerStyle(.segmented)
-                    Toggle("Pick a date instead", isOn: $pickDate)
-                    if pickDate {
-                        DatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
-                    }
+                    CueEditor(cue: $cue)
                 }
                 if let pid = pathID, let path = store.path(pid) {
                     let open = path.nodes.filter { $0.isOpen && $0.kind == .quest }
@@ -88,7 +70,6 @@ struct CaptureView: View {
 
     func save() {
         guard let pid = pathID else { return }
-        let cue = Cue(days: days, window: window, on: pickDate ? Day(date) : nil)
         let node = Node(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), cue: cue, after: after, createdOn: store.today)
         store.addNode(node, to: pid)
         dismiss()

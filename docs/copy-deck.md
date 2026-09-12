@@ -57,6 +57,8 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Node badge, surfaced today: today
 - Node state, paused: paused, tap to reopen
 - Node state, not taken: path not taken
+- Quests footer: Tap one to change it. Swipe to let it go. Plus adds another.
+- Node swipe: Let it go
 - Pause path: Let it rest
 - Resume path: Continue
 - Archive path: Put it away
@@ -110,6 +112,17 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Exit to form: Type it instead
 - Save: Begin
 
+## Edit a quest or practice
+
+- Header: Quest · Practice
+- Text field placeholder: What is it?
+- Kind segmented: Quest · Practice
+- Cue label: When could you do this?
+- Blocker label: Only after (optional)
+- Remove: Let it go
+- Remove confirm: `Remove {node title}?`
+- Save: Save
+
 ## Celebration
 
 - Eyebrow: Milestone
@@ -142,8 +155,10 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Evening window: Evening objectives at
 - Quiet days: Quiet days
 - New paths section: New paths
-- Talk toggle: Create paths by talking
-- Talk footer: On this phone only. The model asks, you answer, it writes down your words.
+- Talk toggle: Start new paths by talking
+- Talk footer: Either way, the New path screen offers the other. On this phone only. The model asks, you answer, it writes down your words.
+- New path, talk row: Talk it through instead
+- New path, talk row footer: On this phone only. The model asks, you answer, it writes down your words.
 - Talk unavailable, device: This iPhone cannot run the on-device model. The form stays.
 - Talk unavailable, Apple Intelligence off: Turn on Apple Intelligence in iOS Settings to create paths by talking.
 - Talk unavailable, downloading: The on-device model is still downloading. Try again later.

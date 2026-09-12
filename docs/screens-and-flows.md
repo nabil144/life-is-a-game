@@ -8,9 +8,9 @@ Eight screens. Navigation is a tab bar with two tabs, Today and Paths. Everythin
 |---|---|---|---|
 | Today | Show today's one objective, or the reason there is none. Done / Not now / Too big. | Tab, notification tap, widget tap | Capture sheet, Path detail |
 | Paths | List of Paths with glyph, identity, milestone progress as ticks, quiet state (evolved, paused). | Tab | Path detail, Capture (new Path) |
-| Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Edit in place. | Paths list, Today card title | Capture (new node), Celebration |
+| Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Tap a node to edit its words, cue, or blocker; swipe to let it go. | Paths list, Today card title | Capture (new node), Node editor, Celebration |
 | New path | Name and one milestone, then Begin. Templates in a one-tap menu. Identity, kind, glyph, and first quests under a collapsed More row. | Plus on Paths, onboarding | Paths |
-| Talk a path | Same result as New path, by conversation. The on-device model asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when the Settings toggle is on and the model is available. | Plus on Paths | Paths, or Type it instead |
+| Talk a path | Same result as New path, by conversation. The on-device model asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when the model is available; the Settings toggle decides whether it opens first, and each surface offers the other. | Plus on Paths, "Talk it through instead" on New path | Paths, or Type it instead |
 | Capture | One text field. Which Path, quest or practice, when could you do this (cue chips). Three taps to save. | Plus button anywhere | Back to caller |
 | Celebration | Full-screen moment when a milestone is ticked. Glyph animates, identity label, the milestone sentence. One button. | Ticking a milestone | Path detail |
 | Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, JSON export (phase 2). | Gear on Paths | Back |
