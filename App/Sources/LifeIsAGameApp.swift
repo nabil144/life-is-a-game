@@ -6,6 +6,7 @@ enum Prefs {
     static let morningKey = "morningHour"
     static let eveningKey = "eveningHour"
     static let todayStyleKey = "todayStyle"
+    static let pathsStyleKey = "pathsStyle"
     static let talkKey = "talkPaths"
     static let providerKey = "talkProvider"
     static let modelKey = "talkModel"
