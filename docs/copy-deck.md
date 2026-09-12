@@ -41,6 +41,10 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Row meta, paused: Resting
 - Empty: Name one thing you want to evolve.
 - Add button: New path
+- View segment: World · List
+- World hint, far: Pinch closer. Drag to wander.
+- World hint, close: The smaller rings are milestones. Tap a path to open it.
+- World self: You
 
 ## Path detail
 
@@ -167,6 +171,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 
 ## Settings
 
+- Paths view picker: Paths screen (prototype weeks)
 - Header: Settings
 - Notifications row: Notifications
 - Morning window: Morning objectives at
