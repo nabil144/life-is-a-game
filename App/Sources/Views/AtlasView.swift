@@ -47,7 +47,7 @@ struct AtlasView: View {
                 ForEach(layout.nodes, id: \.path.id) { node in
                     pathOrb(node.path, at: node.at, today: node.path.id == today)
                     if scale > 1.25 {
-                        ForEach(node.milestones, id: \.milestone.id) { sat in
+                        ForEach(node.milestones) { sat in
                             milestonePip(sat.milestone, at: sat.at, pathID: node.path.id)
                                 .transition(.scale.combined(with: .opacity))
                         }
@@ -192,33 +192,43 @@ private struct AtlasSky: View {
 }
 
 private struct AtlasLayout {
+    struct Sat: Identifiable {
+        var milestone: Milestone
+        var at: CGPoint
+        var id: UUID { milestone.id }
+    }
+
     struct Node {
         var path: Path
         var at: CGPoint
-        var milestones: [(milestone: Milestone, at: CGPoint)]
+        var milestones: [Sat]
     }
 
     var center: CGPoint
     var nodes: [Node]
 
     init(paths: [Path], in size: CGSize) {
-        center = CGPoint(x: size.width / 2, y: size.height / 2 - 12)
+        let origin = CGPoint(x: size.width / 2, y: size.height / 2 - 12)
         let radius = min(size.width, size.height) * 0.34
         let count = max(paths.count, 1)
-        nodes = paths.enumerated().map { i, path in
+        let laid = paths.enumerated().map { i, item in
             let angle = (Double(i) / Double(count)) * .pi * 2 - .pi / 2
             let at = CGPoint(
-                x: center.x + CGFloat(cos(angle)) * radius,
-                y: center.y + CGFloat(sin(angle)) * radius
+                x: origin.x + CGFloat(cos(angle)) * radius,
+                y: origin.y + CGFloat(sin(angle)) * radius
             )
             let orbit: CGFloat = 46
-            let sats = path.milestones.enumerated().map { j, m -> (Milestone, CGPoint) in
-                let a = (Double(j) / Double(max(path.milestones.count, 1))) * .pi * 2 - .pi / 2
-                let p = CGPoint(x: at.x + CGFloat(cos(a)) * orbit, y: at.y + CGFloat(sin(a)) * orbit)
-                return (m, p)
+            let sats = item.milestones.enumerated().map { j, m in
+                let a = (Double(j) / Double(max(item.milestones.count, 1))) * .pi * 2 - .pi / 2
+                return Sat(
+                    milestone: m,
+                    at: CGPoint(x: at.x + CGFloat(cos(a)) * orbit, y: at.y + CGFloat(sin(a)) * orbit)
+                )
             }
-            return Node(path: path, at: at, milestones: sats)
+            return Node(path: item, at: at, milestones: sats)
         }
+        center = origin
+        nodes = laid
     }
 
     static func bend(from a: CGPoint, to b: CGPoint) -> CGPoint {
