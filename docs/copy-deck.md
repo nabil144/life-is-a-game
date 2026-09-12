@@ -108,7 +108,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Opening line (fixed, not from the model): What is the thing? Say it however it comes.
 - Composer placeholder: Say it however it comes
 - Card headers: Milestones · Quests and practices
-- Trouble line: Could not take that in. Say it another way, or press Begin with what is here.
+- Trouble lines: see Talk errors under Settings
 - Exit to form: Type it instead
 - Save: Begin
 
@@ -155,14 +155,39 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Evening window: Evening objectives at
 - Quiet days: Quiet days
 - New paths section: New paths
+- Key row, saved: `{provider}, {model}`
+- Key row, none: Add an API key
 - Talk toggle: Start new paths by talking
-- Talk footer: Either way, the New path screen offers the other. On this phone only. The model asks, you answer, it writes down your words.
+- Talk footer: Your own key, your own model. The model asks, you answer, it writes down your words. Either way, the New path screen offers the other.
 - New path, talk row: Talk it through instead
-- New path, talk row footer: On this phone only. The model asks, you answer, it writes down your words.
-- Talk unavailable, device: This iPhone cannot run the on-device model. The form stays.
-- Talk unavailable, Apple Intelligence off: Turn on Apple Intelligence in iOS Settings to create paths by talking.
-- Talk unavailable, downloading: The on-device model is still downloading. Try again later.
-- Talk unavailable, other: The on-device model is not available right now.
+- New path, talk row footer: Your own key, your own model. It asks, you answer, it writes down your words.
+- New path, no key row: Add an API key in Settings to create paths by talking.
+
+## Model (key setup)
+
+- Header: Model
+- Intro: Bring your own key. The app talks to the model you pay for, nothing in between. The key stays in this phone's keychain.
+- Provider header: Provider
+- Provider options: OpenAI · Anthropic
+- Get a key link: `Get a key from {provider}`
+- Key header: Key
+- Key placeholder: `sk-...` · `sk-ant-...`
+- Key placeholder, saved: A key is saved. Paste another to replace it.
+- Model field: Model
+- Test: Test · Asking the model
+- Test footer: One tiny request. A fraction of a cent.
+- Test verdict, ok: `{model} answered: {question}`
+- Remove: Remove key
+- Save: Save
+- Skip (first-launch prompt only): Later
+
+## Talk errors
+
+- Offline: No connection. Your words are kept. Try again when you are back online.
+- Bad key: The API key was not accepted. Check it in Settings.
+- Rate limit: The model is busy. Wait a moment and send again.
+- Refused: `The model could not answer. {reason}`
+- Unreadable: Could not read the model's answer. Say it again, or press Begin with what is here.
 - Export (phase 2): Export paths as JSON
 - Import (phase 2): Import paths from JSON
 - About: One objective a day. Progress that cannot be lost.

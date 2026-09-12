@@ -19,7 +19,7 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 - No XP, points, coins, HP, levels, streaks, leaderboards, avatars, pets, or shop.
 - No preset trees. Templates are editable examples, not curricula.
 - No canvas or graph editor. Authoring is a text field.
-- No cloud AI. The on-device model may help write a Path down (behind a Settings toggle) and only writes what the user said, in the user's words. The owner's coding agent can author nodes through JSON import in phase 2.
+- No AI the app pays for or runs itself. A cloud model with the owner's own API key may help write a Path down (behind a Settings toggle) and only writes what the user said, in the user's words. The owner's coding agent can author nodes through JSON import in phase 2.
 
 ## The six things the app knows
 
@@ -45,7 +45,7 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 
 ## Screens
 
-Today, Paths, Path detail, New path (typed, or talked through with the on-device model), Capture, Milestone celebration, Settings. See `screens-and-flows.md`.
+Today, Paths, Path detail, New path (typed, or talked through with the owner's cloud model), Capture, Milestone celebration, Settings. See `screens-and-flows.md`.
 
 ## Voice
 
@@ -66,4 +66,4 @@ Count of Done actions and milestones ticked. Not opens, not nodes authored. One 
 
 ## Platform
 
-iOS 26 or later, Swift, SwiftUI, one JSON document for storage, UserNotifications, Foundation Models on device. Free Apple ID for now. Built on GitHub Actions macOS runners, installed from Xcode on a Mac until Splice works from the Linux laptop.
+iOS 26 or later, Swift, SwiftUI, one JSON document for storage, UserNotifications, `URLSession` to OpenAI or Anthropic with the owner's key in the keychain. Free Apple ID for now. Built on GitHub Actions macOS runners, installed from Xcode on a Mac until Splice works from the Linux laptop.

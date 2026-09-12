@@ -1,6 +1,6 @@
 # Screens and flows
 
-Eight screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
+Nine screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
 
 ## Screen inventory
 
@@ -10,7 +10,8 @@ Eight screens. Navigation is a tab bar with two tabs, Today and Paths. Everythin
 | Paths | List of Paths with glyph, identity, milestone progress as ticks, quiet state (evolved, paused). | Tab | Path detail, Capture (new Path) |
 | Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Tap a node to edit its words, cue, or blocker; swipe to let it go. | Paths list, Today card title | Capture (new node), Node editor, Celebration |
 | New path | Name and one milestone, then Begin. Templates in a one-tap menu. Identity, kind, glyph, and first quests under a collapsed More row. | Plus on Paths, onboarding | Paths |
-| Talk a path | Same result as New path, by conversation. The on-device model asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when the model is available; the Settings toggle decides whether it opens first, and each surface offers the other. | Plus on Paths, "Talk it through instead" on New path | Paths, or Type it instead |
+| Talk a path | Same result as New path, by conversation. The owner's cloud model (OpenAI or Anthropic, their key) asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when a key is saved; the Settings toggle decides whether it opens first, and each surface offers the other. | Plus on Paths, "Talk it through instead" on New path | Paths, or Type it instead |
+| Model | Provider, key, model name, Test, Save, Remove key. Key in the keychain. | Settings, "Add an API key" on New path, once as a sheet after onboarding when no key is saved (Later skips) | Back |
 | Capture | One text field. Which Path, quest or practice, when could you do this (cue chips). Three taps to save. | Plus button anywhere | Back to caller |
 | Celebration | Full-screen moment when a milestone is ticked. Glyph animates, identity label, the milestone sentence. One button. | Ticking a milestone | Path detail |
 | Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, JSON export (phase 2). | Gear on Paths | Back |
@@ -30,6 +31,7 @@ flowchart TD
   Empty --> Milestone
   Milestone --> More["Optional under More: identity, kind, glyph, first quests"]
   More --> Notify["Allow notifications so objectives can find you"]
+  Notify --> Key["Once, if no key is saved: Model sheet. Provider, key, Test, Save or Later"]
   Notify --> Today[Today screen with first objective or a 'tomorrow' note]
 ```
 
