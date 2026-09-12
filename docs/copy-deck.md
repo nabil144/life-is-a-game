@@ -63,6 +63,23 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Resume path: Continue
 - Archive path: Put it away
 - Evolved banner: This path has evolved. It will stay here, quiet.
+- Header hint: Tap to change this path.
+- Edit: Edit
+
+## This path (edit)
+
+- Header: This path
+- Name placeholder: What are you evolving?
+- Identity placeholder: Who are you on this path? e.g. Guitarist
+- Role label: What kind of path is this?
+- Deadline label (decision only): Decide by
+- Glyph label: Glyph
+- Milestones header: Milestones
+- Milestone placeholder: A sentence that will be true, e.g. It holds tune
+- Add milestone: Add another milestone
+- Milestones footer: Tap a milestone on the path to tick it. Here you change the words, the order, or drop one.
+- Save: Save
+- Cancel: Cancel
 
 ## Capture
 

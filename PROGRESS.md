@@ -24,7 +24,8 @@ Done.
 - First install on the iPhone, from Xcode on the Mac, 2026-09-12. Free Apple ID, so the signature lasts 7 days. Refresh by plugging the phone into the Mac and pressing Run again. Steps in `README.md`.
 - New path form trimmed to a name and one milestone. Identity, kind, glyph, and first quests sit under a collapsed More row with defaults. Templates are a one-tap menu.
 - Paths by talking. `App/Sources/Views/TalkPathView.swift` over `App/Sources/Talk/PathModel.swift`, a cloud model with the owner's own API key (OpenAI or Anthropic), key in the keychain. Setup once after onboarding or in Settings > New paths. The New path form offers "Talk it through instead" once a key is saved. Deployment target is iOS 26. CI proves compile and launch only; the runner has no key. The conversation has not run on a real phone yet. The owner said the key is not working; left for later.
-- A copy of the world can live in Files. Settings > Your data, a one-time sheet after the first Path, restore on onboarding and on an empty Paths list. Full `world.json` (ticks and log), not drafts. Build 0.5 (5).
+- A copy of the world can live in Files. Settings > Your data, a one-time sheet after the first Path, restore on onboarding and on an empty Paths list. Full `world.json` (ticks and log), not drafts.
+- The path itself is editable. Path detail header or Edit opens This path: name, identity, kind, glyph, deadline, milestone words and order. Build 0.6 (6).
 
 Blocked.
 
@@ -32,7 +33,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.5 (5)`. Do not delete the app. If a "Keep a copy" sheet appears, pick an iCloud Drive folder (create "Life is a Game" if you want). After that, new versions keep the paths. If the sheet does not appear, Settings > Your data > Keep a copy in Files. If this install is empty and an older icon still has the paths, open that one, export, then restore here.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.6 (6)`. Open a path, tap the name (or Edit), change the words, Save. Ticks and quests stay. If you have not picked a Files folder yet, do that in Settings > Your data so the next build keeps the paths.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -49,6 +50,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-12. Owner pressed Cmd+R without pulling and saw the old build. Added a visible build number in Settings (0.3 (3)) and the release ritual above. New path form always shows either the Talk row or one reason line. Next: pull, regenerate, run, confirm "Version 0.3 (3)" in Settings.
 - 2026-09-12. Owner reversed the on-device choice: bring your own key. Cloud model over `URLSession`, OpenAI or Anthropic, key in the keychain, one-time setup sheet after onboarding and the same screen in Settings, five error sentences. Foundation Models removed. Build 0.4 (4). Next: pull, run, add a key on the sheet, talk a path.
 - 2026-09-12. Owner: key can wait; losing paths on each new version would make the app unused. Files-folder copy of `world.json`, restore from a file, one-time pick sheet. Build 0.5 (5). Next: pull, run, confirm version, pick a folder.
+- 2026-09-12. Path itself is editable (This path sheet). Build 0.6 (6). Next: pull, run, edit a path.
 
 ## How to keep this file true
 
@@ -56,4 +58,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 5.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 6.
