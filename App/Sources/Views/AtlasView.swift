@@ -15,6 +15,8 @@ enum PathsStyle: String, CaseIterable, Identifiable {
 /// You in the middle. Paths as orbs on branches. Pinch closer and milestones appear around each path.
 struct AtlasView: View {
     @Environment(Store.self) private var store
+    @Binding var openPath: UUID?
+    @State private var pick: AtlasPick?
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -23,39 +25,34 @@ struct AtlasView: View {
     var body: some View {
         GeometryReader { geo in
             let layout = AtlasLayout(paths: store.activePaths, in: geo.size)
-            let today = store.todaysObjective()?.pathID
             ZStack {
                 NeuronSky()
                 Canvas { ctx, _ in
                     for node in layout.nodes {
-                        var branch = SwiftUI.Path()
-                        branch.move(to: layout.center)
-                        branch.addQuadCurve(to: node.at, control: Neuron.bend(from: layout.center, to: node.at))
-                        let todayBranch = node.path.id == today
-                        ctx.stroke(
-                            branch,
-                            with: .color((todayBranch ? Ink.brass : Ink.wine).opacity(todayBranch ? 0.85 : 0.55)),
-                            style: StrokeStyle(lineWidth: todayBranch ? 3 : 1.6, lineCap: .round)
+                        let pathOn = pathLit(node.path.id)
+                        strokeBranch(
+                            &ctx,
+                            from: layout.center,
+                            to: node.at,
+                            lit: pathOn
                         )
                         for sat in node.neurons {
-                            var twig = SwiftUI.Path()
-                            twig.move(to: node.at)
-                            twig.addQuadCurve(to: sat.at, control: Neuron.bend(from: node.at, to: sat.at))
-                            ctx.stroke(
-                                twig,
-                                with: .color(Ink.wine.opacity(0.5)),
-                                style: StrokeStyle(lineWidth: 1.3, lineCap: .round)
+                            strokeBranch(
+                                &ctx,
+                                from: node.at,
+                                to: sat.at,
+                                lit: workLit(sat.work.id),
+                                twig: true
                             )
                         }
                         if scale > 1.25 {
                             for sat in node.milestones {
-                                var twig = SwiftUI.Path()
-                                twig.move(to: node.at)
-                                twig.addQuadCurve(to: sat.at, control: Neuron.bend(from: node.at, to: sat.at))
-                                ctx.stroke(
-                                    twig,
-                                    with: .color(Ink.line.opacity(0.8)),
-                                    style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                                strokeBranch(
+                                    &ctx,
+                                    from: node.at,
+                                    to: sat.at,
+                                    lit: false,
+                                    twig: true
                                 )
                             }
                         }
@@ -63,14 +60,11 @@ struct AtlasView: View {
                 }
                 .allowsHitTesting(false)
 
-                selfOrb
-                    .position(layout.center)
-
                 ForEach(layout.nodes, id: \.path.id) { node in
                     ForEach(node.neurons) { sat in
                         neuronPip(sat.work, at: sat.at, pathID: node.path.id)
                     }
-                    pathOrb(node.path, at: node.at, today: node.path.id == today)
+                    pathOrb(node.path, at: node.at)
                     if scale > 1.25 {
                         ForEach(node.milestones) { sat in
                             milestonePip(sat.milestone, at: sat.at, pathID: node.path.id)
@@ -78,6 +72,9 @@ struct AtlasView: View {
                         }
                     }
                 }
+
+                selfOrb
+                    .position(layout.center)
             }
             .scaleEffect(scale)
             .offset(offset)
@@ -92,9 +89,9 @@ struct AtlasView: View {
                         .font(.subheadline)
                     RestoreFileButton()
                 } else {
-                    Text(scale > 1.25
-                         ? "The smaller rings are milestones. Tap a path to open it."
-                         : "Twigs are quests and practices. Pinch for milestones.")
+                    Text(pick == nil
+                         ? "Tap a path or a quest. Tap You to clear."
+                         : "Tap again to open. Tap You to let go.")
                 }
             }
             .font(.footnote)
@@ -105,42 +102,93 @@ struct AtlasView: View {
         }
     }
 
-    private var selfOrb: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(Ink.brass.opacity(0.18))
-                    .frame(width: 92, height: 92)
-                Circle()
-                    .stroke(Ink.brass.opacity(0.85), lineWidth: 2)
-                    .frame(width: 78, height: 78)
-                Image(systemName: "leaf")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(Ink.brass)
-                    .symbolEffect(.pulse, options: .repeating, isActive: true)
-            }
-            .shadow(color: Ink.brass.opacity(0.35), radius: 16)
-            Text("You")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Ink.muted)
+    private func strokeBranch(_ ctx: inout GraphicsContext, from: CGPoint, to: CGPoint, lit: Bool, twig: Bool = false) {
+        var line = SwiftUI.Path()
+        line.move(to: from)
+        line.addQuadCurve(to: to, control: Neuron.bend(from: from, to: to))
+        if lit {
+            ctx.stroke(line, with: .color(Ink.brass.opacity(0.28)), style: StrokeStyle(lineWidth: twig ? 10 : 14, lineCap: .round))
+            ctx.stroke(line, with: .color(Ink.brass.opacity(0.9)), style: StrokeStyle(lineWidth: twig ? 2.4 : 3.2, lineCap: .round))
+        } else {
+            ctx.stroke(
+                line,
+                with: .color(Ink.wine.opacity(twig ? 0.45 : 0.55)),
+                style: StrokeStyle(lineWidth: twig ? 1.3 : 1.6, lineCap: .round)
+            )
         }
     }
 
-    private func pathOrb(_ path: Path, at point: CGPoint, today: Bool) -> some View {
-        NavigationLink(value: path.id) {
+    private func pathLit(_ id: UUID) -> Bool {
+        switch pick {
+        case .path(let p): p == id
+        case .work(let p, _): p == id
+        case nil: false
+        }
+    }
+
+    private func workLit(_ id: UUID) -> Bool {
+        if case .work(_, let n) = pick { return n == id }
+        return false
+    }
+
+    private func tapPath(_ id: UUID) {
+        if pick == .path(id) {
+            openPath = id
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) { pick = .path(id) }
+        }
+    }
+
+    private func tapWork(pathID: UUID, nodeID: UUID) {
+        if pick == .work(pathID: pathID, nodeID: nodeID) {
+            openPath = pathID
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) { pick = .work(pathID: pathID, nodeID: nodeID) }
+        }
+    }
+
+    private var selfOrb: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { pick = nil }
+        } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(Ink.brass.opacity(0.18))
+                        .frame(width: 92, height: 92)
+                    Circle()
+                        .stroke(Ink.brass.opacity(pick == nil ? 0.55 : 0.85), lineWidth: 2)
+                        .frame(width: 78, height: 78)
+                    Image(systemName: "leaf")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(Ink.brass)
+                }
+                .shadow(color: Ink.brass.opacity(pick == nil ? 0.15 : 0.4), radius: 16)
+                Text("You")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Ink.muted)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("You, clear the glow")
+    }
+
+    private func pathOrb(_ path: Path, at point: CGPoint) -> some View {
+        let on = pathLit(path.id)
+        return Button { tapPath(path.id) } label: {
             VStack(spacing: 4) {
                 ZStack {
                     Circle()
                         .fill(path.isEvolved ? Ink.brass.opacity(0.16) : Ink.card)
-                        .frame(width: today ? 68 : 58, height: today ? 68 : 58)
+                        .frame(width: on ? 68 : 58, height: on ? 68 : 58)
                     Circle()
-                        .stroke(today ? Ink.brass : Ink.line, lineWidth: today ? 2.5 : 1)
-                        .frame(width: today ? 68 : 58, height: today ? 68 : 58)
+                        .stroke(on ? Ink.brass : Ink.line, lineWidth: on ? 2.5 : 1)
+                        .frame(width: on ? 68 : 58, height: on ? 68 : 58)
                     Image(systemName: path.glyph)
-                        .font(.system(size: today ? 24 : 20))
-                        .foregroundStyle(path.isEvolved ? Ink.brass : Ink.words)
+                        .font(.system(size: on ? 24 : 20))
+                        .foregroundStyle(path.isEvolved || on ? Ink.brass : Ink.words)
                 }
-                .shadow(color: today ? Ink.brass.opacity(0.45) : .clear, radius: 12)
+                .shadow(color: on ? Ink.brass.opacity(0.5) : .clear, radius: 14)
                 Text(path.name)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Ink.words)
@@ -155,15 +203,17 @@ struct AtlasView: View {
     }
 
     private func neuronPip(_ work: LifeEngine.Node, at point: CGPoint, pathID: UUID) -> some View {
-        NavigationLink(value: pathID) {
+        let on = workLit(work.id)
+        return Button { tapWork(pathID: pathID, nodeID: work.id) } label: {
             VStack(spacing: 3) {
                 Circle()
-                    .fill(work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card)
-                    .overlay(Circle().stroke(work.kind == .practice ? Ink.brass : Ink.line, lineWidth: 1.4))
-                    .frame(width: 16, height: 16)
+                    .fill(on ? Ink.brass.opacity(0.35) : (work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card))
+                    .overlay(Circle().stroke(on || work.kind == .practice ? Ink.brass : Ink.line, lineWidth: on ? 2 : 1.4))
+                    .frame(width: on ? 20 : 16, height: on ? 20 : 16)
+                    .shadow(color: on ? Ink.brass.opacity(0.55) : .clear, radius: 8)
                 Text(work.title)
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Ink.words)
+                    .foregroundStyle(on ? Ink.brass : Ink.words)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 72)
@@ -219,6 +269,11 @@ struct AtlasView: View {
             }
         }
     }
+}
+
+private enum AtlasPick: Equatable {
+    case path(UUID)
+    case work(pathID: UUID, nodeID: UUID)
 }
 
 private struct AtlasLayout {
