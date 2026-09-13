@@ -14,13 +14,12 @@ enum TodayStyle: String, CaseIterable, Identifiable {
 }
 
 enum TodaySort: String, CaseIterable, Identifiable {
-    case quests, practices, path, when
+    case quests, practices, when
     var id: String { rawValue }
     var label: String {
         switch self {
         case .quests: "Quests"
         case .practices: "Practice"
-        case .path: "Path"
         case .when: "When"
         }
     }
@@ -38,41 +37,20 @@ struct TodayView: View {
 
     private var due: [Objective] { store.dueToday() }
     private var collapse: CGFloat { min(1, max(0, scrollY / 56)) }
-    private var showKind: Bool { sort == .path || sort == .when }
+    private var showKind: Bool { sort == .when }
+    private var dateSlot: CGFloat { 68 }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 pin
-                List {
-                    if due.isEmpty {
-                        Section {
-                            quiet
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else {
-                        ForEach(buckets) { bucket in
-                            bucketSection(bucket)
-                        }
-                        let entries = store.recentLog()
-                        if !entries.isEmpty {
-                            Section {
-                                ForEach(entries) { LogRow(entry: $0) }
-                            } header: {
-                                Text("Recently")
-                                    .foregroundStyle(Ink.muted)
-                            }
-                        }
-                    }
-                }
-                .scrollContentBackground(.hidden)
-                .contentMargins(.top, 0, for: .scrollContent)
-                .environment(\.defaultMinListHeaderHeight, 0)
-                .onScrollGeometryChange(for: CGFloat.self) { geo in
-                    max(0, geo.contentOffset.y + geo.contentInsets.top)
-                } action: { _, y in
-                    scrollY = y
+                if due.isEmpty {
+                    quiet
+                    Spacer()
+                } else if sort == .when {
+                    whenList
+                } else {
+                    neuronScroll
                 }
             }
             .background(Ink.ground)
@@ -85,25 +63,31 @@ struct TodayView: View {
     }
 
     private var pin: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(spacing: 12) {
+            ZStack {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(context.date, format: collapse > 0.55 ? Self.compactStamp : Self.fullStamp)
+                    Text(context.date, format: Self.stamp)
                         .font(.system(size: 28 - 10 * collapse, weight: .bold))
                         .foregroundStyle(Ink.words)
-                        .lineLimit(collapse > 0.55 ? 1 : 2)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
                         .minimumScaleFactor(0.65)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 36)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityAddTraits(.isHeader)
                 }
-                Button { capture = CaptureRequest() } label: {
-                    Image(systemName: "plus")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Ink.brass)
-                        .frame(width: 32, height: 32)
+                HStack {
+                    Spacer()
+                    Button { capture = CaptureRequest() } label: {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Ink.brass)
+                            .frame(width: 32, height: 32)
+                    }
+                    .accessibilityLabel("Capture")
                 }
-                .accessibilityLabel("Capture")
             }
+            .frame(height: dateSlot)
             if !due.isEmpty {
                 Picker("Sort", selection: $sort) {
                     ForEach(TodaySort.allCases) { s in
@@ -120,7 +104,7 @@ struct TodayView: View {
         .background(Ink.ground)
     }
 
-    private static let fullStamp = Date.FormatStyle()
+    private static let stamp = Date.FormatStyle()
         .weekday(.wide)
         .month(.wide)
         .day()
@@ -129,12 +113,87 @@ struct TodayView: View {
         .minute()
         .second()
 
-    private static let compactStamp = Date.FormatStyle()
-        .month(.abbreviated)
-        .day()
-        .hour()
-        .minute()
-        .second()
+    private var neuronScroll: some View {
+        ScrollView {
+            LazyVStack(spacing: 18) {
+                if clusters.isEmpty {
+                    Text(sort == .practices ? "No practices due today." : "No quests due today.")
+                        .foregroundStyle(Ink.muted)
+                        .padding(.top, 36)
+                } else {
+                    ForEach(clusters) { cluster in
+                        DueNeuronView(
+                            path: cluster.path,
+                            items: cluster.items,
+                            confirming: pendingID,
+                            onAsk: { pendingID = $0 },
+                            onCancel: { pendingID = nil },
+                            onDone: markDone,
+                            onOpenPath: { openPath = OpenPath(id: $0) }
+                        )
+                    }
+                }
+                recentlyBlock
+                Text("Tap one when it is done. A practice will come back the next day its cue allows.")
+                    .font(.footnote)
+                    .foregroundStyle(Ink.muted)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
+            }
+        }
+        .background(NeuronSky())
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            max(0, geo.contentOffset.y + geo.contentInsets.top)
+        } action: { _, y in
+            scrollY = y
+        }
+    }
+
+    private var whenList: some View {
+        List {
+            ForEach(whenBuckets) { bucket in
+                bucketSection(bucket)
+            }
+            let entries = store.recentLog()
+            if !entries.isEmpty {
+                Section {
+                    ForEach(entries) { LogRow(entry: $0) }
+                } header: {
+                    Text("Recently")
+                        .foregroundStyle(Ink.muted)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .contentMargins(.top, 0, for: .scrollContent)
+        .environment(\.defaultMinListHeaderHeight, 0)
+        .onScrollGeometryChange(for: CGFloat.self) { geo in
+            max(0, geo.contentOffset.y + geo.contentInsets.top)
+        } action: { _, y in
+            scrollY = y
+        }
+    }
+
+    @ViewBuilder
+    private var recentlyBlock: some View {
+        let entries = store.recentLog()
+        if !entries.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Recently")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Ink.muted)
+                    .padding(.horizontal, 20)
+                ForEach(entries) { entry in
+                    LogRow(entry: entry)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(Ink.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.horizontal, 16)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
 
     @ViewBuilder
     private func bucketSection(_ bucket: DueBucket) -> some View {
@@ -153,7 +212,7 @@ struct TodayView: View {
                 Text(title).foregroundStyle(Ink.muted)
             }
         } footer: {
-            if bucket.id == buckets.last?.id {
+            if bucket.id == whenBuckets.last?.id {
                 Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
             }
         }
@@ -172,32 +231,18 @@ struct TodayView: View {
         )
     }
 
-    private var buckets: [DueBucket] {
-        switch sort {
-        case .quests:
-            return [DueBucket(
-                id: "quest",
-                title: nil,
-                items: due.filter { nodeKind($0) == .quest },
-                empty: "No quests due today."
-            )]
-        case .practices:
-            return [DueBucket(
-                id: "practice",
-                title: nil,
-                items: due.filter { nodeKind($0) == .practice },
-                empty: "No practices due today."
-            )]
-        case .path:
-            return store.activePaths.compactMap { path in
-                let items = due.filter { $0.pathID == path.id }
-                return items.isEmpty ? nil : DueBucket(id: path.id.uuidString, title: path.name, items: items)
-            }
-        case .when:
-            return [Window.morning, .evening, .any].compactMap { window in
-                let items = due.filter { $0.window == window }
-                return items.isEmpty ? nil : DueBucket(id: window.rawValue, title: windowLabel(window), items: items)
-            }
+    private var clusters: [DueCluster] {
+        let kind: NodeKind = sort == .practices ? .practice : .quest
+        return store.activePaths.compactMap { path in
+            let items = due.filter { $0.pathID == path.id && nodeKind($0) == kind }
+            return items.isEmpty ? nil : DueCluster(path: path, items: items)
+        }
+    }
+
+    private var whenBuckets: [DueBucket] {
+        [Window.morning, .evening, .any].compactMap { window in
+            let items = due.filter { $0.window == window }
+            return items.isEmpty ? nil : DueBucket(id: window.rawValue, title: windowLabel(window), items: items)
         }
     }
 
@@ -232,6 +277,12 @@ struct TodayView: View {
         if store.activePaths.allSatisfy(\.isEvolved) { return "Every path has evolved. Add a milestone or start a new path." }
         return "Nothing is due today. Your paths are resting."
     }
+}
+
+private struct DueCluster: Identifiable {
+    var path: Path
+    var items: [Objective]
+    var id: UUID { path.id }
 }
 
 private struct DueBucket: Identifiable {

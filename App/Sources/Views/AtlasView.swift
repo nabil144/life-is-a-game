@@ -25,12 +25,12 @@ struct AtlasView: View {
             let layout = AtlasLayout(paths: store.activePaths, in: geo.size)
             let today = store.todaysObjective()?.pathID
             ZStack {
-                AtlasSky()
+                NeuronSky()
                 Canvas { ctx, _ in
                     for node in layout.nodes {
                         var branch = SwiftUI.Path()
                         branch.move(to: layout.center)
-                        branch.addQuadCurve(to: node.at, control: AtlasLayout.bend(from: layout.center, to: node.at))
+                        branch.addQuadCurve(to: node.at, control: Neuron.bend(from: layout.center, to: node.at))
                         let todayBranch = node.path.id == today
                         ctx.stroke(
                             branch,
@@ -176,21 +176,6 @@ struct AtlasView: View {
     }
 }
 
-private struct AtlasSky: View {
-    var body: some View {
-        RadialGradient(
-            colors: [
-                Ink.wine.opacity(0.35),
-                Ink.ground,
-                Ink.ground,
-            ],
-            center: .center,
-            startRadius: 20,
-            endRadius: 420
-        )
-    }
-}
-
 private struct AtlasLayout {
     struct Sat: Identifiable {
         var milestone: Milestone
@@ -229,14 +214,5 @@ private struct AtlasLayout {
         }
         center = origin
         nodes = laid
-    }
-
-    static func bend(from a: CGPoint, to b: CGPoint) -> CGPoint {
-        let mx = (a.x + b.x) / 2
-        let my = (a.y + b.y) / 2
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-        let len = max(hypot(dx, dy), 1)
-        return CGPoint(x: mx - dy / len * 36, y: my + dx / len * 36)
     }
 }
