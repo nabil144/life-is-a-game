@@ -46,7 +46,7 @@ struct SettingsView: View {
         Section("Notifications") {
             if authorized {
                 Label("Objectives can find you", systemImage: "checkmark.circle")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Ink.brass)
             } else {
                 Button("Allow notifications") {
                     Task { authorized = await notifier.requestPermission() }

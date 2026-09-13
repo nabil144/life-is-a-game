@@ -34,7 +34,7 @@ struct AtlasView: View {
                         let todayBranch = node.path.id == today
                         ctx.stroke(
                             branch,
-                            with: .color(Color.accentColor.opacity(todayBranch ? 0.7 : 0.28)),
+                            with: .color((todayBranch ? Ink.brass : Ink.wine).opacity(todayBranch ? 0.85 : 0.55)),
                             style: StrokeStyle(lineWidth: todayBranch ? 3 : 1.6, lineCap: .round)
                         )
                     }
@@ -59,7 +59,7 @@ struct AtlasView: View {
             .gesture(pan.simultaneously(with: pinch))
             .onTapGesture(count: 2, perform: toggleZoom)
         }
-        .background(Color(.systemBackground))
+        .background(Ink.ground)
         .overlay(alignment: .bottom) {
             VStack(spacing: 10) {
                 if store.activePaths.isEmpty {
@@ -73,7 +73,7 @@ struct AtlasView: View {
                 }
             }
             .font(.footnote)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Ink.muted)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 24)
             .padding(.bottom, 8)
@@ -84,20 +84,20 @@ struct AtlasView: View {
         VStack(spacing: 6) {
             ZStack {
                 Circle()
-                    .fill(Color.accentColor.opacity(0.18))
+                    .fill(Ink.brass.opacity(0.18))
                     .frame(width: 92, height: 92)
                 Circle()
-                    .stroke(Color.accentColor.opacity(0.85), lineWidth: 2)
+                    .stroke(Ink.brass.opacity(0.85), lineWidth: 2)
                     .frame(width: 78, height: 78)
                 Image(systemName: "leaf")
                     .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Ink.brass)
                     .symbolEffect(.pulse, options: .repeating, isActive: true)
             }
-            .shadow(color: Color.accentColor.opacity(0.35), radius: 16)
+            .shadow(color: Ink.brass.opacity(0.35), radius: 16)
             Text("You")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Ink.muted)
         }
     }
 
@@ -106,19 +106,19 @@ struct AtlasView: View {
             VStack(spacing: 4) {
                 ZStack {
                     Circle()
-                        .fill(path.isEvolved ? Color.green.opacity(0.16) : Color(.secondarySystemGroupedBackground))
+                        .fill(path.isEvolved ? Ink.brass.opacity(0.16) : Ink.card)
                         .frame(width: today ? 68 : 58, height: today ? 68 : 58)
                     Circle()
-                        .stroke(today ? Color.accentColor : Color.secondary.opacity(0.35), lineWidth: today ? 2.5 : 1)
+                        .stroke(today ? Ink.brass : Ink.line, lineWidth: today ? 2.5 : 1)
                         .frame(width: today ? 68 : 58, height: today ? 68 : 58)
                     Image(systemName: path.glyph)
                         .font(.system(size: today ? 24 : 20))
-                        .foregroundStyle(path.isEvolved ? Color.green : Color.primary)
+                        .foregroundStyle(path.isEvolved ? Ink.brass : Ink.words)
                 }
-                .shadow(color: today ? Color.accentColor.opacity(0.45) : .clear, radius: 12)
+                .shadow(color: today ? Ink.brass.opacity(0.45) : .clear, radius: 12)
                 Text(path.name)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Ink.words)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 96)
@@ -132,10 +132,10 @@ struct AtlasView: View {
     private func milestonePip(_ milestone: Milestone, at point: CGPoint, pathID: UUID) -> some View {
         NavigationLink(value: pathID) {
             Circle()
-                .fill(milestone.tickedOn == nil ? Color.clear : Color.green)
-                .stroke(milestone.tickedOn == nil ? Color.secondary.opacity(0.7) : Color.green, lineWidth: 1.5)
+                .fill(milestone.tickedOn == nil ? Color.clear : Ink.brass)
+                .stroke(milestone.tickedOn == nil ? Ink.muted : Ink.brass, lineWidth: 1.5)
                 .frame(width: 13, height: 13)
-                .shadow(color: milestone.tickedOn == nil ? .clear : Color.green.opacity(0.5), radius: 4)
+                .shadow(color: milestone.tickedOn == nil ? .clear : Ink.brass.opacity(0.5), radius: 4)
         }
         .buttonStyle(.plain)
         .position(point)
@@ -180,9 +180,9 @@ private struct AtlasSky: View {
     var body: some View {
         RadialGradient(
             colors: [
-                Color.accentColor.opacity(0.14),
-                Color(.systemBackground),
-                Color(.systemBackground),
+                Ink.wine.opacity(0.35),
+                Ink.ground,
+                Ink.ground,
             ],
             center: .center,
             startRadius: 20,

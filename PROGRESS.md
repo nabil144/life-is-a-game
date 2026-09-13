@@ -26,7 +26,8 @@ Done.
 - Paths by talking. `App/Sources/Views/TalkPathView.swift` over `App/Sources/Talk/PathModel.swift`, a cloud model with the owner's own API key (OpenAI or Anthropic), key in the keychain. Setup once after onboarding or in Settings > New paths. The New path form offers "Talk it through instead" once a key is saved. Deployment target is iOS 26. CI proves compile and launch only; the runner has no key. The conversation has not run on a real phone yet. The owner said the key is not working; left for later.
 - A copy of the world can live in Files. Settings > Your data, a one-time sheet after the first Path, restore on onboarding and on an empty Paths list. Full `world.json` (ticks and log), not drafts.
 - The path itself is editable. Path detail header or Edit opens This path: name, identity, kind, glyph, deadline, milestone words and order.
-- Paths World view. You in the middle, paths as orbs, pinch for milestones. List still there. Build 0.7 (7).
+- Paths World view. You in the middle, paths as orbs, pinch for milestones. List still there.
+- Blood and brass palette (`Ink`). Dark only. Build 0.8 (8).
 
 Blocked.
 
@@ -34,7 +35,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.7 (7)`. Paths tab opens as World: you in the middle, your paths around you. Pinch to see milestones. Tap a path to open it. List is the other segment. If you have not picked a Files folder yet, Settings > Your data.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.8 (8)`. The app should be wine-dark with brass, not grey. Paths World first.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -53,6 +54,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-12. Owner: key can wait; losing paths on each new version would make the app unused. Files-folder copy of `world.json`, restore from a file, one-time pick sheet. Build 0.5 (5). Next: pull, run, confirm version, pick a folder.
 - 2026-09-12. Path itself is editable (This path sheet). Build 0.6 (6). Next: pull, run, edit a path.
 - 2026-09-12. Paths World view (skill-tree atlas, list stays). Build 0.7 (7). Next: pull, run, pinch around.
+- 2026-09-13. Blood and brass. Build 0.8 (8). Next: pull, run, look at World and Today.
 
 ## How to keep this file true
 
@@ -60,4 +62,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 7.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 8.

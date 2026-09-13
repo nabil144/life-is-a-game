@@ -25,6 +25,8 @@ struct CelebrationView: View {
             Button { dismiss() } label: { Text("Continue").frame(maxWidth: .infinity) }
                 .buttonStyle(.borderedProminent).controlSize(.large).padding(24)
         }
+        .foregroundStyle(Ink.words)
+        .background(Ink.ground)
         .sensoryFeedback(.success, trigger: grown)
         .onAppear { grown = true }
     }

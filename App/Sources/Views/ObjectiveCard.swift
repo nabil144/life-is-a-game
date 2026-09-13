@@ -23,7 +23,7 @@ struct ObjectiveCard: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(Ink.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .sheet(isPresented: $showDone) { DoneSheet(node: node) }
         }
     }

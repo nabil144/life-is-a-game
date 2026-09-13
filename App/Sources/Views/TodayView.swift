@@ -32,7 +32,7 @@ struct TodayView: View {
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Ink.ground)
             .navigationTitle(style == .pathsFirst ? "Evolving" : "Today")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -120,8 +120,8 @@ struct TodayView: View {
                             Text(hot ? "objective ready" : (p.isEvolved ? "evolved" : "quiet today")).font(.caption).foregroundStyle(.secondary)
                         }
                         .padding(12).frame(minWidth: 120, alignment: .leading)
-                        .background(.background, in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(hot ? Color.accentColor : .clear, lineWidth: 2))
+                        .background(Ink.card, in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(hot ? Ink.brass : .clear, lineWidth: 2))
                     }
                 }
             }
@@ -162,8 +162,8 @@ struct PathRow: View {
             Spacer()
             HStack(spacing: 5) {
                 ForEach(path.milestones) { m in
-                    Circle().fill(m.tickedOn == nil ? Color.clear : Color.green)
-                        .overlay(Circle().stroke(m.tickedOn == nil ? Color.secondary : .green, lineWidth: 1.5))
+                    Circle().fill(m.tickedOn == nil ? Color.clear : Ink.brass)
+                        .overlay(Circle().stroke(m.tickedOn == nil ? Ink.muted : Ink.brass, lineWidth: 1.5))
                         .frame(width: 10, height: 10)
                 }
             }

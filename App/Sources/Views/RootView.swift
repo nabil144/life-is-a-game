@@ -22,6 +22,9 @@ struct RootView: View {
                 OnboardingView()
             }
         }
+        .tint(Ink.brass)
+        .preferredColorScheme(.dark)
+        .background(Ink.ground)
         .sheet(item: $captureFor) { req in
             CaptureView(request: req)
         }

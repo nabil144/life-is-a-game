@@ -198,6 +198,8 @@ struct OnboardingView: View {
             Text("One notification a day at most. Never the same one twice in a week.")
                 .font(.footnote).foregroundStyle(.secondary).padding(.bottom, 24)
         }
+        .foregroundStyle(Ink.words)
+        .background(Ink.ground)
         .sheet(isPresented: $begin) { NewPathView().interactiveDismissDisabled() }
     }
 }

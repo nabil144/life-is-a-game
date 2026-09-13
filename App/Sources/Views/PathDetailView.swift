@@ -23,7 +23,7 @@ struct PathDetailView: View {
                             Text("Tap to change this path.")
                                 .font(.caption).foregroundStyle(.tint)
                             if path.isEvolved {
-                                Text("This path has evolved. It will stay here, quiet.").font(.footnote).foregroundStyle(.green).padding(.top, 4)
+                                Text("This path has evolved. It will stay here, quiet.").font(.footnote).foregroundStyle(Ink.brass).padding(.top, 4)
                             }
                         }
                     }
@@ -93,7 +93,7 @@ struct PathDetailView: View {
                     Button { editing = n } label: {
                         HStack {
                             Image(systemName: kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise")
-                                .foregroundStyle(n.isDone ? .green : .secondary)
+                                .foregroundStyle(n.isDone ? Ink.brass : Ink.muted)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.title).strikethrough(n.isDone).foregroundStyle(.primary)
                                 Text(nodeMeta(n, in: path)).font(.caption).foregroundStyle(.secondary)
@@ -150,7 +150,7 @@ struct MilestoneList: View {
                 } label: {
                     HStack(spacing: 14) {
                         Image(systemName: m.tickedOn == nil ? "circle" : "circle.fill")
-                            .foregroundStyle(m.tickedOn == nil ? Color.secondary : Color.green)
+                            .foregroundStyle(m.tickedOn == nil ? Ink.muted : Ink.brass)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.text).foregroundStyle(.primary)
                             Text(m.tickedOn.map { "ticked \($0.description)" } ?? "tap when true")

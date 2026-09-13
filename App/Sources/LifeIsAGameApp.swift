@@ -34,6 +34,7 @@ struct LifeIsAGameApp: App {
         let notifier = Notifier(store: store)
         _store = State(initialValue: store)
         _notifier = State(initialValue: notifier)
+        Ink.install()
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.refreshTaskID, using: nil) { task in
             Task { @MainActor in
                 await Self.replan(store: store, notifier: notifier)
