@@ -197,28 +197,29 @@ struct AtlasView: View {
     private func pathOrb(_ path: Path, at point: CGPoint) -> some View {
         let on = pathLit(path.id)
         return Button { tapPath(path.id) } label: {
-            VStack(spacing: 4) {
-                ZStack {
-                    Circle()
-                        .fill(path.isEvolved ? Ink.brass.opacity(0.16) : Ink.card)
-                        .frame(width: on ? 68 : 58, height: on ? 68 : 58)
-                    Circle()
-                        .stroke(on ? Ink.brass : Ink.line, lineWidth: on ? 2.5 : 1)
-                        .frame(width: on ? 68 : 58, height: on ? 68 : 58)
-                    Image(systemName: path.glyph)
-                        .font(.system(size: on ? 24 : 20))
-                        .foregroundStyle(path.isEvolved || on ? Ink.brass : Ink.words)
-                }
-                .shadow(color: on ? Ink.brass.opacity(0.5) : .clear, radius: 14)
+            ZStack {
+                Circle()
+                    .fill(path.isEvolved ? Ink.brass.opacity(0.16) : Ink.card)
+                Circle()
+                    .stroke(on ? Ink.brass : Ink.line, lineWidth: on ? 2.5 : 1)
+                Image(systemName: path.glyph)
+                    .font(.system(size: 20))
+                    .foregroundStyle(path.isEvolved || on ? Ink.brass : Ink.words)
+            }
+            .frame(width: 58, height: 58)
+            .shadow(color: on ? Ink.brass.opacity(0.5) : .clear, radius: 14)
+            .overlay(alignment: .top) {
                 Text(path.name)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Ink.words)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .frame(maxWidth: 96)
+                    .frame(width: 96)
+                    .offset(y: 62)
             }
         }
         .buttonStyle(.plain)
+        .frame(width: 58, height: 58)
         .position(point)
         .opacity(path.status == .resting ? 0.55 : 1)
     }
@@ -226,24 +227,26 @@ struct AtlasView: View {
     private func neuronPip(_ work: LifeEngine.Node, at point: CGPoint, pathID: UUID) -> some View {
         let on = workLit(work.id)
         return Button { tapWork(pathID: pathID, nodeID: work.id) } label: {
-            VStack(spacing: 3) {
-                Circle()
-                    .fill(on ? Ink.brass.opacity(0.35) : (work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card))
-                    .overlay(Circle().stroke(on || work.kind == .practice ? Ink.brass : Ink.line, lineWidth: on ? 2 : 1.4))
-                    .frame(width: on ? 20 : 16, height: on ? 20 : 16)
-                    .shadow(color: on ? Ink.brass.opacity(0.55) : .clear, radius: 8)
-                if namesOn(pathID) {
-                    Text(work.title)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(on ? Ink.brass : Ink.words)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 72)
-                        .transition(.opacity)
+            Circle()
+                .fill(on ? Ink.brass.opacity(0.35) : (work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card))
+                .overlay(Circle().stroke(on || work.kind == .practice ? Ink.brass : Ink.line, lineWidth: on ? 2 : 1.4))
+                .frame(width: 16, height: 16)
+                .shadow(color: on ? Ink.brass.opacity(0.55) : .clear, radius: 8)
+                .overlay(alignment: .top) {
+                    if namesOn(pathID) {
+                        Text(work.title)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(on ? Ink.brass : Ink.words)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 72)
+                            .offset(y: 20)
+                            .transition(.opacity)
+                    }
                 }
-            }
         }
         .buttonStyle(.plain)
+        .frame(width: 16, height: 16)
         .position(point)
         .animation(.easeInOut(duration: 0.18), value: pick)
         .accessibilityLabel(work.title)

@@ -26,11 +26,11 @@ Done.
 - Paths by talking. `App/Sources/Views/TalkPathView.swift` over `App/Sources/Talk/PathModel.swift`, a cloud model with the owner's own API key (OpenAI or Anthropic), key in the keychain. Setup once after onboarding or in Settings > New paths. The New path form offers "Talk it through instead" once a key is saved. Deployment target is iOS 26. CI proves compile and launch only; the runner has no key. The conversation has not run on a real phone yet. The owner said the key is not working; left for later.
 - A copy of the world can live in Files. Settings > Your data, a one-time sheet after the first Path, restore on onboarding and on an empty Paths list. Full `world.json` (ticks and log), not drafts.
 - The path itself is editable. Path detail header or Edit opens This path: name, identity, kind, glyph, deadline, milestone words and order.
-- Paths World view. You in the middle, paths as orbs, pinch for milestones. List still there.
+- Paths World view. You in the middle, paths as orbs, quests and practices as twigs. List still there.
 - Blood and brass palette (`Ink`). Dark only.
 - A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back.
 - The words: in-app cheat sheet. Settings and New path.
-- Practices have a frequency on the same cue. World glow hops through You. No pinch milestone rings. Build 0.17 (22).
+- Practices have a frequency on the same cue. World glow hops through You. Orbs stay on their twigs when names show. Build 0.17 (23).
 
 Blocked.
 
@@ -38,7 +38,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.17 (22)`. Zoom in: no stray rings.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.17 (23)`. Select a path: quests stay on their twigs.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -72,6 +72,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. World glow is a tap selection from You. Build 0.17 (20). Next: pull, tap a path, tap You.
 - 2026-09-13. Glow retracts to You then out. Quest names only when the path is selected. Build 0.17 (21). Next: pull, switch paths.
 - 2026-09-13. Drop World milestone rings. Build 0.17 (22). Next: pull, pinch: only paths and twigs.
+- 2026-09-13. Pin World orbs to branch tips so names do not lift them. Build 0.17 (23). Next: pull, select a path.
 
 ## How to keep this file true
 
@@ -79,4 +80,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 22.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 23.
