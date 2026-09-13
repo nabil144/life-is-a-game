@@ -119,7 +119,7 @@ struct PathDetailView: View {
     }
 
     func nodeMeta(_ n: Node, in path: Path) -> String {
-        var parts = [cueText(n.cue)]
+        var parts = [cueText(n.cue, kind: n.kind)]
         if let a = n.after, let b = path.node(a) { parts.append("after \(b.title)") }
         if n.kind == .practice, let last = n.lastDone { parts.append("last \(last.description)") }
         if n.state == .paused { parts.append("paused") }

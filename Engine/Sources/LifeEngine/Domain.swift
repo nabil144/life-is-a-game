@@ -16,19 +16,68 @@ public enum Window: String, Codable, CaseIterable, Sendable {
     case any, morning, evening
 }
 
+public enum PracticeRhythm: String, CaseIterable, Sendable {
+    case everyday, weekdays, weekends, few, weekly
+}
+
 /// When a node may surface. `on` pins it to one date and overrides `days`.
-public struct Cue: Codable, Hashable, Sendable {
+/// `every` is how many days a practice waits after lastDone. Quests ignore it.
+public struct Cue: Hashable, Sendable {
     public var days: DaysCue
     public var window: Window
     public var on: Day?
+    public var every: Int
 
-    public init(days: DaysCue = .any, window: Window = .any, on: Day? = nil) {
+    public init(days: DaysCue = .any, window: Window = .any, on: Day? = nil, every: Int = 1) {
         self.days = days
         self.window = window
         self.on = on
+        self.every = max(1, every)
     }
 
     public static let anytime = Cue()
+
+    public var practiceRhythm: PracticeRhythm {
+        get {
+            if every >= 7 { return .weekly }
+            if every >= 3 { return .few }
+            switch days {
+            case .weekday: return .weekdays
+            case .weekend: return .weekends
+            case .any: return .everyday
+            }
+        }
+        set {
+            on = nil
+            switch newValue {
+            case .everyday: days = .any; every = 1
+            case .weekdays: days = .weekday; every = 1
+            case .weekends: days = .weekend; every = 1
+            case .few: days = .any; every = 3
+            case .weekly: days = .any; every = 7
+            }
+        }
+    }
+}
+
+extension Cue: Codable {
+    enum CodingKeys: String, CodingKey { case days, window, on, every }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        days = try c.decodeIfPresent(DaysCue.self, forKey: .days) ?? .any
+        window = try c.decodeIfPresent(Window.self, forKey: .window) ?? .any
+        on = try c.decodeIfPresent(Day.self, forKey: .on)
+        every = max(1, try c.decodeIfPresent(Int.self, forKey: .every) ?? 1)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(days, forKey: .days)
+        try c.encode(window, forKey: .window)
+        try c.encodeIfPresent(on, forKey: .on)
+        if every != 1 { try c.encode(every, forKey: .every) }
+    }
 }
 
 public enum NodeState: Codable, Hashable, Sendable {

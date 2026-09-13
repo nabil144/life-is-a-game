@@ -271,7 +271,7 @@ private struct TodayRow: View {
                                     .foregroundStyle(Ink.brass)
                             }
                             Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
-                            Text("\(path.name) · \(cueText(node.cue))")
+                            Text("\(path.name) · \(cueText(node.cue, kind: node.kind))")
                                 .font(.caption)
                                 .foregroundStyle(Ink.muted)
                         }

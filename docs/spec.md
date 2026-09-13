@@ -27,12 +27,12 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 - Role. `hobby`, `craft`, `decision`, `lab`, `work`. Sets default cue windows, surfacing cadence, and voice.
 - Node. `quest` (one-shot) or `practice` (repeatable, never done). Optional single `after` blocker. Has a cue.
 - Milestone. A sentence describing a state of the world. Ticked by hand. Order gives the Path its stages.
-- Cue. When a node may surface. Phase 1 supports weekday, weekend, morning, evening, anytime, and an exact date.
+- Cue. When a node may surface. Quests: weekday, weekend, morning, evening, anytime, a date. Practices use the same cue: everyday, weekdays, weekends, every 3 days, or weekly, plus a time of day. Not a second field.
 - LogEntry. What happened, when, optional photo. The proof and the memory.
 
 ## Surfacing rules
 
-1. Today lists every quest and practice whose cue fits the day. One notification at most. A done quest leaves. A done practice leaves until a later day that still matches its cue.
+1. Today lists every quest and practice whose cue fits the day. One notification at most. A done quest leaves. A done practice waits `cue.every` days, then the next day that still matches its cue.
 2. Only nodes whose cue is true for that day and window.
 3. A node never repeats within 7 days of last being surfaced.
 4. A node with an unfinished `after` blocker is not eligible.

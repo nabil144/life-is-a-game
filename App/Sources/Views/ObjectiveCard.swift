@@ -29,7 +29,7 @@ struct ObjectiveCard: View {
     }
 
     func meta(path: Path, node: Node) -> String {
-        var parts = [path.identity, cueText(node.cue)]
+        var parts = [path.identity, cueText(node.cue, kind: node.kind)]
         if let after = node.after, let b = path.node(after) { parts.append("after \"\(b.title)\"") }
         return parts.joined(separator: " · ")
     }
@@ -51,9 +51,20 @@ struct ObjectiveCard: View {
     }
 }
 
-func cueText(_ cue: Cue) -> String {
+func cueText(_ cue: Cue, kind: NodeKind = .quest) -> String {
     if let on = cue.on { return on.description }
-    var s = cue.days == .any ? "anytime" : cue.days.rawValue
+    var s: String
+    if kind == .practice {
+        switch cue.practiceRhythm {
+        case .everyday: s = "everyday"
+        case .weekdays: s = "weekdays"
+        case .weekends: s = "weekends"
+        case .few: s = "every \(cue.every) days"
+        case .weekly: s = "weekly"
+        }
+    } else {
+        s = cue.days == .any ? "anytime" : cue.days.rawValue
+    }
     if cue.window != .any { s += " " + cue.window.rawValue + "s" }
     return s
 }

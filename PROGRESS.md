@@ -30,7 +30,7 @@ Done.
 - Blood and brass palette (`Ink`). Dark only.
 - A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back.
 - The words: in-app cheat sheet. Settings and New path.
-- Today: centered live clock, fixed gap to sort. Quests, Practice, and When are lists. Path sort is gone. Build 0.16 (18).
+- Practices have a frequency on the same cue (everyday, weekdays, weekends, every 3 days, weekly). World shows twigs from each path. Build 0.17 (19).
 
 Blocked.
 
@@ -38,7 +38,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.16 (18)`. Quests and Practice are lists again.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.17 (19)`. Edit a practice: Everyday / Weekdays / … World: twigs on each path.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -68,6 +68,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. Centered clock, neuron quests per path, Path sort gone. Build 0.16 (16). Next: pull, look at Quests.
 - 2026-09-13. Missing return in DueNeuronLayout. Build 0.16 (17). Next: pull, generate, run.
 - 2026-09-13. Revert Today Quests/Practice to the list. Build 0.16 (18). Next: pull, open Quests.
+- 2026-09-13. Practice frequency on the cue. World twigs. Build 0.17 (19). Next: pull, set a practice to every 3 days, look at World.
 
 ## How to keep this file true
 
@@ -75,4 +76,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 18.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 19.

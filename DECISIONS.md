@@ -38,6 +38,8 @@ One entry per decision that shaped the work, newest at the bottom. Current state
 
 - Today is the daily list of due quests and practices, not a second path browser. Owner lived with the one-card-plus-paths prototype and said the job is: open the app, see what to do, mark it done, it leaves. A practice returns when its cue allows (weekend, evening, a date); the seven-day notification cooldown does not hide it from Today. `Planner.due` is that list. Notifications still pick one. The A/B/C Today styles are retired.
 
+- Practice frequency is the same cue, not a second type. Everyday, weekdays, weekends, every 3 days, weekly. That is `days` plus `every` (default 1 so old worlds stay everyday). Quests still ask when. World always draws twigs from each path to its open nodes; pinch still shows milestones.
+
 - The words live in the app. Owner asked for a cheat sheet so they do not have to ask the agent what a milestone is. Schema unchanged; the fight was interpretation. The sheet uses their guitar-solo reading: a milestone is something you achieve and tick when you reach it. Settings, New path footer, and a question mark on New path. One screen, no tutorial on launch.
 
 - Ticking a milestone is a fact, not a toggle. Owner unticked one by accident, reticked, and the day became today. First tap still marks it true today. A second tap opens The fact: change the day (the app may have arrived late) or take the tick back, which asks once more. Copy is "It was not true yet", not "you are falling behind". The log's day follows the fact; a taken-back tick drops that log row. `tickMilestone` no longer clears.

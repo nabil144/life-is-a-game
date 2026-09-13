@@ -2,37 +2,61 @@ import SwiftUI
 import LifeEngine
 
 /// Days, time of day, or one exact date. Shared by Capture and the node editor.
+/// Practices reuse the same cue: frequency is `days` plus `every`, not a second field.
 struct CueEditor: View {
     @Binding var cue: Cue
+    var forPractice: Bool
     @State private var pickDate: Bool
     @State private var date: Date
 
-    init(cue: Binding<Cue>) {
+    init(cue: Binding<Cue>, forPractice: Bool = false) {
         _cue = cue
+        self.forPractice = forPractice
         _pickDate = State(initialValue: cue.wrappedValue.on != nil)
         let pinned = cue.wrappedValue.on.flatMap { Calendar.current.date(from: DateComponents(year: $0.year, month: $0.month, day: $0.day)) }
         _date = State(initialValue: pinned ?? Date())
     }
 
     var body: some View {
-        Picker("Days", selection: $cue.days) {
-            Text("Anytime").tag(DaysCue.any)
-            Text("Weekend").tag(DaysCue.weekend)
-            Text("Weekday").tag(DaysCue.weekday)
+        if forPractice {
+            Picker("How often", selection: rhythm) {
+                Text("Everyday").tag(PracticeRhythm.everyday)
+                Text("Weekdays").tag(PracticeRhythm.weekdays)
+                Text("Weekends").tag(PracticeRhythm.weekends)
+            }
+            .pickerStyle(.segmented)
+            Picker("How often", selection: rhythm) {
+                Text("Every 3 days").tag(PracticeRhythm.few)
+                Text("Weekly").tag(PracticeRhythm.weekly)
+            }
+            .pickerStyle(.segmented)
+        } else {
+            Picker("Days", selection: $cue.days) {
+                Text("Anytime").tag(DaysCue.any)
+                Text("Weekend").tag(DaysCue.weekend)
+                Text("Weekday").tag(DaysCue.weekday)
+            }
+            .pickerStyle(.segmented)
+            Toggle("Pick a date instead", isOn: $pickDate)
+                .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
+            if pickDate {
+                DatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
+                    .onChange(of: date) { _, d in cue.on = Day(d) }
+            }
         }
-        .pickerStyle(.segmented)
         Picker("Time", selection: $cue.window) {
             Text("Any").tag(Window.any)
             Text("Morning").tag(Window.morning)
             Text("Evening").tag(Window.evening)
         }
         .pickerStyle(.segmented)
-        Toggle("Pick a date instead", isOn: $pickDate)
-            .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
-        if pickDate {
-            DatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
-                .onChange(of: date) { _, d in cue.on = Day(d) }
-        }
+    }
+
+    private var rhythm: Binding<PracticeRhythm> {
+        Binding(
+            get: { cue.practiceRhythm },
+            set: { cue.practiceRhythm = $0 }
+        )
     }
 }
 
@@ -59,8 +83,8 @@ struct NodeEditView: View {
                     Text(node.kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-                Section("When could you do this?") {
-                    CueEditor(cue: $node.cue)
+                Section(node.kind == .practice ? "How often?" : "When could you do this?") {
+                    CueEditor(cue: $node.cue, forPractice: node.kind == .practice)
                 }
                 if let path = store.path(pathID) {
                     let others = path.nodes.filter { $0.isOpen && $0.kind == .quest && $0.id != node.id }

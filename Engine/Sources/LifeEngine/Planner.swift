@@ -40,7 +40,7 @@ public struct Planner: Sendable {
         candidates(for: day, paths: paths, history: history).first
     }
 
-    /// Everything that can be done on this day. No seven-day cooldown. A practice already done today is out until a later day that still matches its cue.
+    /// Everything that can be done on this day. No seven-day cooldown. A practice waits `cue.every` days after lastDone, then the next day that still matches its cue.
     public func due(on day: Day, paths: [Path]) -> [Objective] {
         var found: [Objective] = []
         for path in paths {
@@ -51,7 +51,7 @@ public struct Planner: Sendable {
 
             for node in path.nodes {
                 guard node.isOpen else { continue }
-                if node.kind == .practice, node.lastDone == day { continue }
+                if !practiceReady(node, on: day) { continue }
                 if let after = node.after, let blocker = path.node(after), !blocker.isDone { continue }
                 guard cueMatchesDay(node.cue, day: day) else { continue }
                 let window = node.cue.window == .any ? baseWindow : node.cue.window
@@ -104,6 +104,7 @@ public struct Planner: Sendable {
 
             for (ni, node) in path.nodes.enumerated() {
                 guard node.isOpen else { continue }
+                if !practiceReady(node, on: day) { continue }
                 if let after = node.after, let blocker = path.node(after), !blocker.isDone { continue }
                 guard cueMatchesDay(node.cue, day: day) else { continue }
                 let window = node.cue.window == .any ? baseWindow : node.cue.window
@@ -133,6 +134,12 @@ public struct Planner: Sendable {
         if a.neverSurfaced != b.neverSurfaced { return a.neverSurfaced }
         if let la = a.lastSurfaced, let lb = b.lastSurfaced, la != lb { return la < lb }
         return a.order < b.order
+    }
+
+    func practiceReady(_ node: Node, on day: Day) -> Bool {
+        guard node.kind == .practice else { return true }
+        guard let last = node.lastDone else { return true }
+        return day.days(since: last) >= max(node.cue.every, 1)
     }
 
     func cueMatchesDay(_ cue: Cue, day: Day) -> Bool {

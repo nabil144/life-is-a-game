@@ -37,8 +37,8 @@ struct CaptureView: View {
                     Text(kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-                Section("When could you do this?") {
-                    CueEditor(cue: $cue)
+                Section(kind == .practice ? "How often?" : "When could you do this?") {
+                    CueEditor(cue: $cue, forPractice: kind == .practice)
                 }
                 if let pid = pathID, let path = store.path(pid) {
                     let open = path.nodes.filter { $0.isOpen && $0.kind == .quest }

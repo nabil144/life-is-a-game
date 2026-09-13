@@ -115,7 +115,8 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Kind helper, quest: Something you do once.
 - Kind helper, practice: Something you return to.
 - Cue label: When could you do this?
-- Cue chips: Weekend · Weekday · Morning · Evening · Anytime · Pick a date
+- Cue chips, quest: Weekend · Weekday · Morning · Evening · Anytime · Pick a date
+- Cue chips, practice: Everyday · Weekdays · Weekends · Every 3 days · Weekly · Morning · Evening
 - Blocker label: Only after (optional)
 - Save: Add to path
 - Too big prefill title: `Part of: {original title}`
@@ -255,8 +256,8 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Path: The thing you are evolving. Guitar, a lab, a decision. You write it.
 - Milestone: A fact you want to be able to say is true. “I can play solo X.” Tick it the day that is true. The app never throws this at you as tonight’s job.
 - Quest: One sitting. A step toward a milestone. “Learn the first eight bars of solo X.” Today may put it in front of you.
-- Practice: You return to it. It is never done. “20 minutes on solo X.”
-- Cue: When a quest or practice may surface. Weekend, evening, a date. Not an alarm.
+- Practice: You return to it. It is never done. “20 minutes on solo X.” Everyday, weekdays, weekends, every 3 days, or weekly.
+- Cue: When a quest or practice may surface. For a practice, how often. Not an alarm.
 - Today: The quests and practices that fit this day. The date ticks with the phone’s clock. Quests, practice, or when. Swipe right or tap to mark one done. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.
 - Evolved: Every milestone on the path is ticked. The path goes quiet and stays visible.
 - The fact: A ticked milestone. Tap it to change the day, or to take the tick back. One tap will not undo it.

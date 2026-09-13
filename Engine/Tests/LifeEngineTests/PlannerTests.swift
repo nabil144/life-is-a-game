@@ -150,6 +150,23 @@ final class PlannerTests: XCTestCase {
         XCTAssertEqual(ids, [a.nodes[0].id, a.nodes[1].id])
     }
 
+    func testPracticeEveryThreeDaysWaits() {
+        var n = Node(kind: .practice, title: "chords", cue: Cue(every: 3), createdOn: fri)
+        var p = path("A", nodes: [n])
+        planner.apply(.done, to: &p.nodes[0], on: sat)
+        XCTAssertEqual(planner.due(on: sun, paths: [p]).map(\.nodeID), [])
+        XCTAssertEqual(planner.due(on: sat.adding(days: 2), paths: [p]).map(\.nodeID), [])
+        XCTAssertEqual(planner.due(on: sat.adding(days: 3), paths: [p]).map(\.nodeID), [p.nodes[0].id])
+    }
+
+    func testPracticeWeekdaysSkipTheWeekend() {
+        var n = Node(kind: .practice, title: "scales", cue: Cue(days: .weekday), createdOn: fri)
+        planner.apply(.done, to: &n, on: fri)
+        let p = path("A", nodes: [n])
+        XCTAssertEqual(planner.due(on: sat, paths: [p]).map(\.nodeID), [])
+        XCTAssertEqual(planner.due(on: mon, paths: [p]).map(\.nodeID), [n.id])
+    }
+
     func testDueDropsAQuestOnceDoneAndAPracticeUntilTomorrow() {
         var chords = Node(kind: .practice, title: "chords", createdOn: fri)
         var p = path("A", nodes: [quest("strings"), chords])

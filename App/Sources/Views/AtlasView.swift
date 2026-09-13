@@ -37,6 +37,28 @@ struct AtlasView: View {
                             with: .color((todayBranch ? Ink.brass : Ink.wine).opacity(todayBranch ? 0.85 : 0.55)),
                             style: StrokeStyle(lineWidth: todayBranch ? 3 : 1.6, lineCap: .round)
                         )
+                        for sat in node.neurons {
+                            var twig = SwiftUI.Path()
+                            twig.move(to: node.at)
+                            twig.addQuadCurve(to: sat.at, control: Neuron.bend(from: node.at, to: sat.at))
+                            ctx.stroke(
+                                twig,
+                                with: .color(Ink.wine.opacity(0.5)),
+                                style: StrokeStyle(lineWidth: 1.3, lineCap: .round)
+                            )
+                        }
+                        if scale > 1.25 {
+                            for sat in node.milestones {
+                                var twig = SwiftUI.Path()
+                                twig.move(to: node.at)
+                                twig.addQuadCurve(to: sat.at, control: Neuron.bend(from: node.at, to: sat.at))
+                                ctx.stroke(
+                                    twig,
+                                    with: .color(Ink.line.opacity(0.8)),
+                                    style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                                )
+                            }
+                        }
                     }
                 }
                 .allowsHitTesting(false)
@@ -45,6 +67,9 @@ struct AtlasView: View {
                     .position(layout.center)
 
                 ForEach(layout.nodes, id: \.path.id) { node in
+                    ForEach(node.neurons) { sat in
+                        neuronPip(sat.work, at: sat.at, pathID: node.path.id)
+                    }
                     pathOrb(node.path, at: node.at, today: node.path.id == today)
                     if scale > 1.25 {
                         ForEach(node.milestones) { sat in
@@ -69,7 +94,7 @@ struct AtlasView: View {
                 } else {
                     Text(scale > 1.25
                          ? "The smaller rings are milestones. Tap a path to open it."
-                         : "Pinch closer. Drag to wander.")
+                         : "Twigs are quests and practices. Pinch for milestones.")
                 }
             }
             .font(.footnote)
@@ -129,6 +154,26 @@ struct AtlasView: View {
         .opacity(path.status == .resting ? 0.55 : 1)
     }
 
+    private func neuronPip(_ work: LifeEngine.Node, at point: CGPoint, pathID: UUID) -> some View {
+        NavigationLink(value: pathID) {
+            VStack(spacing: 3) {
+                Circle()
+                    .fill(work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card)
+                    .overlay(Circle().stroke(work.kind == .practice ? Ink.brass : Ink.line, lineWidth: 1.4))
+                    .frame(width: 16, height: 16)
+                Text(work.title)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Ink.words)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 72)
+            }
+        }
+        .buttonStyle(.plain)
+        .position(point)
+        .accessibilityLabel(work.title)
+    }
+
     private func milestonePip(_ milestone: Milestone, at point: CGPoint, pathID: UUID) -> some View {
         NavigationLink(value: pathID) {
             Circle()
@@ -183,10 +228,17 @@ private struct AtlasLayout {
         var id: UUID { milestone.id }
     }
 
+    struct NeuronSat: Identifiable {
+        var work: LifeEngine.Node
+        var at: CGPoint
+        var id: UUID { work.id }
+    }
+
     struct Node {
         var path: Path
         var at: CGPoint
         var milestones: [Sat]
+        var neurons: [NeuronSat]
     }
 
     var center: CGPoint
@@ -210,7 +262,22 @@ private struct AtlasLayout {
                     at: CGPoint(x: at.x + CGFloat(cos(a)) * orbit, y: at.y + CGFloat(sin(a)) * orbit)
                 )
             }
-            return Node(path: item, at: at, milestones: sats)
+            let open = item.nodes.filter(\.isOpen)
+            let outward = atan2(at.y - origin.y, at.x - origin.x)
+            let fan = Double.pi * 1.15
+            let twigOrbit: CGFloat = 62
+            let neurons = open.enumerated().map { j, n -> NeuronSat in
+                let t = open.count == 1 ? 0 : (Double(j) / Double(open.count - 1)) - 0.5
+                let a = outward + t * fan
+                return NeuronSat(
+                    work: n,
+                    at: CGPoint(
+                        x: at.x + CGFloat(cos(a)) * twigOrbit,
+                        y: at.y + CGFloat(sin(a)) * twigOrbit
+                    )
+                )
+            }
+            return Node(path: item, at: at, milestones: sats, neurons: neurons)
         }
         center = origin
         nodes = laid
