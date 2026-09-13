@@ -28,7 +28,8 @@ Done.
 - The path itself is editable. Path detail header or Edit opens This path: name, identity, kind, glyph, deadline, milestone words and order.
 - Paths World view. You in the middle, paths as orbs, pinch for milestones. List still there.
 - Blood and brass palette (`Ink`). Dark only.
-- A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back. Build 0.9 (9).
+- A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back.
+- The words: in-app cheat sheet. Settings and New path. Build 0.10 (10).
 
 Blocked.
 
@@ -36,7 +37,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.9 (9)`. Tick a milestone, tap it again: change the day or take the tick back (it asks). First tap still ticks today.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.10 (10)`. Settings > The words, or New path > What is a milestone?
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -57,6 +58,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-12. Paths World view (skill-tree atlas, list stays). Build 0.7 (7). Next: pull, run, pinch around.
 - 2026-09-13. Blood and brass. Build 0.8 (8). Next: pull, run, look at World and Today.
 - 2026-09-13. Milestone facts: no silent untick, editable day. Build 0.9 (9). Next: pull, run, tap a ticked milestone.
+- 2026-09-13. The words cheat sheet. Schema unchanged. Build 0.10 (10). Next: pull, open The words.
 
 ## How to keep this file true
 
@@ -64,4 +66,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 9.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 10.

@@ -110,6 +110,8 @@ struct NewPathView: View {
                     Button("Add another milestone") { draft.milestones.append("") }
                 } header: {
                     Text("Name it, then one milestone")
+                } footer: {
+                    NavigationLink("What is a milestone?") { HelpView() }
                 }
                 Section {
                     Menu {
@@ -161,6 +163,9 @@ struct NewPathView: View {
                     Button("Begin") { save() }.disabled(!draft.isBeginnable)
                 }
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink { HelpView() } label: { Image(systemName: "questionmark.circle") }
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 # Screens and flows
 
-Twelve screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
+Thirteen screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
 
 ## Screen inventory
 
@@ -16,7 +16,8 @@ Twelve screens. Navigation is a tab bar with two tabs, Today and Paths. Everythi
 | Model | Provider, key, model name, Test, Save, Remove key. Key in the keychain. | Settings, "Add an API key" on New path, once as a sheet after onboarding when no key is saved (Later skips) | Back |
 | Capture | One text field. Which Path, quest or practice, when could you do this (cue chips). Three taps to save. | Plus button anywhere | Back to caller |
 | Celebration | Full-screen moment when a milestone is ticked. Glyph animates, identity label, the milestone sentence. One button. | Ticking a milestone | Path detail |
-| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, keep a copy in Files, save world.json, restore from a file. | Gear on Paths | Back |
+| Settings | Notification permission, quiet hours, morning and evening window times, role defaults, create paths by talking, keep a copy in Files, save world.json, restore from a file, The words. | Gear on Paths | Back |
+| The words | Cheat sheet for Path, Milestone, Quest, Practice, Cue, Today, Evolved, The fact. | Settings, New path “What is a milestone?”, question mark on New path | Back |
 
 ## Onboarding flow
 

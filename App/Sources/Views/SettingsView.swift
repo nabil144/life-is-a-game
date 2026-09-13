@@ -22,6 +22,13 @@ struct SettingsView: View {
                 upcomingSection
                 dataSection
                 Section {
+                    NavigationLink {
+                        HelpView()
+                    } label: {
+                        Label("The words", systemImage: "text.book.closed")
+                    }
+                }
+                Section {
                     Text("One objective a day. Progress that cannot be lost.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
