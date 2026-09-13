@@ -13,49 +13,89 @@ enum TodayStyle: String, CaseIterable, Identifiable {
     }
 }
 
+enum TodaySort: String, CaseIterable, Identifiable {
+    case kind, path, when
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .kind: "Kind"
+        case .path: "Path"
+        case .when: "When"
+        }
+    }
+}
+
 struct TodayView: View {
     @Environment(Store.self) private var store
     @Environment(Notifier.self) private var notifier
     @Binding var capture: CaptureRequest?
+    @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .kind
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
 
+    private var due: [Objective] { store.dueToday() }
+    private var todayName: String {
+        Date().formatted(.dateTime.weekday(.wide).day().month(.wide))
+    }
+
     var body: some View {
         NavigationStack {
-            Group {
-                if store.dueToday().isEmpty {
-                    quiet
+            List {
+                if due.isEmpty {
+                    Section {
+                        quiet
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
                 } else {
-                    List {
+                    Section {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(TodaySort.allCases) { s in
+                                Text(s.label).tag(s)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .listRowBackground(Ink.card)
+                    } header: {
+                        Text("Sort")
+                            .foregroundStyle(Ink.muted)
+                    }
+
+                    ForEach(buckets) { bucket in
                         Section {
-                            ForEach(store.dueToday(), id: \.nodeID) { o in
-                                TodayRow(
-                                    objective: o,
-                                    confirming: pendingID == o.nodeID,
-                                    onAsk: { pendingID = o.nodeID },
-                                    onCancel: { pendingID = nil },
-                                    onDone: { markDone(o.nodeID) },
-                                    onOpenPath: { openPath = OpenPath(id: $0) }
-                                )
+                            ForEach(bucket.items, id: \.nodeID) { o in
+                                dueRow(o)
                             }
                         } header: {
-                            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                            Text(bucket.title)
+                                .foregroundStyle(Ink.muted)
                         } footer: {
-                            Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
-                        }
-                        let entries = store.recentLog()
-                        if !entries.isEmpty {
-                            Section("Recently") {
-                                ForEach(entries) { LogRow(entry: $0) }
+                            if bucket.id == buckets.last?.id {
+                                Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
                             }
                         }
                     }
-                    .scrollContentBackground(.hidden)
+
+                    let entries = store.recentLog()
+                    if !entries.isEmpty {
+                        Section {
+                            ForEach(entries) { LogRow(entry: $0) }
+                        } header: {
+                            Text("Recently")
+                                .foregroundStyle(Ink.muted)
+                        }
+                    }
                 }
             }
+            .scrollContentBackground(.hidden)
             .background(Ink.ground)
             .navigationTitle("Today")
+            .navigationSubtitle(todayName)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Ink.ground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationDestination(item: $openPath) { dest in
                 PathDetailView(pathID: dest.id, capture: $capture)
             }
@@ -65,6 +105,50 @@ struct TodayView: View {
                 }
             }
             .task { authorized = await notifier.authorized() }
+        }
+    }
+
+    @ViewBuilder
+    private func dueRow(_ o: Objective) -> some View {
+        TodayRow(
+            objective: o,
+            confirming: pendingID == o.nodeID,
+            onAsk: { pendingID = o.nodeID },
+            onCancel: { pendingID = nil },
+            onDone: { markDone(o.nodeID) },
+            onOpenPath: { openPath = OpenPath(id: $0) }
+        )
+    }
+
+    private var buckets: [DueBucket] {
+        switch sort {
+        case .kind:
+            return [
+                DueBucket(id: "quest", title: "Quests", items: due.filter { nodeKind($0) == .quest }),
+                DueBucket(id: "practice", title: "Practices", items: due.filter { nodeKind($0) == .practice }),
+            ].filter { !$0.items.isEmpty }
+        case .path:
+            return store.activePaths.compactMap { path in
+                let items = due.filter { $0.pathID == path.id }
+                return items.isEmpty ? nil : DueBucket(id: path.id.uuidString, title: path.name, items: items)
+            }
+        case .when:
+            return [Window.morning, .evening, .any].compactMap { window in
+                let items = due.filter { $0.window == window }
+                return items.isEmpty ? nil : DueBucket(id: window.rawValue, title: windowLabel(window), items: items)
+            }
+        }
+    }
+
+    private func nodeKind(_ o: Objective) -> NodeKind? {
+        store.node(o.nodeID)?.1.kind
+    }
+
+    private func windowLabel(_ window: Window) -> String {
+        switch window {
+        case .morning: "Morning"
+        case .evening: "Evening"
+        case .any: "Anytime"
         }
     }
 
@@ -78,8 +162,8 @@ struct TodayView: View {
             Image(systemName: "moon.stars").font(.largeTitle).foregroundStyle(Ink.muted)
             Text(quietLine).multilineTextAlignment(.center).foregroundStyle(Ink.muted)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(30)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
     }
 
     var quietLine: String {
@@ -87,6 +171,12 @@ struct TodayView: View {
         if store.activePaths.allSatisfy(\.isEvolved) { return "Every path has evolved. Add a milestone or start a new path." }
         return "Nothing is due today. Your paths are resting."
     }
+}
+
+private struct DueBucket: Identifiable {
+    let id: String
+    let title: String
+    let items: [Objective]
 }
 
 private struct OpenPath: Identifiable, Hashable {

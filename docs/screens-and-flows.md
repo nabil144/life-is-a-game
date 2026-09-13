@@ -6,7 +6,7 @@ Thirteen screens. Navigation is a tab bar with two tabs, Today and Paths. Everyt
 
 | Screen | Purpose | Entry | Exit |
 |---|---|---|---|
-| Today | Quests and practices due today. Swipe right to mark done, or tap the row to confirm on that row. Glyph opens the path. | Tab, notification tap | Path detail, Capture |
+| Today | Quests and practices due today, grouped by Kind, Path, or When. Swipe right to mark done, or tap the row to confirm on that row. Glyph opens the path. | Tab, notification tap | Path detail, Capture |
 | Paths | World or list. World: you in the middle, paths as orbs on branches, pinch to see milestones. List: the original rows. Segment on the tab. | Tab | Path detail, Capture (new Path) |
 | Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Tap the header or Edit to change the path itself. Tap an unticked milestone to mark it true today. Tap a ticked one to change the day or take the tick back, with a confirm. Tap a node to edit its words, cue, or blocker; swipe to let it go. | Paths list, Today card title | Path editor, The fact, Capture (new node), Node editor, Celebration |
 | The fact | Day a milestone became true, Keep it, or It was not true yet (confirm). | Tapped ticked milestone | Path detail |

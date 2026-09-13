@@ -26,6 +26,8 @@ enum Ink {
         nav.largeTitleTextAttributes = [.foregroundColor: words]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+        UINavigationBar.appearance().compactScrollEdgeAppearance = nav
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
         tab.backgroundColor = ground

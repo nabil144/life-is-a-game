@@ -14,7 +14,7 @@ struct HelpView: View {
             row("Quest", "One sitting. A step toward a milestone. “Learn the first eight bars of solo X.” Today may put it in front of you.")
             row("Practice", "You return to it. It is never done. “20 minutes on solo X.”")
             row("Cue", "When a quest or practice may surface. Weekend, evening, a date. Not an alarm.")
-            row("Today", "The quests and practices that fit this day. Swipe right to mark one done, or tap to confirm on that row. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.")
+            row("Today", "The quests and practices that fit this day. Sort by kind, path, or when. Swipe right to mark one done, or tap to confirm on that row. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.")
             row("Evolved", "Every milestone on the path is ticked. The path goes quiet and stays visible.")
             row("The fact", "A ticked milestone. Tap it to change the day, or to take the tick back. One tap will not undo it.")
             Section {
