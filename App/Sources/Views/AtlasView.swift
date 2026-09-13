@@ -17,6 +17,9 @@ struct AtlasView: View {
     @Environment(Store.self) private var store
     @Binding var openPath: UUID?
     @State private var pick: AtlasPick?
+    @State private var glow: AtlasPick?
+    @State private var travel: CGFloat = 0
+    @State private var hop = 0
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -29,19 +32,18 @@ struct AtlasView: View {
                 NeuronSky()
                 Canvas { ctx, _ in
                     for node in layout.nodes {
-                        let pathOn = pathLit(node.path.id)
                         strokeBranch(
                             &ctx,
                             from: layout.center,
                             to: node.at,
-                            lit: pathOn
+                            fill: pathFill(node.path.id)
                         )
                         for sat in node.neurons {
                             strokeBranch(
                                 &ctx,
                                 from: node.at,
                                 to: sat.at,
-                                lit: workLit(sat.work.id),
+                                fill: workFill(sat.work.id),
                                 twig: true
                             )
                         }
@@ -51,7 +53,7 @@ struct AtlasView: View {
                                     &ctx,
                                     from: node.at,
                                     to: sat.at,
-                                    lit: false,
+                                    fill: 0,
                                     twig: true
                                 )
                             }
@@ -102,54 +104,90 @@ struct AtlasView: View {
         }
     }
 
-    private func strokeBranch(_ ctx: inout GraphicsContext, from: CGPoint, to: CGPoint, lit: Bool, twig: Bool = false) {
+    private func strokeBranch(_ ctx: inout GraphicsContext, from: CGPoint, to: CGPoint, fill: CGFloat, twig: Bool = false) {
         var line = SwiftUI.Path()
         line.move(to: from)
         line.addQuadCurve(to: to, control: Neuron.bend(from: from, to: to))
-        if lit {
-            ctx.stroke(line, with: .color(Ink.brass.opacity(0.28)), style: StrokeStyle(lineWidth: twig ? 10 : 14, lineCap: .round))
-            ctx.stroke(line, with: .color(Ink.brass.opacity(0.9)), style: StrokeStyle(lineWidth: twig ? 2.4 : 3.2, lineCap: .round))
-        } else {
-            ctx.stroke(
-                line,
-                with: .color(Ink.wine.opacity(twig ? 0.45 : 0.55)),
-                style: StrokeStyle(lineWidth: twig ? 1.3 : 1.6, lineCap: .round)
-            )
+        ctx.stroke(
+            line,
+            with: .color(Ink.wine.opacity(twig ? 0.45 : 0.55)),
+            style: StrokeStyle(lineWidth: twig ? 1.3 : 1.6, lineCap: .round)
+        )
+        let t = min(1, max(0, fill))
+        guard t > 0.01 else { return }
+        let beam = line.trimmedPath(from: 0, to: t)
+        ctx.stroke(beam, with: .color(Ink.brass.opacity(0.28)), style: StrokeStyle(lineWidth: twig ? 10 : 14, lineCap: .round))
+        ctx.stroke(beam, with: .color(Ink.brass.opacity(0.9)), style: StrokeStyle(lineWidth: twig ? 2.4 : 3.2, lineCap: .round))
+    }
+
+    private func pathFill(_ id: UUID) -> CGFloat {
+        switch glow {
+        case .path(let p) where p == id: min(1, travel)
+        case .work(let p, _) where p == id: min(1, travel)
+        default: 0
         }
     }
 
-    private func pathLit(_ id: UUID) -> Bool {
+    private func workFill(_ id: UUID) -> CGFloat {
+        if case .work(_, let n) = glow, n == id { return min(1, max(0, travel - 1)) }
+        return 0
+    }
+
+    private func pathLit(_ id: UUID) -> Bool { pathFill(id) > 0.35 }
+
+    private func workLit(_ id: UUID) -> Bool { workFill(id) > 0.35 }
+
+    private func namesOn(_ pathID: UUID) -> Bool {
         switch pick {
-        case .path(let p): p == id
-        case .work(let p, _): p == id
+        case .path(let p): p == pathID
+        case .work(let p, _): p == pathID
         case nil: false
         }
     }
 
-    private func workLit(_ id: UUID) -> Bool {
-        if case .work(_, let n) = pick { return n == id }
-        return false
-    }
-
-    private func tapPath(_ id: UUID) {
-        if pick == .path(id) {
-            openPath = id
-        } else {
-            withAnimation(.easeInOut(duration: 0.2)) { pick = .path(id) }
+    private func target(_ pick: AtlasPick?) -> CGFloat {
+        switch pick {
+        case .path: 1
+        case .work: 2
+        case nil: 0
         }
     }
 
-    private func tapWork(pathID: UUID, nodeID: UUID) {
-        if pick == .work(pathID: pathID, nodeID: nodeID) {
-            openPath = pathID
+    private func select(_ new: AtlasPick?) {
+        if pick == new, let new {
+            switch new {
+            case .path(let id), .work(let id, _): openPath = id
+            }
+            return
+        }
+        hop += 1
+        let token = hop
+        if glow != nil, travel > 0.02 {
+            withAnimation(.easeInOut(duration: 0.22)) { travel = 0 }
+            pick = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(230))
+                guard token == hop else { return }
+                glow = new
+                pick = new
+                if new != nil {
+                    withAnimation(.easeInOut(duration: 0.28)) { travel = target(new) }
+                }
+            }
         } else {
-            withAnimation(.easeInOut(duration: 0.2)) { pick = .work(pathID: pathID, nodeID: nodeID) }
+            glow = new
+            pick = new
+            withAnimation(.easeInOut(duration: 0.28)) { travel = target(new) }
         }
     }
+
+    private func tapPath(_ id: UUID) { select(.path(id)) }
+
+    private func tapWork(pathID: UUID, nodeID: UUID) { select(.work(pathID: pathID, nodeID: nodeID)) }
 
     private var selfOrb: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { pick = nil }
+            select(nil)
         } label: {
             VStack(spacing: 6) {
                 ZStack {
@@ -211,16 +249,20 @@ struct AtlasView: View {
                     .overlay(Circle().stroke(on || work.kind == .practice ? Ink.brass : Ink.line, lineWidth: on ? 2 : 1.4))
                     .frame(width: on ? 20 : 16, height: on ? 20 : 16)
                     .shadow(color: on ? Ink.brass.opacity(0.55) : .clear, radius: 8)
-                Text(work.title)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(on ? Ink.brass : Ink.words)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 72)
+                if namesOn(pathID) {
+                    Text(work.title)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(on ? Ink.brass : Ink.words)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 72)
+                        .transition(.opacity)
+                }
             }
         }
         .buttonStyle(.plain)
         .position(point)
+        .animation(.easeInOut(duration: 0.18), value: pick)
         .accessibilityLabel(work.title)
     }
 
