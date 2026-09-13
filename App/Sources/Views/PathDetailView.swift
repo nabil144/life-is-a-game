@@ -139,26 +139,33 @@ struct MilestoneList: View {
     @Environment(Store.self) private var store
     let pathID: UUID
     var onTick: ((Milestone) -> Void)? = nil
+    @State private var fact: Milestone?
 
     var body: some View {
         if let path = store.path(pathID) {
             ForEach(path.milestones) { m in
                 Button {
-                    let wasTicked = m.tickedOn != nil
-                    store.tickMilestone(m.id, in: pathID)
-                    if !wasTicked { onTick?(m) }
+                    if m.tickedOn == nil {
+                        store.tickMilestone(m.id, in: pathID)
+                        onTick?(m)
+                    } else {
+                        fact = m
+                    }
                 } label: {
                     HStack(spacing: 14) {
                         Image(systemName: m.tickedOn == nil ? "circle" : "circle.fill")
                             .foregroundStyle(m.tickedOn == nil ? Ink.muted : Ink.brass)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.text).foregroundStyle(.primary)
-                            Text(m.tickedOn.map { "ticked \($0.description)" } ?? "tap when true")
+                            Text(m.tickedOn.map { "true on \($0.description) · tap to change" } ?? "tap when true")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
                 .sensoryFeedback(.success, trigger: m.tickedOn)
+            }
+            .sheet(item: $fact) { m in
+                MilestoneFactView(pathID: pathID, milestone: m)
             }
         }
     }

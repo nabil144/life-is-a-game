@@ -52,6 +52,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Role window text: hobby = evenings and weekends; craft = evenings and weekends; lab = weekends; decision = once a week until the deadline; work = weekday mornings
 - Milestones section: Milestones
 - Milestone hint, untick: tap when true
+- Milestone hint, ticked: `true on {date} · tap to change`
 - Milestone add row: Add a milestone as a sentence
 - Quests section: Quests
 - Practices section: Practices
@@ -68,6 +69,16 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Archive path: Put it away
 - Evolved banner: This path has evolved. It will stay here, quiet.
 - Header hint: Tap to change this path.
+
+## The fact (ticked milestone)
+
+- Header: The fact
+- Date: It became true on
+- Footer: A tap on the path should not take this back. Change the day if the app was not here yet.
+- Keep: Keep it
+- Take back: It was not true yet
+- Take back confirm: Take the tick back?
+- Take back message: The path will no longer show this as true.
 - Edit: Edit
 
 ## This path (edit)

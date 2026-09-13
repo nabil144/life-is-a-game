@@ -243,15 +243,27 @@ final class Store {
         }
     }
 
+    /// First tap: the fact became true today. Later changes go through `setMilestone`.
     func tickMilestone(_ milestoneID: UUID, in pathID: UUID) {
-        let day = today
+        guard let p = path(pathID), let m = p.milestones.first(where: { $0.id == milestoneID }), m.tickedOn == nil else { return }
+        setMilestone(milestoneID, in: pathID, tickedOn: today)
+    }
+
+    /// Set or clear when a milestone became true. Clearing needs a confirm in the UI. The log follows the date.
+    func setMilestone(_ milestoneID: UUID, in pathID: UUID, tickedOn day: Day?) {
         mutate { w in
             guard let p = w.paths.firstIndex(where: { $0.id == pathID }),
                   let m = w.paths[p].milestones.firstIndex(where: { $0.id == milestoneID }) else { return }
-            let already = w.paths[p].milestones[m].tickedOn != nil
-            w.paths[p].milestones[m].tickedOn = already ? nil : day
-            if !already {
-                w.log.append(LogEntry(day: day, pathID: pathID, milestoneID: milestoneID, text: w.paths[p].milestones[m].text))
+            let was = w.paths[p].milestones[m].tickedOn
+            w.paths[p].milestones[m].tickedOn = day
+            if let day {
+                if let i = w.log.lastIndex(where: { $0.milestoneID == milestoneID }) {
+                    w.log[i].day = day
+                } else if was == nil {
+                    w.log.append(LogEntry(day: day, pathID: pathID, milestoneID: milestoneID, text: w.paths[p].milestones[m].text))
+                }
+            } else {
+                w.log.removeAll { $0.milestoneID == milestoneID }
             }
         }
     }

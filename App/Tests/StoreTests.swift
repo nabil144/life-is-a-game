@@ -39,6 +39,34 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(store.paths[0].nodes[0].id, nodeID)
     }
 
+    func testTickDoesNotClearAnExistingFact() throws {
+        let store = makeStore()
+        let path = try PathDraft(name: "A", identity: "A", glyph: "star", role: .hobby, milestones: ["It holds tune"],
+                                 nodes: []).begun(on: store.today)
+        store.add(path)
+        let id = store.paths[0].milestones[0].id
+        store.tickMilestone(id, in: store.paths[0].id)
+        store.tickMilestone(id, in: store.paths[0].id)
+        XCTAssertEqual(store.paths[0].milestones[0].tickedOn, store.today)
+        XCTAssertEqual(store.world.log.count, 1)
+    }
+
+    func testSetMilestoneMovesTheDayAndTheLog() throws {
+        let store = makeStore()
+        let path = try PathDraft(name: "A", identity: "A", glyph: "star", role: .hobby, milestones: ["It holds tune"],
+                                 nodes: []).begun(on: store.today)
+        store.add(path)
+        let id = store.paths[0].milestones[0].id
+        store.tickMilestone(id, in: store.paths[0].id)
+        let earlier = store.today.adding(days: -14)
+        store.setMilestone(id, in: store.paths[0].id, tickedOn: earlier)
+        XCTAssertEqual(store.paths[0].milestones[0].tickedOn, earlier)
+        XCTAssertEqual(store.world.log[0].day, earlier)
+        store.setMilestone(id, in: store.paths[0].id, tickedOn: nil)
+        XCTAssertNil(store.paths[0].milestones[0].tickedOn)
+        XCTAssertTrue(store.world.log.isEmpty)
+    }
+
     func testDoneWritesALogEntry() throws {
         let store = makeStore()
         let path = try PathDraft(name: "A", identity: "A", glyph: "star", role: .hobby, milestones: ["m"],

@@ -1,6 +1,6 @@
 # Screens and flows
 
-Eleven screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
+Twelve screens. Navigation is a tab bar with two tabs, Today and Paths. Everything else is a sheet or a push from those two.
 
 ## Screen inventory
 
@@ -8,7 +8,8 @@ Eleven screens. Navigation is a tab bar with two tabs, Today and Paths. Everythi
 |---|---|---|---|
 | Today | Show today's one objective, or the reason there is none. Done / Not now / Too big. | Tab, notification tap, widget tap | Capture sheet, Path detail |
 | Paths | World or list. World: you in the middle, paths as orbs on branches, pinch to see milestones. List: the original rows. Segment on the tab. | Tab | Path detail, Capture (new Path) |
-| Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Tap the header or Edit to change the path itself. Tap a node to edit its words, cue, or blocker; swipe to let it go. | Paths list, Today card title | Path editor, Capture (new node), Node editor, Celebration |
+| Path detail | Milestones as an ordered strip, nodes grouped as quests and practices, log entries below. Tap the header or Edit to change the path itself. Tap an unticked milestone to mark it true today. Tap a ticked one to change the day or take the tick back, with a confirm. Tap a node to edit its words, cue, or blocker; swipe to let it go. | Paths list, Today card title | Path editor, The fact, Capture (new node), Node editor, Celebration |
+| The fact | Day a milestone became true, Keep it, or It was not true yet (confirm). | Tapped ticked milestone | Path detail |
 | This path | Name, identity, kind, glyph, deadline, milestone wording and order. Save writes through `Store.update`. Ticks stay. | Path detail header or Edit | Path detail |
 | New path | Name and one milestone, then Begin. Templates in a one-tap menu. Identity, kind, glyph, and first quests under a collapsed More row. | Plus on Paths, onboarding | Paths |
 | Talk a path | Same result as New path, by conversation. The owner's cloud model (OpenAI or Anthropic, their key) asks one short question at a time and writes down what the user said. A live card shows the path so far, every line editable. Begin saves it. Only when a key is saved; the Settings toggle decides whether it opens first, and each surface offers the other. | Plus on Paths, "Talk it through instead" on New path | Paths, or Type it instead |
