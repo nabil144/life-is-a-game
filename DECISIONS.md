@@ -38,7 +38,7 @@ One entry per decision that shaped the work, newest at the bottom. Current state
 
 - Today is the daily list of due quests and practices, not a second path browser. Owner lived with the one-card-plus-paths prototype and said the job is: open the app, see what to do, mark it done, it leaves. A practice returns when its cue allows (weekend, evening, a date); the seven-day notification cooldown does not hide it from Today. `Planner.due` is that list. Notifications still pick one. The A/B/C Today styles are retired.
 
-- Practice frequency is the same cue, not a second type. Everyday, weekdays, weekends, every 3 days, weekly. That is `days` plus `every` (default 1 so old worlds stay everyday). Quests still ask when. World always draws twigs from each path to its open nodes; pinch still shows milestones.
+- Practice frequency is the same cue, not a second type. Everyday, weekdays, weekends, every 3 days, weekly. That is `days` plus `every` (default 1 so old worlds stay everyday). Quests still ask when. World draws twigs from each path to its open nodes. Pinch-zoom milestone rings were leftover and are gone; milestones live on the path.
 
 - The words live in the app. Owner asked for a cheat sheet so they do not have to ask the agent what a milestone is. Schema unchanged; the fight was interpretation. The sheet uses their guitar-solo reading: a milestone is something you achieve and tick when you reach it. Settings, New path footer, and a question mark on New path. One screen, no tutorial on launch.
 

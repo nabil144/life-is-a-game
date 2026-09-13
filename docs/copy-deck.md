@@ -52,8 +52,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Empty: Name one thing you want to evolve.
 - Add button: New path
 - View segment: World · List
-- World hint, far: Pinch closer. Drag to wander.
-- World hint, close: The smaller rings are milestones. Tap a path to open it.
+- World hint: Tap a path or a quest. Tap You to clear.
 - World self: You
 
 ## Path detail

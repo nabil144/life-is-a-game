@@ -12,7 +12,7 @@ enum PathsStyle: String, CaseIterable, Identifiable {
     }
 }
 
-/// You in the middle. Paths as orbs on branches. Pinch closer and milestones appear around each path.
+/// You in the middle. Paths as orbs on branches. Quests and practices as twigs.
 struct AtlasView: View {
     @Environment(Store.self) private var store
     @Binding var openPath: UUID?
@@ -47,17 +47,6 @@ struct AtlasView: View {
                                 twig: true
                             )
                         }
-                        if scale > 1.25 {
-                            for sat in node.milestones {
-                                strokeBranch(
-                                    &ctx,
-                                    from: node.at,
-                                    to: sat.at,
-                                    fill: 0,
-                                    twig: true
-                                )
-                            }
-                        }
                     }
                 }
                 .allowsHitTesting(false)
@@ -67,12 +56,6 @@ struct AtlasView: View {
                         neuronPip(sat.work, at: sat.at, pathID: node.path.id)
                     }
                     pathOrb(node.path, at: node.at)
-                    if scale > 1.25 {
-                        ForEach(node.milestones) { sat in
-                            milestonePip(sat.milestone, at: sat.at, pathID: node.path.id)
-                                .transition(.scale.combined(with: .opacity))
-                        }
-                    }
                 }
 
                 selfOrb
@@ -266,19 +249,6 @@ struct AtlasView: View {
         .accessibilityLabel(work.title)
     }
 
-    private func milestonePip(_ milestone: Milestone, at point: CGPoint, pathID: UUID) -> some View {
-        NavigationLink(value: pathID) {
-            Circle()
-                .fill(milestone.tickedOn == nil ? Color.clear : Ink.brass)
-                .stroke(milestone.tickedOn == nil ? Ink.muted : Ink.brass, lineWidth: 1.5)
-                .frame(width: 13, height: 13)
-                .shadow(color: milestone.tickedOn == nil ? .clear : Ink.brass.opacity(0.5), radius: 4)
-        }
-        .buttonStyle(.plain)
-        .position(point)
-        .accessibilityLabel(milestone.text)
-    }
-
     private var pinch: some Gesture {
         MagnifyGesture()
             .onChanged { value in
@@ -319,12 +289,6 @@ private enum AtlasPick: Equatable {
 }
 
 private struct AtlasLayout {
-    struct Sat: Identifiable {
-        var milestone: Milestone
-        var at: CGPoint
-        var id: UUID { milestone.id }
-    }
-
     struct NeuronSat: Identifiable {
         var work: LifeEngine.Node
         var at: CGPoint
@@ -334,7 +298,6 @@ private struct AtlasLayout {
     struct Node {
         var path: Path
         var at: CGPoint
-        var milestones: [Sat]
         var neurons: [NeuronSat]
     }
 
@@ -351,14 +314,6 @@ private struct AtlasLayout {
                 x: origin.x + CGFloat(cos(angle)) * radius,
                 y: origin.y + CGFloat(sin(angle)) * radius
             )
-            let orbit: CGFloat = 46
-            let sats = item.milestones.enumerated().map { j, m in
-                let a = (Double(j) / Double(max(item.milestones.count, 1))) * .pi * 2 - .pi / 2
-                return Sat(
-                    milestone: m,
-                    at: CGPoint(x: at.x + CGFloat(cos(a)) * orbit, y: at.y + CGFloat(sin(a)) * orbit)
-                )
-            }
             let open = item.nodes.filter(\.isOpen)
             let outward = atan2(at.y - origin.y, at.x - origin.x)
             let fan = Double.pi * 1.15
@@ -374,7 +329,7 @@ private struct AtlasLayout {
                     )
                 )
             }
-            return Node(path: item, at: at, milestones: sats, neurons: neurons)
+            return Node(path: item, at: at, neurons: neurons)
         }
         center = origin
         nodes = laid

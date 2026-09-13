@@ -30,7 +30,7 @@ Done.
 - Blood and brass palette (`Ink`). Dark only.
 - A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back.
 - The words: in-app cheat sheet. Settings and New path.
-- Practices have a frequency on the same cue. World glow hops through You when switching. Quest names only on the selected path. Build 0.17 (21).
+- Practices have a frequency on the same cue. World glow hops through You. No pinch milestone rings. Build 0.17 (22).
 
 Blocked.
 
@@ -38,7 +38,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.17 (21)`. Switch paths: glow returns to You, then out to the new one. Quest names only on the selected path.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.17 (22)`. Zoom in: no stray rings.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -71,6 +71,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. Practice frequency on the cue. World twigs. Build 0.17 (19). Next: pull, set a practice to every 3 days, look at World.
 - 2026-09-13. World glow is a tap selection from You. Build 0.17 (20). Next: pull, tap a path, tap You.
 - 2026-09-13. Glow retracts to You then out. Quest names only when the path is selected. Build 0.17 (21). Next: pull, switch paths.
+- 2026-09-13. Drop World milestone rings. Build 0.17 (22). Next: pull, pinch: only paths and twigs.
 
 ## How to keep this file true
 
@@ -78,4 +79,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 21.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 22.
