@@ -18,7 +18,8 @@ struct TodayView: View {
     @Environment(Notifier.self) private var notifier
     @Binding var capture: CaptureRequest?
     @State private var authorized = true
-    @State private var pending: Objective?
+    @State private var pendingID: UUID?
+    @State private var openPath: OpenPath?
 
     var body: some View {
         NavigationStack {
@@ -29,12 +30,19 @@ struct TodayView: View {
                     List {
                         Section {
                             ForEach(store.dueToday(), id: \.nodeID) { o in
-                                TodayRow(objective: o) { pending = o }
+                                TodayRow(
+                                    objective: o,
+                                    confirming: pendingID == o.nodeID,
+                                    onAsk: { pendingID = o.nodeID },
+                                    onCancel: { pendingID = nil },
+                                    onDone: { markDone(o.nodeID) },
+                                    onOpenPath: { openPath = OpenPath(id: $0) }
+                                )
                             }
                         } header: {
                             Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
                         } footer: {
-                            Text("Tap one when it is done. A practice will come back the next day its cue allows.")
+                            Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
                         }
                         let entries = store.recentLog()
                         if !entries.isEmpty {
@@ -48,8 +56,8 @@ struct TodayView: View {
             }
             .background(Ink.ground)
             .navigationTitle("Today")
-            .navigationDestination(for: UUID.self) { id in
-                PathDetailView(pathID: id, capture: $capture)
+            .navigationDestination(item: $openPath) { dest in
+                PathDetailView(pathID: dest.id, capture: $capture)
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -57,32 +65,12 @@ struct TodayView: View {
                 }
             }
             .task { authorized = await notifier.authorized() }
-            .confirmationDialog(pendingTitle, isPresented: Binding(
-                get: { pending != nil },
-                set: { if !$0 { pending = nil } }
-            ), titleVisibility: .visible) {
-                Button("Done") {
-                    if let id = pending?.nodeID { store.respond(.done, nodeID: id) }
-                    pending = nil
-                }
-                Button("Cancel", role: .cancel) { pending = nil }
-            } message: {
-                Text(pendingMessage)
-            }
         }
     }
 
-    private var pendingTitle: String {
-        guard let o = pending, let (_, n) = store.node(o.nodeID) else { return "Done?" }
-        return n.kind == .practice ? "Practice done for today?" : "Quest done?"
-    }
-
-    private var pendingMessage: String {
-        guard let o = pending, let (_, n) = store.node(o.nodeID) else { return "" }
-        if n.kind == .practice {
-            return "It leaves Today. It will come back when its cue allows."
-        }
-        return "It leaves Today. A quest does not come back."
+    private func markDone(_ nodeID: UUID) {
+        store.respond(.done, nodeID: nodeID)
+        if pendingID == nodeID { pendingID = nil }
     }
 
     var quiet: some View {
@@ -101,35 +89,76 @@ struct TodayView: View {
     }
 }
 
+private struct OpenPath: Identifiable, Hashable {
+    let id: UUID
+}
+
 private struct TodayRow: View {
     @Environment(Store.self) private var store
     let objective: Objective
+    let confirming: Bool
+    var onAsk: () -> Void
+    var onCancel: () -> Void
     var onDone: () -> Void
+    var onOpenPath: (UUID) -> Void
 
     var body: some View {
         if let (path, node) = store.node(objective.nodeID) {
-            HStack(alignment: .top, spacing: 12) {
-                Button(action: onDone) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(node.kind == .practice ? "Practice" : "Quest")
-                            .font(.caption.weight(.bold))
-                            .textCase(.uppercase)
-                            .tracking(1)
-                            .foregroundStyle(Ink.brass)
-                        Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
-                        Text("\(path.name) · \(cueText(node.cue))")
-                            .font(.caption)
-                            .foregroundStyle(Ink.muted)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    Button(action: onAsk) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(node.kind == .practice ? "Practice" : "Quest")
+                                .font(.caption.weight(.bold))
+                                .textCase(.uppercase)
+                                .tracking(1)
+                                .foregroundStyle(Ink.brass)
+                            Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
+                            Text("\(path.name) · \(cueText(node.cue))")
+                                .font(.caption)
+                                .foregroundStyle(Ink.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .buttonStyle(.plain)
+
+                    Button { onOpenPath(path.id) } label: {
+                        Image(systemName: path.glyph).foregroundStyle(Ink.brass)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 28)
+                    .accessibilityLabel(path.name)
                 }
-                .buttonStyle(.plain)
-                NavigationLink(value: path.id) {
-                    Image(systemName: path.glyph).foregroundStyle(Ink.brass)
+
+                if confirming {
+                    Text(node.kind == .practice
+                         ? "It leaves Today. It will come back when its cue allows."
+                         : "It leaves Today. A quest does not come back.")
+                        .font(.caption)
+                        .foregroundStyle(Ink.muted)
+                    HStack {
+                        Button("Cancel", action: onCancel)
+                            .foregroundStyle(Ink.muted)
+                        Spacer()
+                        Button("Done", action: onDone)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Ink.ground)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(Ink.brass, in: Capsule())
+                    }
+                    .accessibilityElement(children: .contain)
                 }
-                .frame(width: 28)
+            }
+            .contentShape(Rectangle())
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button(action: onDone) {
+                    Label("Done", systemImage: "checkmark")
+                }
+                .tint(Ink.brass)
             }
             .listRowBackground(Ink.card)
+            .animation(.easeInOut(duration: 0.2), value: confirming)
         }
     }
 }

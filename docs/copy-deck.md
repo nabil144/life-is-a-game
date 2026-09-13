@@ -28,7 +28,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Confirm practice: Practice done for today?
 - Confirm quest body: It leaves Today. A quest does not come back.
 - Confirm practice body: It leaves Today. It will come back when its cue allows.
-- Footer: Tap one when it is done. A practice will come back the next day its cue allows.
+- Footer: Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.
 - Card eyebrow: New objective
 - Card meta: `{identity} · {cue} · after "{blocker}"` (parts omitted when absent)
 - After the card: That is all for today. One thing, done well.
@@ -253,7 +253,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Quest: One sitting. A step toward a milestone. “Learn the first eight bars of solo X.” Today may put it in front of you.
 - Practice: You return to it. It is never done. “20 minutes on solo X.”
 - Cue: When a quest or practice may surface. Weekend, evening, a date. Not an alarm.
-- Today: The quests and practices that fit this day. Tap one to mark it done. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.
+- Today: The quests and practices that fit this day. Swipe right to mark one done, or tap to confirm on that row. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.
 - Evolved: Every milestone on the path is ticked. The path goes quiet and stays visible.
 - The fact: A ticked milestone. Tap it to change the day, or to take the tick back. One tap will not undo it.
 - Close: If it is the destination, it is a milestone. If it is tonight’s move, it is a quest. If you will do it again next week, it is a practice. If you cannot see a quest yet, skip it. Add one from the path later.
