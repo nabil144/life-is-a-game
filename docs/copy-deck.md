@@ -257,7 +257,7 @@ Every string the user sees. Quest-log voice. Short. No exclamation marks. Never 
 - Quest: One sitting. A step toward a milestone. “Learn the first eight bars of solo X.” Today may put it in front of you.
 - Practice: You return to it. It is never done. “20 minutes on solo X.”
 - Cue: When a quest or practice may surface. Weekend, evening, a date. Not an alarm.
-- Today: The quests and practices that fit this day. The date ticks with the phone’s clock. Quests and practices grow out of each path, like World. When groups by morning and evening. Tap one to mark it done. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.
+- Today: The quests and practices that fit this day. The date ticks with the phone’s clock. Quests, practice, or when. Swipe right or tap to mark one done. A quest leaves. A practice comes back when its cue allows. Paths live on the other tab.
 - Evolved: Every milestone on the path is ticked. The path goes quiet and stays visible.
 - The fact: A ticked milestone. Tap it to change the day, or to take the tick back. One tap will not undo it.
 - Close: If it is the destination, it is a milestone. If it is tonight’s move, it is a quest. If you will do it again next week, it is a practice. If you cannot see a quest yet, skip it. Add one from the path later.
