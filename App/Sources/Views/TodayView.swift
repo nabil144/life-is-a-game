@@ -14,11 +14,12 @@ enum TodayStyle: String, CaseIterable, Identifiable {
 }
 
 enum TodaySort: String, CaseIterable, Identifiable {
-    case kind, path, when
+    case quests, practices, path, when
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .kind: "Kind"
+        case .quests: "Quests"
+        case .practices: "Practice"
         case .path: "Path"
         case .when: "When"
         }
@@ -29,7 +30,7 @@ struct TodayView: View {
     @Environment(Store.self) private var store
     @Environment(Notifier.self) private var notifier
     @Binding var capture: CaptureRequest?
-    @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .kind
+    @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .quests
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
@@ -42,6 +43,20 @@ struct TodayView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Today")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(Ink.words)
+                        Text(todayName)
+                            .font(.subheadline)
+                            .foregroundStyle(Ink.muted)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 8, trailing: 20))
+                }
+
                 if due.isEmpty {
                     Section {
                         quiet
@@ -56,25 +71,12 @@ struct TodayView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        .labelsHidden()
                         .listRowBackground(Ink.card)
-                    } header: {
-                        Text("Sort")
-                            .foregroundStyle(Ink.muted)
                     }
 
                     ForEach(buckets) { bucket in
-                        Section {
-                            ForEach(bucket.items, id: \.nodeID) { o in
-                                dueRow(o)
-                            }
-                        } header: {
-                            Text(bucket.title)
-                                .foregroundStyle(Ink.muted)
-                        } footer: {
-                            if bucket.id == buckets.last?.id {
-                                Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
-                            }
-                        }
+                        bucketSection(bucket)
                     }
 
                     let entries = store.recentLog()
@@ -91,8 +93,7 @@ struct TodayView: View {
             .scrollContentBackground(.hidden)
             .background(Ink.ground)
             .navigationTitle("Today")
-            .navigationSubtitle(todayName)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Ink.ground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -105,6 +106,29 @@ struct TodayView: View {
                 }
             }
             .task { authorized = await notifier.authorized() }
+        }
+    }
+
+    @ViewBuilder
+    private func bucketSection(_ bucket: DueBucket) -> some View {
+        Section {
+            if bucket.items.isEmpty {
+                Text(bucket.empty)
+                    .foregroundStyle(Ink.muted)
+                    .listRowBackground(Ink.card)
+            } else {
+                ForEach(bucket.items, id: \.nodeID) { o in
+                    dueRow(o)
+                }
+            }
+        } header: {
+            if let title = bucket.title {
+                Text(title).foregroundStyle(Ink.muted)
+            }
+        } footer: {
+            if bucket.id == buckets.last?.id {
+                Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
+            }
         }
     }
 
@@ -122,11 +146,20 @@ struct TodayView: View {
 
     private var buckets: [DueBucket] {
         switch sort {
-        case .kind:
-            return [
-                DueBucket(id: "quest", title: "Quests", items: due.filter { nodeKind($0) == .quest }),
-                DueBucket(id: "practice", title: "Practices", items: due.filter { nodeKind($0) == .practice }),
-            ].filter { !$0.items.isEmpty }
+        case .quests:
+            return [DueBucket(
+                id: "quest",
+                title: nil,
+                items: due.filter { nodeKind($0) == .quest },
+                empty: "No quests due today."
+            )]
+        case .practices:
+            return [DueBucket(
+                id: "practice",
+                title: nil,
+                items: due.filter { nodeKind($0) == .practice },
+                empty: "No practices due today."
+            )]
         case .path:
             return store.activePaths.compactMap { path in
                 let items = due.filter { $0.pathID == path.id }
@@ -175,8 +208,16 @@ struct TodayView: View {
 
 private struct DueBucket: Identifiable {
     let id: String
-    let title: String
+    let title: String?
     let items: [Objective]
+    var empty: String = ""
+
+    init(id: String, title: String?, items: [Objective], empty: String = "") {
+        self.id = id
+        self.title = title
+        self.items = items
+        self.empty = empty
+    }
 }
 
 private struct OpenPath: Identifiable, Hashable {
