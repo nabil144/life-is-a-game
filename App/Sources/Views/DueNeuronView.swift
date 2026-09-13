@@ -155,7 +155,7 @@ private struct DueNeuronLayout {
         let count = max(items.count, 1)
         sats = items.enumerated().map { i, item in
             let angle = (Double(i) / Double(count)) * .pi * 2 - .pi / 2
-            Sat(
+            return Sat(
                 objective: item,
                 at: CGPoint(
                     x: origin.x + CGFloat(cos(angle)) * radius,
