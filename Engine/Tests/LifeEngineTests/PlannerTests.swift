@@ -144,6 +144,21 @@ final class PlannerTests: XCTestCase {
         XCTAssertEqual(picked, [0, 7, 14, 17, 18, 19], "weekly until the last three days, then daily while the cooldown allows")
     }
 
+    func testDueListsEveryOpenNodeThatMatchesTheDay() {
+        let a = path("A", nodes: [quest("one"), quest("two")])
+        let ids = planner.due(on: sat, paths: [a]).map(\.nodeID)
+        XCTAssertEqual(ids, [a.nodes[0].id, a.nodes[1].id])
+    }
+
+    func testDueDropsAQuestOnceDoneAndAPracticeUntilTomorrow() {
+        var chords = Node(kind: .practice, title: "chords", createdOn: fri)
+        var p = path("A", nodes: [quest("strings"), chords])
+        planner.apply(.done, to: &p.nodes[0], on: sat)
+        planner.apply(.done, to: &p.nodes[1], on: sat)
+        XCTAssertEqual(planner.due(on: sat, paths: [p]).map(\.nodeID), [])
+        XCTAssertEqual(planner.due(on: sun, paths: [p]).map(\.nodeID), [p.nodes[1].id])
+    }
+
     func testPlanNeverPicksFromRestingOrArchivedPaths() {
         var p = path("A", nodes: [quest("x")])
         p.status = .resting

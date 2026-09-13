@@ -32,7 +32,7 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 
 ## Surfacing rules
 
-1. One objective per day at most, across all Paths.
+1. Today lists every quest and practice whose cue fits the day. One notification at most. A done quest leaves. A done practice leaves until a later day that still matches its cue.
 2. Only nodes whose cue is true for that day and window.
 3. A node never repeats within 7 days of last being surfaced.
 4. A node with an unfinished `after` blocker is not eligible.

@@ -7,7 +7,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(Prefs.morningKey) private var morningHour = 10
     @AppStorage(Prefs.eveningKey) private var eveningHour = 19
-    @AppStorage(Prefs.todayStyleKey) private var style: TodayStyle = .objectiveAndPaths
     @AppStorage(Prefs.pathsStyleKey) private var pathsStyle: PathsStyle = .atlas
     @AppStorage(Prefs.talkKey) private var talk = false
     @State private var authorized = false
@@ -66,14 +65,6 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var styleSection: some View {
-        Section("Today screen (prototype weeks)") {
-            Picker("Style", selection: $style) {
-                ForEach(TodayStyle.allCases) { s in
-                    Text(s.label).tag(s)
-                }
-            }
-            .pickerStyle(.inline)
-        }
         Section("Paths screen (prototype weeks)") {
             Picker("View", selection: $pathsStyle) {
                 ForEach(PathsStyle.allCases) { s in

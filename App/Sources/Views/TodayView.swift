@@ -17,52 +17,81 @@ struct TodayView: View {
     @Environment(Store.self) private var store
     @Environment(Notifier.self) private var notifier
     @Binding var capture: CaptureRequest?
-    @AppStorage(Prefs.todayStyleKey) private var style: TodayStyle = .objectiveAndPaths
     @State private var authorized = true
+    @State private var pending: Objective?
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    switch style {
-                    case .oneCard: oneCard
-                    case .objectiveAndPaths: objectiveAndPaths
-                    case .pathsFirst: pathsFirst
+            Group {
+                if store.dueToday().isEmpty {
+                    quiet
+                } else {
+                    List {
+                        Section {
+                            ForEach(store.dueToday(), id: \.nodeID) { o in
+                                TodayRow(objective: o) { pending = o }
+                            }
+                        } header: {
+                            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                        } footer: {
+                            Text("Tap one when it is done. A practice will come back the next day its cue allows.")
+                        }
+                        let entries = store.recentLog()
+                        if !entries.isEmpty {
+                            Section("Recently") {
+                                ForEach(entries) { LogRow(entry: $0) }
+                            }
+                        }
                     }
+                    .scrollContentBackground(.hidden)
                 }
-                .padding(16)
             }
             .background(Ink.ground)
-            .navigationTitle(style == .pathsFirst ? "Evolving" : "Today")
+            .navigationTitle("Today")
+            .navigationDestination(for: UUID.self) { id in
+                PathDetailView(pathID: id, capture: $capture)
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { capture = CaptureRequest() } label: { Image(systemName: "plus") }
                 }
             }
             .task { authorized = await notifier.authorized() }
+            .confirmationDialog(pendingTitle, isPresented: Binding(
+                get: { pending != nil },
+                set: { if !$0 { pending = nil } }
+            ), titleVisibility: .visible) {
+                Button("Done") {
+                    if let id = pending?.nodeID { store.respond(.done, nodeID: id) }
+                    pending = nil
+                }
+                Button("Cancel", role: .cancel) { pending = nil }
+            } message: {
+                Text(pendingMessage)
+            }
         }
     }
 
-    var dateLine: some View {
-        Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
-            .font(.subheadline).foregroundStyle(.secondary)
+    private var pendingTitle: String {
+        guard let o = pending, let (_, n) = store.node(o.nodeID) else { return "Done?" }
+        return n.kind == .practice ? "Practice done for today?" : "Quest done?"
     }
 
-    @ViewBuilder
-    var objectiveOrQuiet: some View {
-        if let o = store.todaysObjective() {
-            ObjectiveCard(objective: o, compact: style != .oneCard)
-        } else {
-            quiet
+    private var pendingMessage: String {
+        guard let o = pending, let (_, n) = store.node(o.nodeID) else { return "" }
+        if n.kind == .practice {
+            return "It leaves Today. It will come back when its cue allows."
         }
+        return "It leaves Today. A quest does not come back."
     }
 
     var quiet: some View {
         VStack(spacing: 6) {
-            Image(systemName: "moon.stars").font(.largeTitle).foregroundStyle(.secondary)
-            Text(quietLine).multilineTextAlignment(.center).foregroundStyle(.secondary)
+            Image(systemName: "moon.stars").font(.largeTitle).foregroundStyle(Ink.muted)
+            Text(quietLine).multilineTextAlignment(.center).foregroundStyle(Ink.muted)
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 30)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(30)
     }
 
     var quietLine: String {
@@ -70,82 +99,37 @@ struct TodayView: View {
         if store.activePaths.allSatisfy(\.isEvolved) { return "Every path has evolved. Add a milestone or start a new path." }
         return "Nothing is due today. Your paths are resting."
     }
+}
 
-    // MARK: Style A
+private struct TodayRow: View {
+    @Environment(Store.self) private var store
+    let objective: Objective
+    var onDone: () -> Void
 
-    var oneCard: some View {
-        Group {
-            dateLine
-            objectiveOrQuiet
-            if store.todaysObjective() != nil {
-                Text("That is all for today. One thing, done well.")
-                    .font(.footnote).foregroundStyle(.secondary).frame(maxWidth: .infinity)
-            }
-            recently
-        }
-    }
-
-    // MARK: Style B
-
-    var objectiveAndPaths: some View {
-        Group {
-            dateLine
-            objectiveOrQuiet
-            Text("Your paths").font(.title3.bold())
-            GroupBox {
-                ForEach(store.activePaths) { p in
-                    NavigationLink(value: p.id) { PathRow(path: p) }
-                }
-            }
-            recently
-        }
-        .navigationDestination(for: UUID.self) { id in
-            if let p = store.path(id) { PathDetailView(pathID: p.id, capture: $capture) }
-        }
-    }
-
-    // MARK: Style C
-
-    var pathsFirst: some View {
-        Group {
-            Text("\(store.activePaths.count) paths · \(store.todaysObjective() == nil ? "quiet today" : "1 objective today")")
-                .font(.subheadline).foregroundStyle(.secondary)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(store.activePaths) { p in
-                        let hot = store.todaysObjective()?.pathID == p.id
-                        VStack(alignment: .leading, spacing: 4) {
-                            Image(systemName: p.glyph).font(.title2)
-                            Text(p.name).font(.subheadline.bold())
-                            Text(hot ? "objective ready" : (p.isEvolved ? "evolved" : "quiet today")).font(.caption).foregroundStyle(.secondary)
-                        }
-                        .padding(12).frame(minWidth: 120, alignment: .leading)
-                        .background(Ink.card, in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(hot ? Ink.brass : .clear, lineWidth: 2))
+    var body: some View {
+        if let (path, node) = store.node(objective.nodeID) {
+            HStack(alignment: .top, spacing: 12) {
+                Button(action: onDone) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(node.kind == .practice ? "Practice" : "Quest")
+                            .font(.caption.weight(.bold))
+                            .textCase(.uppercase)
+                            .tracking(1)
+                            .foregroundStyle(Ink.brass)
+                        Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
+                        Text("\(path.name) · \(cueText(node.cue))")
+                            .font(.caption)
+                            .foregroundStyle(Ink.muted)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .buttonStyle(.plain)
+                NavigationLink(value: path.id) {
+                    Image(systemName: path.glyph).foregroundStyle(Ink.brass)
+                }
+                .frame(width: 28)
             }
-            if let o = store.todaysObjective(), let p = store.path(o.pathID) {
-                Text("\(p.name) · \(p.identity)").font(.title3.bold())
-                ObjectiveCard(objective: o, compact: true)
-                Text("Milestones").font(.headline)
-                GroupBox { MilestoneList(pathID: p.id) }
-            } else {
-                quiet
-            }
-        }
-    }
-
-    // MARK: Shared
-
-    @ViewBuilder
-    var recently: some View {
-        let entries = store.recentLog()
-        if !entries.isEmpty {
-            Text("Recently").font(.title3.bold())
-            GroupBox {
-                ForEach(entries) { e in LogRow(entry: e) }
-            }
+            .listRowBackground(Ink.card)
         }
     }
 }

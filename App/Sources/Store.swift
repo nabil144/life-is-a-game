@@ -192,6 +192,14 @@ final class Store {
         return nil
     }
 
+    func dueToday() -> [Objective] {
+        planner.due(on: today, paths: activePaths)
+    }
+
+    func isDueToday(_ nodeID: UUID) -> Bool {
+        dueToday().contains { $0.nodeID == nodeID }
+    }
+
     func todaysObjective() -> Objective? {
         let day = today
         guard let s = world.history.last(where: { $0.day == day }) else { return nil }

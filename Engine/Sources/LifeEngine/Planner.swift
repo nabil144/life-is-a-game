@@ -12,7 +12,7 @@ public struct PlannerConfig: Sendable {
     public init() {}
 }
 
-/// Pure rules. Takes paths and history in, hands one objective per day out. Never touches storage or notifications.
+/// Pure rules. Today lists every node that is due. Notifications still pick one. Never touches storage.
 public struct Planner: Sendable {
     public var config: PlannerConfig
 
@@ -38,6 +38,27 @@ public struct Planner: Sendable {
 
     public func objective(for day: Day, paths: [Path], history: [Surfacing]) -> Objective? {
         candidates(for: day, paths: paths, history: history).first
+    }
+
+    /// Everything that can be done on this day. No seven-day cooldown. A practice already done today is out until a later day that still matches its cue.
+    public func due(on day: Day, paths: [Path]) -> [Objective] {
+        var found: [Objective] = []
+        for path in paths {
+            guard path.status == .active, !path.isEvolved else { continue }
+            guard let baseWindow = roleWindow(path.role, on: day) else { continue }
+            let finalDays = isInFinalDays(path, on: day)
+            if path.role == .decision, !finalDays, !decisionCadenceAllows(path, on: day, history: []) { continue }
+
+            for node in path.nodes {
+                guard node.isOpen else { continue }
+                if node.kind == .practice, node.lastDone == day { continue }
+                if let after = node.after, let blocker = path.node(after), !blocker.isDone { continue }
+                guard cueMatchesDay(node.cue, day: day) else { continue }
+                let window = node.cue.window == .any ? baseWindow : node.cue.window
+                found.append(Objective(day: day, window: window, pathID: path.id, nodeID: node.id, kind: .objective))
+            }
+        }
+        return found
     }
 
     /// Plan several days ahead. Each pick is fed back as history so the same node is not chosen twice in a row.

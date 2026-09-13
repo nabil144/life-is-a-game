@@ -99,7 +99,7 @@ struct PathDetailView: View {
                                 Text(nodeMeta(n, in: path)).font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if store.todaysObjective()?.nodeID == n.id { Text("today").font(.caption.bold()).foregroundStyle(.tint) }
+                            if store.isDueToday(n.id) { Text("today").font(.caption.bold()).foregroundStyle(.tint) }
                             if n.state == .paused {
                                 Button("Reopen") { store.respond(.reopen, nodeID: n.id) }.font(.caption).buttonStyle(.borderless)
                             }
