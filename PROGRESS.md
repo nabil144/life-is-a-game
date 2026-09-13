@@ -30,7 +30,7 @@ Done.
 - Blood and brass palette (`Ink`). Dark only.
 - A ticked milestone is a fact. Second tap edits the day or confirms taking the tick back.
 - The words: in-app cheat sheet. Settings and New path.
-- Today lists due quests and practices. Title and date are on the page. Sort is Quests, Practice, Path, or When. Swipe right marks done. Tap confirms on that row. Practices return with their cue. Build 0.14 (14).
+- Today lists due quests and practices. Live regional clock and sort stay pinned; the date shrinks on scroll. Quests/Practice hide the kind label on the row. Swipe right marks done. Build 0.15 (15).
 
 Blocked.
 
@@ -38,7 +38,7 @@ Blocked.
 
 Next.
 
-1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.14 (14)`. Today should show the word Today and the date above the sort. Sort is Quests / Practice / Path / When.
+1. On the Mac, `git pull`, `xcodegen generate`, open the project, Cmd+R. Check Settings says `Version 0.15 (15)`. Today: live clock above the sort, no dead gap, date shrinks on scroll.
 2. Live with the Today screen for the prototype weeks. Switch styles A, B, C from Settings and note which one survives. Same for the two ways of creating a path, form and talk. One survives.
 3. Load the owner's own paths from `testdata/owner-paths.json` through import once it exists (phase 2 item, see spec).
 4. File the 503 null-deref against Splice (`splice login` on the Linux laptop gets an HTTP 503 from Apple and segfaults) so the Linux pipeline can take over the 7-day refreshes later.
@@ -64,6 +64,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. Today: swipe right is done; tap confirms on the row. Build 0.12 (12). Next: pull, swipe one, tap one.
 - 2026-09-13. Today title pinned; sort section Kind / Path / When. Build 0.13 (13). Next: pull, confirm the title, try the sorts.
 - 2026-09-13. Today title lives in the page. Sort is Quests / Practice / Path / When. Build 0.14 (14). Next: pull, look above the sort.
+- 2026-09-13. Today clock ticks; pin stays; date shrinks. Build 0.15 (15). Next: pull, scroll, watch the seconds.
 
 ## How to keep this file true
 
@@ -71,4 +72,4 @@ At the end of a session, add one line to the session log and update the Status s
 
 ## Release ritual
 
-Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 14.
+Every push that touches `App/` bumps `CURRENT_PROJECT_VERSION` in `project.yml` by one. The report to the owner names the build to expect, and the owner checks it at the bottom of Settings ("Version 0.3 (3)") before judging anything else. A different number means the Mac has not pulled and regenerated. Current build: 15.

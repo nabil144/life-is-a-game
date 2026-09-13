@@ -64,6 +64,7 @@ struct PathDetailView: View {
             }
             .navigationTitle(path.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { capture = CaptureRequest(pathID: pathID) } label: { Image(systemName: "plus") }

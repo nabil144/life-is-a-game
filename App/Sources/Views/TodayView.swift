@@ -34,80 +34,107 @@ struct TodayView: View {
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
+    @State private var scrollY: CGFloat = 0
 
     private var due: [Objective] { store.dueToday() }
-    private var todayName: String {
-        Date().formatted(.dateTime.weekday(.wide).day().month(.wide))
-    }
+    private var collapse: CGFloat { min(1, max(0, scrollY / 56)) }
+    private var showKind: Bool { sort == .path || sort == .when }
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Today")
-                            .font(.largeTitle.bold())
-                            .foregroundStyle(Ink.words)
-                        Text(todayName)
-                            .font(.subheadline)
-                            .foregroundStyle(Ink.muted)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 8, trailing: 20))
-                }
-
-                if due.isEmpty {
-                    Section {
-                        quiet
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
-                } else {
-                    Section {
-                        Picker("Sort", selection: $sort) {
-                            ForEach(TodaySort.allCases) { s in
-                                Text(s.label).tag(s)
+            VStack(spacing: 0) {
+                pin
+                List {
+                    if due.isEmpty {
+                        Section {
+                            quiet
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
+                    } else {
+                        ForEach(buckets) { bucket in
+                            bucketSection(bucket)
+                        }
+                        let entries = store.recentLog()
+                        if !entries.isEmpty {
+                            Section {
+                                ForEach(entries) { LogRow(entry: $0) }
+                            } header: {
+                                Text("Recently")
+                                    .foregroundStyle(Ink.muted)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .listRowBackground(Ink.card)
-                    }
-
-                    ForEach(buckets) { bucket in
-                        bucketSection(bucket)
-                    }
-
-                    let entries = store.recentLog()
-                    if !entries.isEmpty {
-                        Section {
-                            ForEach(entries) { LogRow(entry: $0) }
-                        } header: {
-                            Text("Recently")
-                                .foregroundStyle(Ink.muted)
-                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .contentMargins(.top, 0, for: .scrollContent)
+                .environment(\.defaultMinListHeaderHeight, 0)
+                .onScrollGeometryChange(for: CGFloat.self) { geo in
+                    max(0, geo.contentOffset.y + geo.contentInsets.top)
+                } action: { _, y in
+                    scrollY = y
+                }
             }
-            .scrollContentBackground(.hidden)
             .background(Ink.ground)
-            .navigationTitle("Today")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Ink.ground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar(openPath == nil ? .hidden : .automatic, for: .navigationBar)
             .navigationDestination(item: $openPath) { dest in
                 PathDetailView(pathID: dest.id, capture: $capture)
-            }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { capture = CaptureRequest() } label: { Image(systemName: "plus") }
-                }
             }
             .task { authorized = await notifier.authorized() }
         }
     }
+
+    private var pin: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(context.date, format: collapse > 0.55 ? Self.compactStamp : Self.fullStamp)
+                        .font(.system(size: 28 - 10 * collapse, weight: .bold))
+                        .foregroundStyle(Ink.words)
+                        .lineLimit(collapse > 0.55 ? 1 : 2)
+                        .minimumScaleFactor(0.65)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                Button { capture = CaptureRequest() } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Ink.brass)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel("Capture")
+            }
+            if !due.isEmpty {
+                Picker("Sort", selection: $sort) {
+                    ForEach(TodaySort.allCases) { s in
+                        Text(s.label).tag(s)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+        .background(Ink.ground)
+    }
+
+    private static let fullStamp = Date.FormatStyle()
+        .weekday(.wide)
+        .month(.wide)
+        .day()
+        .year()
+        .hour()
+        .minute()
+        .second()
+
+    private static let compactStamp = Date.FormatStyle()
+        .month(.abbreviated)
+        .day()
+        .hour()
+        .minute()
+        .second()
 
     @ViewBuilder
     private func bucketSection(_ bucket: DueBucket) -> some View {
@@ -137,6 +164,7 @@ struct TodayView: View {
         TodayRow(
             objective: o,
             confirming: pendingID == o.nodeID,
+            showKind: showKind,
             onAsk: { pendingID = o.nodeID },
             onCancel: { pendingID = nil },
             onDone: { markDone(o.nodeID) },
@@ -228,6 +256,7 @@ private struct TodayRow: View {
     @Environment(Store.self) private var store
     let objective: Objective
     let confirming: Bool
+    var showKind: Bool
     var onAsk: () -> Void
     var onCancel: () -> Void
     var onDone: () -> Void
@@ -239,11 +268,13 @@ private struct TodayRow: View {
                 HStack(alignment: .top, spacing: 12) {
                     Button(action: onAsk) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(node.kind == .practice ? "Practice" : "Quest")
-                                .font(.caption.weight(.bold))
-                                .textCase(.uppercase)
-                                .tracking(1)
-                                .foregroundStyle(Ink.brass)
+                            if showKind {
+                                Text(node.kind == .practice ? "Practice" : "Quest")
+                                    .font(.caption.weight(.bold))
+                                    .textCase(.uppercase)
+                                    .tracking(1)
+                                    .foregroundStyle(Ink.brass)
+                            }
                             Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
                             Text("\(path.name) · \(cueText(node.cue))")
                                 .font(.caption)
