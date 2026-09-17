@@ -398,14 +398,6 @@ private struct TodayRow: View {
                 }
             }
             .padding(.vertical, store.goingOutToday && node.isOutsideQuest ? 6 : 0)
-            .overlay {
-                if store.goingOutToday && node.isOutsideQuest {
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Ink.brass.opacity(0.85), lineWidth: 1.5)
-                        .shadow(color: Ink.brass.opacity(0.45), radius: 6)
-                        .allowsHitTesting(false)
-                }
-            }
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
@@ -413,7 +405,17 @@ private struct TodayRow: View {
                 }
                 .tint(Ink.brass)
             }
-            .listRowBackground(path.role == .work ? Ink.workCard : Ink.card)
+            .listRowBackground(
+                (path.role == .work ? Ink.workCard : Ink.card)
+                    .overlay {
+                        if store.goingOutToday && node.isOutsideQuest {
+                            RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(Ink.brass.opacity(0.85), lineWidth: 1.5)
+                                .shadow(color: Ink.brass.opacity(0.45), radius: 6)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            )
             .animation(.easeInOut(duration: 0.2), value: confirming)
         }
     }
