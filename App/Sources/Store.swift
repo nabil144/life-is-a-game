@@ -21,6 +21,8 @@ struct World: Codable {
     var history: [Surfacing] = []
     var log: [LogEntry] = []
     var onboarded = false
+    var goingOutOn: Day?
+    var outsideReminderAt: Date?
 }
 
 /// A Files folder the owner picked once. The bookmark dies with the app, the file does not.
@@ -194,6 +196,31 @@ final class Store {
 
     func dueToday() -> [Objective] {
         planner.due(on: today, paths: activePaths)
+    }
+
+    var goingOutToday: Bool { world.goingOutOn == today }
+
+    func outsideQuestsToday() -> [Objective] {
+        planner.outsideQuests(on: today, paths: activePaths)
+    }
+
+    func setGoingOut(_ enabled: Bool) {
+        let day = today
+        mutate {
+            $0.goingOutOn = enabled ? day : nil
+            $0.outsideReminderAt = nil
+        }
+    }
+
+    func setOutsideReminder(_ date: Date?) {
+        mutate { $0.outsideReminderAt = date }
+    }
+
+    // A stable identity prevents rescheduling merely because another view redraws.
+    var outsideReminderSignature: String {
+        let items = outsideQuestsToday().compactMap { node($0.nodeID)?.1 }
+        let data = (try? JSONEncoder().encode(items)) ?? Data()
+        return "\(today)|\(goingOutToday)|\(world.outsideReminderAt?.timeIntervalSince1970 ?? 0)|" + data.base64EncodedString()
     }
 
     func isDueToday(_ nodeID: UUID) -> Bool {

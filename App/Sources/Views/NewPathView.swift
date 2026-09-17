@@ -150,7 +150,7 @@ struct NewPathView: View {
                         }
                         .onDelete { draft.nodes.remove(atOffsets: $0) }
                         Button("Add a quest") { draft.nodes.append(.init(kind: .quest, title: "")) }
-                        Button("Add a practice") { draft.nodes.append(.init(kind: .practice, title: "", cue: Cue(window: .evening))) }
+                        Button("Add a routine") { draft.nodes.append(.init(kind: .practice, title: "", cue: Cue(window: .evening))) }
                     }
                 } footer: {
                     Text("All of this is optional. Quests can be added from the path any time.")
@@ -200,7 +200,7 @@ struct OnboardingView: View {
             .buttonStyle(.borderedProminent).controlSize(.large).padding(.horizontal, 24)
             RestoreFileButton(title: "I already have a copy")
                 .padding(.horizontal, 24)
-            Text("One notification a day at most. Never the same one twice in a week.")
+            Text("One suggested objective a day at most. Optional outside reminders are yours to set.")
                 .font(.footnote).foregroundStyle(.secondary).padding(.bottom, 24)
         }
         .foregroundStyle(Ink.words)

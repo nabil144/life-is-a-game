@@ -102,6 +102,10 @@ public struct Node: Codable, Identifiable, Hashable, Sendable {
     public var touchedOn: Day
     /// Day a "still want this?" check was surfaced, if any.
     public var staleCheckOn: Day?
+    /// Optional for compatibility with existing saved worlds.
+    public var outsideHome: Bool?
+
+    public var isOutsideQuest: Bool { kind == .quest && outsideHome == true }
 
     public init(id: UUID = UUID(), kind: NodeKind, title: String, cue: Cue = .anytime, after: UUID? = nil, createdOn: Day) {
         self.id = id

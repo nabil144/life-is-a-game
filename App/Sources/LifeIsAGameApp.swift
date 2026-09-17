@@ -60,6 +60,7 @@ struct LifeIsAGameApp: App {
 
     @MainActor
     static func replan(store: Store, notifier: Notifier) async {
+        if let day = store.world.goingOutOn, day != store.today { store.setGoingOut(false) }
         let objectives = store.refreshPlan()
         await notifier.schedule(objectives, morningHour: Prefs.morningHour, eveningHour: Prefs.eveningHour)
     }

@@ -10,6 +10,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let category = "objective"
     static let staleCategory = "staleCheck"
     static let prefix = "objective-"
+    static let outsideID = "outside-errands"
+    var openTodayRequest = UUID()
+    var outsideReminderError: String?
+    private var outsideSyncVersion = 0
 
     enum ActionID: String {
         case done, later, tooBig, keep, letGo
@@ -75,6 +79,39 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// One editable outing summary, separate from the usual daily objective.
+    func syncOutsideReminder() async {
+        outsideSyncVersion += 1
+        let version = outsideSyncVersion
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.outsideID])
+        center.removeDeliveredNotifications(withIdentifiers: [Self.outsideID])
+        outsideReminderError = nil
+        guard store.goingOutToday,
+              let date = store.world.outsideReminderAt, date > Date(),
+              Day(date) == store.today else { return }
+        let items = store.outsideQuestsToday().compactMap { store.node($0.nodeID)?.1.title }
+        guard !items.isEmpty else { return }
+        let allowed = await authorized()
+        guard version == outsideSyncVersion, !Task.isCancelled else { return }
+        guard allowed else {
+            outsideReminderError = "Notifications are off. Enable them in iPhone Settings to receive this reminder."
+            return
+        }
+        let content = UNMutableNotificationContent()
+        content.title = "While you’re out · \(items.count) quest\(items.count == 1 ? "" : "s")"
+        content.body = items.prefix(5).joined(separator: " • ")
+            + (items.count > 5 ? " • Open Today for the full list." : "")
+        content.sound = .default
+        content.threadIdentifier = Self.outsideID
+        content.userInfo = ["outside": true]
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        let request = UNNotificationRequest(identifier: Self.outsideID, content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false))
+        do { try await center.add(request) }
+        catch { outsideReminderError = "Could not schedule the reminder. Please try again." }
+    }
+
     // MARK: Delegate
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
@@ -82,6 +119,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if response.notification.request.identifier == Self.outsideID {
+            await MainActor.run { openTodayRequest = UUID() }
+            return
+        }
         guard let raw = response.notification.request.content.userInfo["nodeID"] as? String,
               let nodeID = UUID(uuidString: raw) else { return }
         let actionID = response.actionIdentifier

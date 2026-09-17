@@ -61,6 +61,12 @@ public struct Planner: Sendable {
         return found
     }
 
+    /// Outing highlights respect the same dates, path status and blockers as Today.
+    public func outsideQuests(on day: Day, paths: [Path]) -> [Objective] {
+        let ids = Set(paths.flatMap(\.nodes).filter(\.isOutsideQuest).map(\.id))
+        return due(on: day, paths: paths).filter { ids.contains($0.nodeID) }
+    }
+
     /// Plan several days ahead. Each pick is fed back as history so the same node is not chosen twice in a row.
     public func plan(days: [Day], paths: [Path], history: [Surfacing]) -> [Objective] {
         var paths = paths

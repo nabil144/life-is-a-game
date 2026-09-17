@@ -8,20 +8,25 @@ struct RootView: View {
     @AppStorage(Prefs.keyPromptSeenKey) private var keyPromptSeen = false
     @State private var keyPrompt = false
     @State private var mirrorPrompt = false
+    @State private var selectedTab = 0
 
     var body: some View {
         Group {
             if store.world.onboarded {
-                TabView {
+                TabView(selection: $selectedTab) {
                     TodayView(capture: $captureFor)
                         .tabItem { Label("Today", systemImage: "sun.max") }
+                        .tag(0)
                     PathsView(capture: $captureFor)
                         .tabItem { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
+                        .tag(1)
                 }
             } else {
                 OnboardingView()
             }
         }
+        .task(id: store.outsideReminderSignature) { await notifier.syncOutsideReminder() }
+        .onChange(of: notifier.openTodayRequest) { _, _ in selectedTab = 0 }
         .tint(Ink.brass)
         .preferredColorScheme(.dark)
         .background(Ink.ground)

@@ -12,6 +12,7 @@ struct CaptureView: View {
     @State private var kind: NodeKind = .quest
     @State private var cue = Cue.anytime
     @State private var after: UUID?
+    @State private var outsideHome = false
 
     var body: some View {
         NavigationStack {
@@ -31,11 +32,18 @@ struct CaptureView: View {
                 Section {
                     Picker("Kind", selection: $kind) {
                         Text("Quest").tag(NodeKind.quest)
-                        Text("Practice").tag(NodeKind.practice)
+                        Text("Routine").tag(NodeKind.practice)
                     }
                     .pickerStyle(.segmented)
                     Text(kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
+                }
+                if kind == .quest {
+                    Section {
+                        Toggle("Outside home", isOn: $outsideHome)
+                    } footer: {
+                        Text("Highlight this quest when you turn on Going out today.")
+                    }
                 }
                 Section(kind == .practice ? "How often?" : "When could you do this?") {
                     CueEditor(cue: $cue, forPractice: kind == .practice)
@@ -70,7 +78,8 @@ struct CaptureView: View {
 
     func save() {
         guard let pid = pathID else { return }
-        let node = Node(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), cue: cue, after: after, createdOn: store.today)
+        var node = Node(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), cue: cue, after: after, createdOn: store.today)
+        node.outsideHome = kind == .quest && outsideHome
         store.addNode(node, to: pid)
         dismiss()
     }

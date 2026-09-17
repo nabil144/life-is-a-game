@@ -77,11 +77,21 @@ struct NodeEditView: View {
                 Section {
                     Picker("Kind", selection: $node.kind) {
                         Text("Quest").tag(NodeKind.quest)
-                        Text("Practice").tag(NodeKind.practice)
+                        Text("Routine").tag(NodeKind.practice)
                     }
                     .pickerStyle(.segmented)
                     Text(node.kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
+                }
+                if node.kind == .quest {
+                    Section {
+                        Toggle("Outside home", isOn: Binding(
+                            get: { node.outsideHome == true },
+                            set: { node.outsideHome = $0 }
+                        ))
+                    } footer: {
+                        Text("Highlight this quest when you turn on Going out today.")
+                    }
                 }
                 Section(node.kind == .practice ? "How often?" : "When could you do this?") {
                     CueEditor(cue: $node.cue, forPractice: node.kind == .practice)
@@ -101,7 +111,7 @@ struct NodeEditView: View {
                     Button("Let it go", role: .destructive) { confirmLetGo = true }
                 }
             }
-            .navigationTitle(node.kind == .quest ? "Quest" : "Practice")
+            .navigationTitle(node.kind == .quest ? "Quest" : "Routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

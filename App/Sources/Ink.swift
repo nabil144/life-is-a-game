@@ -5,6 +5,7 @@ import UIKit
 enum Ink {
     static let ground = Color(hex: 0x140C0E)
     static let card = Color(hex: 0x231418)
+    static let workCard = Color(hex: 0x10151D)
     static let words = Color(hex: 0xF0E4D4)
     static let muted = Color(hex: 0xC4A99A)
     static let brass = Color(hex: 0xC9A15B)

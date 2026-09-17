@@ -31,7 +31,7 @@ enum Talk {
         Never praise, cheer, encourage, or motivate. No exclamation marks. Plain, warm, curious. \
         Do not invent milestones or quests they did not say or clearly imply. Ask instead. \
         A path has a name (their words), one or more milestones (a sentence that will be true when it has moved, like "It holds tune" or "I played it for someone"), \
-        and small quests (things finishable in one sitting) or practices (things they return to). \
+        and small quests (things finishable in one sitting) or routines (things they return to). \
         Good questions: what would be true when this has moved? what is one small thing you could do on a free evening? \
         is this a hobby, a craft, a decision with a deadline, a lab to tinker in, or work? \
         Once there is a name, one milestone, and one quest, ask only whether there is anything else. \
@@ -45,9 +45,9 @@ extension PathDraft {
         var lines = ["Name: \(name)", "Who: \(identity)", "Kind: \(role.rawValue)"]
         if !milestones.isEmpty { lines.append("Milestones: " + milestones.joined(separator: "; ")) }
         let quests = nodes.filter { $0.kind == .quest }.map(\.title)
-        let practices = nodes.filter { $0.kind == .practice }.map(\.title)
+        let routines = nodes.filter { $0.kind == .practice }.map(\.title)
         if !quests.isEmpty { lines.append("Quests: " + quests.joined(separator: "; ")) }
-        if !practices.isEmpty { lines.append("Practices: " + practices.joined(separator: "; ")) }
+        if !routines.isEmpty { lines.append("Routines: " + routines.joined(separator: "; ")) }
         return lines.joined(separator: "\n")
     }
 
@@ -233,7 +233,7 @@ private struct SketchCard: View {
                 }
             }
             if !draft.nodes.isEmpty {
-                Text("Quests and practices").font(.caption).foregroundStyle(.secondary)
+                Text("Quests and routines").font(.caption).foregroundStyle(.secondary)
                 ForEach(draft.nodes.indices, id: \.self) { i in
                     HStack(alignment: .top) {
                         Image(systemName: draft.nodes[i].kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise")

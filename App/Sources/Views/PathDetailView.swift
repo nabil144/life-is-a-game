@@ -44,7 +44,7 @@ struct PathDetailView: View {
                 }
 
                 nodeSection("Quests", path: path, kind: .quest)
-                nodeSection("Practices", path: path, kind: .practice)
+                nodeSection("Routines", path: path, kind: .practice)
 
                 let entries = store.log(for: pathID)
                 if !entries.isEmpty {

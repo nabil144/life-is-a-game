@@ -19,7 +19,7 @@ enum TodaySort: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .quests: "Quests"
-        case .practices: "Practice"
+        case .practices: "Routine"
         case .when: "When"
         }
     }
@@ -34,6 +34,9 @@ struct TodayView: View {
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
     @State private var scrollY: CGFloat = 0
+    @State private var showOuting = false
+    @State private var reminderTime = Date().addingTimeInterval(15 * 60)
+    @State private var reminderDenied = false
 
     private var due: [Objective] { store.dueToday() }
     private var collapse: CGFloat { min(1, max(0, scrollY / 56)) }
@@ -56,7 +59,14 @@ struct TodayView: View {
             .navigationDestination(item: $openPath) { dest in
                 PathDetailView(pathID: dest.id, capture: $capture)
             }
-            .task { authorized = await notifier.authorized() }
+            .sheet(isPresented: $showOuting) { outingSettings }
+            .task {
+                authorized = await notifier.authorized()
+                while !Task.isCancelled {
+                    if let day = store.world.goingOutOn, day != store.today { store.setGoingOut(false) }
+                    do { try await Task.sleep(for: .seconds(30)) } catch { break }
+                }
+            }
         }
     }
 
@@ -86,6 +96,32 @@ struct TodayView: View {
                 }
             }
             .frame(height: dateSlot)
+            HStack {
+                Button {
+                    store.setGoingOut(!store.goingOutToday)
+                    if store.goingOutToday && !store.outsideQuestsToday().isEmpty {
+                        reminderTime = Date().addingTimeInterval(900)
+                        reminderDenied = false
+                        showOuting = true
+                    }
+                } label: {
+                    Label(store.goingOutToday ? "Going out today · On" : "Going out today",
+                          systemImage: store.goingOutToday ? "checkmark.circle.fill" : "figure.walk")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityValue(store.goingOutToday ? "On" : "Off")
+                Spacer()
+                if store.goingOutToday {
+                    Button("Reminder") {
+                        reminderTime = max(store.world.outsideReminderAt ?? Date().addingTimeInterval(900), Date().addingTimeInterval(60))
+                        reminderDenied = false
+                        showOuting = true
+                    }
+                }
+            }
+            if let error = notifier.outsideReminderError {
+                Text(error).font(.caption).foregroundStyle(Ink.muted)
+            }
             if !due.isEmpty {
                 Picker("Sort", selection: $sort) {
                     ForEach(TodaySort.allCases) { s in
@@ -100,6 +136,41 @@ struct TodayView: View {
         .padding(.top, 4)
         .padding(.bottom, 10)
         .background(Ink.ground)
+    }
+
+    private var outingSettings: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("\(store.outsideQuestsToday().count) outside quests ready today")
+                    DatePicker("Remind me", selection: $reminderTime, displayedComponents: [.date, .hourAndMinute])
+                    Button("Set reminder") {
+                        Task {
+                            let allowed = await notifier.requestPermission()
+                            reminderDenied = !allowed
+                            if allowed {
+                                store.setOutsideReminder(reminderTime)
+                                showOuting = false
+                            }
+                        }
+                    }
+                    .disabled(store.outsideQuestsToday().isEmpty || reminderTime <= Date() || Day(reminderTime) != store.today)
+                    if store.world.outsideReminderAt != nil {
+                        Button("Cancel reminder", role: .destructive) {
+                            store.setOutsideReminder(nil)
+                            showOuting = false
+                        }
+                    }
+                } footer: {
+                    Text("Choose a future time today. One notification lists your remaining outside quests. Tapping it opens Today. Going out resets tomorrow.")
+                }
+                if reminderDenied {
+                    Text("Notifications are off. Enable them in iPhone Settings, then set the reminder again.")
+                }
+            }
+            .navigationTitle("While you’re out")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { showOuting = false } } }
+        }
     }
 
     private static let stamp = Date.FormatStyle()
@@ -154,7 +225,7 @@ struct TodayView: View {
             }
         } footer: {
                             if bucket.id == buckets.last?.id {
-                Text("Swipe right when it is done, or tap to confirm. A practice will come back the next day its cue allows.")
+                Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
             }
         }
     }
@@ -164,7 +235,7 @@ struct TodayView: View {
         TodayRow(
             objective: o,
             confirming: pendingID == o.nodeID,
-            showKind: showKind,
+            showKind: showKind || (store.goingOutToday && store.node(o.nodeID)?.1.isOutsideQuest == true),
             onAsk: { pendingID = o.nodeID },
             onCancel: { pendingID = nil },
             onDone: { markDone(o.nodeID) },
@@ -173,6 +244,15 @@ struct TodayView: View {
     }
 
     private var buckets: [DueBucket] {
+        let outside = store.goingOutToday ? store.outsideQuestsToday() : []
+        let outsideIDs = Set(outside.map(\.nodeID))
+        let rest = due.filter { !outsideIDs.contains($0.nodeID) }
+        let featured = store.goingOutToday ? [DueBucket(id: "outside", title: "While you’re out", items: outside,
+            empty: "No outside quests ready today. Flag a quest as Outside home in its editor.")] : []
+        return featured + regularBuckets(rest)
+    }
+
+    private func regularBuckets(_ due: [Objective]) -> [DueBucket] {
         switch sort {
         case .quests:
             return [DueBucket(
@@ -186,7 +266,7 @@ struct TodayView: View {
                 id: "practice",
                 title: nil,
                 items: due.filter { nodeKind($0) == .practice },
-                empty: "No practices due today."
+                empty: "No routines due today."
             )]
         case .when:
             return [Window.morning, .evening, .any].compactMap { window in
@@ -264,11 +344,21 @@ private struct TodayRow: View {
                     Button(action: onAsk) {
                         VStack(alignment: .leading, spacing: 4) {
                             if showKind {
-                                Text(node.kind == .practice ? "Practice" : "Quest")
+                                Text(node.kind == .practice ? "Routine" : "Quest")
                                     .font(.caption.weight(.bold))
                                     .textCase(.uppercase)
                                     .tracking(1)
                                     .foregroundStyle(Ink.brass)
+                            }
+                            if node.isOutsideQuest {
+                                Label("Outside home", systemImage: "figure.walk")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Ink.brass)
+                            }
+                            if path.role == .work {
+                                Label("Work", systemImage: "briefcase")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Ink.muted)
                             }
                             Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
                             Text("\(path.name) · \(cueText(node.cue, kind: node.kind))")
@@ -307,6 +397,15 @@ private struct TodayRow: View {
                     .accessibilityElement(children: .contain)
                 }
             }
+            .padding(.vertical, store.goingOutToday && node.isOutsideQuest ? 6 : 0)
+            .overlay {
+                if store.goingOutToday && node.isOutsideQuest {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Ink.brass.opacity(0.85), lineWidth: 1.5)
+                        .shadow(color: Ink.brass.opacity(0.45), radius: 6)
+                        .allowsHitTesting(false)
+                }
+            }
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
@@ -314,7 +413,7 @@ private struct TodayRow: View {
                 }
                 .tint(Ink.brass)
             }
-            .listRowBackground(Ink.card)
+            .listRowBackground(path.role == .work ? Ink.workCard : Ink.card)
             .animation(.easeInOut(duration: 0.2), value: confirming)
         }
     }
