@@ -10,7 +10,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let category = "objective"
     static let staleCategory = "staleCheck"
     static let prefix = "objective-"
-    static let outsideID = "outside-errands"
+    nonisolated static let outsideID = "outside-errands"
     var openTodayRequest = UUID()
     var outsideReminderError: String?
     private var outsideSyncVersion = 0
