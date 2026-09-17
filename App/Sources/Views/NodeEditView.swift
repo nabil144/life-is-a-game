@@ -108,6 +108,12 @@ struct NodeEditView: View {
                     }
                 }
                 Section {
+                    if node.kind == .quest && node.isDone {
+                        Button("Mark as not done") {
+                            store.respond(.reopen, nodeID: node.id)
+                            dismiss()
+                        }
+                    }
                     Button("Let it go", role: .destructive) { confirmLetGo = true }
                 }
             }

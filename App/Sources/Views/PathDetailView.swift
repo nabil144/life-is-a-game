@@ -109,11 +109,21 @@ struct PathDetailView: View {
                     .swipeActions(edge: .trailing) {
                         Button("Let it go", role: .destructive) { store.respond(.letGo, nodeID: n.id) }
                     }
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        if kind == .quest && n.isDone {
+                            Button {
+                                store.respond(.reopen, nodeID: n.id)
+                            } label: {
+                                Label("Mark as not done", systemImage: "arrow.uturn.backward")
+                            }
+                            .tint(Ink.brass)
+                        }
+                    }
                 }
             } header: {
                 Text(title)
             } footer: {
-                if kind == .quest { Text("Tap one to change it. Swipe to let it go. Plus adds another.") }
+                if kind == .quest { Text("Tap one to change it or mark a completed quest as not done. Swipe left to let it go. Plus adds another.") }
             }
         }
     }
