@@ -31,7 +31,7 @@ struct PathEditView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     TextField("What are you evolving?", text: $name)
                     TextField("Who are you on this path? e.g. Guitarist", text: $identity)

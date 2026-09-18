@@ -14,7 +14,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 notificationsSection
                 styleSection
                 talkSection

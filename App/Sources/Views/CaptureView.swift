@@ -16,7 +16,7 @@ struct CaptureView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     TextField("What is it?", text: $title, axis: .vertical)
                         .font(.title3)
@@ -30,11 +30,10 @@ struct CaptureView: View {
                     .pickerStyle(.menu)
                 }
                 Section {
-                    Picker("Kind", selection: $kind) {
-                        Text("Quest").tag(NodeKind.quest)
-                        Text("Routine").tag(NodeKind.practice)
-                    }
-                    .pickerStyle(.segmented)
+                    PixelChoices(title: "Kind", selection: $kind, options: [
+                ("Quest", NodeKind.quest),
+                ("Routine", NodeKind.practice)
+            ])
                     Text(kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

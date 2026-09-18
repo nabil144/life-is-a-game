@@ -33,19 +33,18 @@ struct PathsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Picker("View", selection: $style) {
-                        ForEach(PathsStyle.allCases) { s in
-                            Text(s.label).tag(s)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 180)
+                    PixelChoices(title: "View", selection: $style,
+                                 options: PathsStyle.allCases.map { ($0.label, $0) })
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button { newPath = true } label: { Label("New path", systemImage: "plus") }
+                    Button { newPath = true } label: { Image(systemName: "plus") }
+                        .buttonStyle(PixelButtonStyle(compact: true))
+                        .accessibilityLabel("New path")
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button { settings = true } label: { Image(systemName: "gearshape") }
+                        .buttonStyle(PixelButtonStyle(compact: true))
+                        .accessibilityLabel("Settings")
                 }
             }
             .sheet(isPresented: $newPath) { NewPathSheet() }
@@ -54,7 +53,7 @@ struct PathsView: View {
     }
 
     private var list: some View {
-        List {
+        PixelList {
             if store.activePaths.isEmpty {
                 ContentUnavailableView {
                     Label("Name one thing you want to evolve.", systemImage: "leaf")

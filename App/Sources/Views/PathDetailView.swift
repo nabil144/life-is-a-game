@@ -12,12 +12,12 @@ struct PathDetailView: View {
 
     var body: some View {
         if let path = store.path(pathID) {
-            List {
+            PixelList {
                 Section {
                     Button { editingPath = true } label: {
                         VStack(alignment: .leading, spacing: 6) {
-                            Image(systemName: path.glyph).font(.system(size: 40))
-                            Text(path.name).font(.largeTitle.bold()).foregroundStyle(.primary)
+                            Image(systemName: path.glyph).font(.title2).frame(width: 44, height: 44).pixelCard()
+                            Text(path.name).font(.title2.bold()).foregroundStyle(.primary)
                             Text("\(path.identity) · \(path.role.rawValue) · surfaces \(roleWindowText(path.role))")
                                 .font(.subheadline).foregroundStyle(.secondary)
                             Text("Tap to change this path.")
@@ -48,7 +48,7 @@ struct PathDetailView: View {
 
                 let entries = store.log(for: pathID)
                 if !entries.isEmpty {
-                    Section("Log") { ForEach(entries) { LogRow(entry: $0) } }
+                    Section("Log") { ForEach(entries) { LogRow(entry: $0, pixelStyle: true) } }
                 }
 
                 Section {
@@ -93,7 +93,7 @@ struct PathDetailView: View {
                 ForEach(nodes) { n in
                     Button { editing = n } label: {
                         HStack {
-                            Image(systemName: kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise")
+                            PixelQuestMark(routine: kind == .practice)
                                 .foregroundStyle(n.isDone ? Ink.brass : Ink.muted)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(n.title).strikethrough(n.isDone).foregroundStyle(.primary)
@@ -121,7 +121,7 @@ struct PathDetailView: View {
                     }
                 }
             } header: {
-                Text(title)
+                Text(title).font(.system(.caption, design: .monospaced).bold()).foregroundStyle(Ink.brass)
             } footer: {
                 if kind == .quest { Text("Tap one to change it or mark a completed quest as not done. Swipe left to let it go. Plus adds another.") }
             }
@@ -164,7 +164,7 @@ struct MilestoneList: View {
                     }
                 } label: {
                     HStack(spacing: 14) {
-                        Image(systemName: m.tickedOn == nil ? "circle" : "circle.fill")
+                        Image(systemName: m.tickedOn == nil ? "square" : "checkmark.square.fill")
                             .foregroundStyle(m.tickedOn == nil ? Ink.muted : Ink.brass)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.text).foregroundStyle(.primary)

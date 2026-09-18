@@ -114,6 +114,7 @@ struct TalkPathView: View {
                         }
                         .padding()
                     }
+                    .scrollIndicators(.hidden)
                     .onChange(of: lines.count) { _, _ in
                         withAnimation { proxy.scrollTo("end", anchor: .bottom) }
                     }
@@ -137,19 +138,21 @@ struct TalkPathView: View {
             HStack(alignment: .bottom) {
                 TextField("Say it however it comes", text: $input, axis: .vertical)
                     .lineLimit(1...4)
-                    .textFieldStyle(.roundedBorder)
+                    .padding(10)
+                    .pixelCard()
                     .focused($composing)
                     .onSubmit(send)
                 Button(action: send) {
-                    Image(systemName: "arrow.up.circle.fill").font(.title)
+                    Image(systemName: "arrow.up").font(.headline)
                 }
+                .buttonStyle(PixelButtonStyle(selected: true, compact: true))
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || responding)
             }
             Button("Type it instead", action: typeInstead)
                 .font(.footnote)
         }
         .padding()
-        .background(.bar)
+        .background(Ink.ground)
     }
 
     private func send() {
@@ -199,8 +202,9 @@ private struct Bubble: View {
             Text(line.text)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(line.mine ? AnyShapeStyle(.tint) : AnyShapeStyle(Color(uiColor: .secondarySystemFill)), in: RoundedRectangle(cornerRadius: 18))
-                .foregroundStyle(line.mine ? .white : .primary)
+                .background(line.mine ? Ink.brass : Ink.card, in: PixelPanel())
+                .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
+                .foregroundStyle(line.mine ? Ink.ground : Ink.words)
             if !line.mine { Spacer(minLength: 40) }
         }
     }
@@ -244,6 +248,6 @@ private struct SketchCard: View {
             }
         }
         .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .pixelCard()
     }
 }

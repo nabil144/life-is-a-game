@@ -19,24 +19,21 @@ struct CueEditor: View {
 
     var body: some View {
         if forPractice {
-            Picker("How often", selection: rhythm) {
-                Text("Everyday").tag(PracticeRhythm.everyday)
-                Text("Weekdays").tag(PracticeRhythm.weekdays)
-                Text("Weekends").tag(PracticeRhythm.weekends)
-            }
-            .pickerStyle(.segmented)
-            Picker("How often", selection: rhythm) {
-                Text("Every 3 days").tag(PracticeRhythm.few)
-                Text("Weekly").tag(PracticeRhythm.weekly)
-            }
-            .pickerStyle(.segmented)
+            PixelChoices(title: "How often", selection: rhythm, options: [
+                ("Everyday", PracticeRhythm.everyday),
+                ("Weekdays", PracticeRhythm.weekdays),
+                ("Weekends", PracticeRhythm.weekends)
+            ])
+            PixelChoices(title: "How often", selection: rhythm, options: [
+                ("Every 3 days", PracticeRhythm.few),
+                ("Weekly", PracticeRhythm.weekly)
+            ])
         } else {
-            Picker("Days", selection: $cue.days) {
-                Text("Anytime").tag(DaysCue.any)
-                Text("Weekend").tag(DaysCue.weekend)
-                Text("Weekday").tag(DaysCue.weekday)
-            }
-            .pickerStyle(.segmented)
+            PixelChoices(title: "Days", selection: $cue.days, options: [
+                ("Anytime", DaysCue.any),
+                ("Weekend", DaysCue.weekend),
+                ("Weekday", DaysCue.weekday)
+            ])
             Toggle("Pick a date instead", isOn: $pickDate)
                 .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
             if pickDate {
@@ -44,12 +41,11 @@ struct CueEditor: View {
                     .onChange(of: date) { _, d in cue.on = Day(d) }
             }
         }
-        Picker("Time", selection: $cue.window) {
-            Text("Any").tag(Window.any)
-            Text("Morning").tag(Window.morning)
-            Text("Evening").tag(Window.evening)
-        }
-        .pickerStyle(.segmented)
+        PixelChoices(title: "Time", selection: $cue.window, options: [
+                ("Any", Window.any),
+                ("Morning", Window.morning),
+                ("Evening", Window.evening)
+            ])
     }
 
     private var rhythm: Binding<PracticeRhythm> {
@@ -70,16 +66,15 @@ struct NodeEditView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     TextField("What is it?", text: $node.title, axis: .vertical).font(.title3)
                 }
                 Section {
-                    Picker("Kind", selection: $node.kind) {
-                        Text("Quest").tag(NodeKind.quest)
-                        Text("Routine").tag(NodeKind.practice)
-                    }
-                    .pickerStyle(.segmented)
+                    PixelChoices(title: "Kind", selection: $node.kind, options: [
+                ("Quest", NodeKind.quest),
+                ("Routine", NodeKind.practice)
+            ])
                     Text(node.kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

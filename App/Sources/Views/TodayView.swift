@@ -186,7 +186,7 @@ struct TodayView: View {
 
     private var outingSettings: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     Text("\(store.outsideQuestsToday().count) outside quests ready today")
                     DatePicker("Remind me", selection: $reminderTime, displayedComponents: [.date, .hourAndMinute])
@@ -501,8 +501,8 @@ private struct TodayRow: View {
 struct PathRow: View {
     let path: Path
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: path.glyph).font(.title2).frame(width: 36)
+        HStack(spacing: 10) {
+            Image(systemName: path.glyph).font(.title3).frame(width: 36, height: 36).pixelCard()
             VStack(alignment: .leading, spacing: 2) {
                 Text(path.name).font(.body.weight(.semibold))
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
@@ -510,13 +510,13 @@ struct PathRow: View {
             Spacer()
             HStack(spacing: 5) {
                 ForEach(path.milestones) { m in
-                    Circle().fill(m.tickedOn == nil ? Color.clear : Ink.brass)
-                        .overlay(Circle().stroke(m.tickedOn == nil ? Ink.muted : Ink.brass, lineWidth: 1.5))
+                    Rectangle().fill(m.tickedOn == nil ? Color.clear : Ink.brass)
+                        .overlay(Rectangle().stroke(m.tickedOn == nil ? Ink.muted : Ink.brass, lineWidth: 1.5))
                         .frame(width: 10, height: 10)
                 }
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
 

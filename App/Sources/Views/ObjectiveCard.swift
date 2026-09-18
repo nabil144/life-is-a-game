@@ -21,9 +21,9 @@ struct ObjectiveCard: View {
                 Text(meta(path: path, node: node)).font(.subheadline).foregroundStyle(.secondary)
                 actions(node: node)
             }
-            .padding(20)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Ink.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .pixelCard()
             .sheet(isPresented: $showDone) { DoneSheet(node: node) }
         }
     }
@@ -38,12 +38,12 @@ struct ObjectiveCard: View {
     func actions(node: Node) -> some View {
         HStack(spacing: 10) {
             if objective.kind == .staleCheck {
-                Button("Keep it") { store.respond(.keep, nodeID: node.id) }.buttonStyle(.borderedProminent)
-                Button("Let it go", role: .destructive) { store.respond(.letGo, nodeID: node.id) }.buttonStyle(.bordered)
+                Button("Keep it") { store.respond(.keep, nodeID: node.id) }.buttonStyle(PixelButtonStyle(selected: true))
+                Button("Let it go", role: .destructive) { store.respond(.letGo, nodeID: node.id) }.buttonStyle(PixelButtonStyle())
             } else {
-                Button("Done") { showDone = true }.buttonStyle(.borderedProminent)
-                Button("Not now") { store.respond(.notNow, nodeID: node.id) }.buttonStyle(.bordered)
-                Button("Too big") { store.respond(.tooBig, nodeID: node.id) }.buttonStyle(.bordered)
+                Button("Done") { showDone = true }.buttonStyle(PixelButtonStyle(selected: true))
+                Button("Not now") { store.respond(.notNow, nodeID: node.id) }.buttonStyle(PixelButtonStyle())
+                Button("Too big") { store.respond(.tooBig, nodeID: node.id) }.buttonStyle(PixelButtonStyle())
             }
         }
         .controlSize(.large)
@@ -80,7 +80,7 @@ struct DoneSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     Text(node.title).font(.headline)
                     TextField("One line about what happened (optional)", text: $note, axis: .vertical)

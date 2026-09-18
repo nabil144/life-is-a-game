@@ -23,7 +23,10 @@ enum Ink {
         let nav = UINavigationBarAppearance()
         nav.configureWithOpaqueBackground()
         nav.backgroundColor = ground
-        nav.titleTextAttributes = [.foregroundColor: words]
+        nav.titleTextAttributes = [
+            .foregroundColor: words,
+            .font: UIFontMetrics(forTextStyle: .headline).scaledFont(for: .monospacedSystemFont(ofSize: 17, weight: .bold))
+        ]
         nav.largeTitleTextAttributes = [.foregroundColor: words]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav

@@ -14,16 +14,14 @@ struct KeySetupView: View {
     @State private var verdict: String?
 
     var body: some View {
-        Form {
+        PixelList {
             Section {
                 Text("Bring your own key. The app talks to the model you pay for, nothing in between. The key stays in this phone's keychain.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Provider") {
-                Picker("Provider", selection: $provider) {
-                    ForEach(Provider.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
+                PixelChoices(title: "Provider", selection: $provider,
+                             options: Provider.allCases.map { ($0.label, $0) })
                 Link(destination: provider.keysURL) {
                     Label("Get a key from \(provider.label)", systemImage: "arrow.up.right.square")
                 }

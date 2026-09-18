@@ -25,6 +25,7 @@ struct PixelPanel: Shape {
 }
 
 struct PixelButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
     var selected = false
     var compact = false
 
@@ -33,13 +34,13 @@ struct PixelButtonStyle: ButtonStyle {
             .font(.system(compact ? .caption : .subheadline, design: .monospaced).weight(.bold))
             .padding(.horizontal, compact ? 8 : 12)
             .frame(minWidth: 28, minHeight: compact ? 30 : 44)
-            .foregroundStyle(selected ? Ink.ground : Ink.brass)
+            .foregroundStyle(configuration.role == .destructive ? Color.red : (selected ? Ink.ground : Ink.brass))
             .background(selected ? Ink.brass : Ink.card, in: PixelPanel())
             .overlay(PixelPanel().stroke(Ink.brass.opacity(0.65), lineWidth: 1))
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
             .offset(y: configuration.isPressed ? 2 : 0)
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .opacity(!isEnabled ? 0.4 : (configuration.isPressed ? 0.8 : 1))
     }
 }
 
@@ -63,5 +64,65 @@ struct PixelQuestMark: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// Native list editing, navigation and form controls inside the compact pixel shell.
+/// Only chrome is styled here; content keeps its normal readable type.
+struct PixelList<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        List {
+            content
+                .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+                .listRowSeparator(.hidden)
+                .listRowBackground(
+                    PixelPanel().fill(Ink.card)
+                        .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
+                        .padding(.vertical, 3)
+                )
+        }
+        .listStyle(.plain)
+        .listRowSpacing(0)
+        .listSectionSpacing(.compact)
+        .contentMargins(.horizontal, 12, for: .scrollContent)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
+        .background(Ink.ground)
+        .environment(\.defaultMinListRowHeight, 44)
+    }
+}
+
+extension View {
+    func pixelCard() -> some View {
+        background(Ink.card, in: PixelPanel())
+            .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
+    }
+}
+
+/// Wraps into a vertical choice list at larger text sizes instead of truncating labels.
+struct PixelChoices<Value: Hashable>: View {
+    let title: String
+    @Binding var selection: Value
+    let options: [(String, Value)]
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 4) { choices }
+            VStack(alignment: .leading, spacing: 2) { choices }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
+    }
+
+    private var choices: some View {
+        ForEach(options.indices, id: \.self) { index in
+            Button { selection = options[index].1 } label: {
+                Text(options[index].0).fixedSize(horizontal: true, vertical: false)
+            }
+            .buttonStyle(PixelButtonStyle(selected: selection == options[index].1, compact: true))
+            .accessibilityAddTraits(selection == options[index].1 ? .isSelected : [])
+        }
     }
 }

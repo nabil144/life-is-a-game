@@ -21,7 +21,7 @@ struct MilestoneFactView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 Section {
                     DatePicker("It became true on", selection: $day, in: ...Date(), displayedComponents: .date)
                 } footer: {

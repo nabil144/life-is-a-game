@@ -12,7 +12,9 @@ struct CelebrationView: View {
         VStack(spacing: 20) {
             Spacer()
             Image(systemName: path.glyph)
-                .font(.system(size: 96))
+                .font(.system(size: 56))
+                .frame(width: 96, height: 96)
+                .pixelCard()
                 .foregroundStyle(.tint)
                 .symbolEffect(.bounce, value: grown)
                 .scaleEffect(grown ? 1 : 0.6)
@@ -23,7 +25,7 @@ struct CelebrationView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Button { dismiss() } label: { Text("Continue").frame(maxWidth: .infinity) }
-                .buttonStyle(.borderedProminent).controlSize(.large).padding(24)
+                .buttonStyle(PixelButtonStyle(selected: true)).controlSize(.large).padding(24)
         }
         .foregroundStyle(Ink.words)
         .background(Ink.ground)

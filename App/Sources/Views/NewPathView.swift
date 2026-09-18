@@ -90,7 +90,7 @@ struct NewPathView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            PixelList {
                 switch talk {
                 case .ready:
                     Section {
@@ -197,8 +197,8 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
-            Image(systemName: "leaf").font(.system(size: 64)).foregroundStyle(.tint)
-            Text("Life is a game.").font(.largeTitle.bold())
+            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 96, height: 96)
+            Text("Life is a game.").font(.system(.largeTitle, design: .monospaced).bold())
             Text("Not with points. With paths you write yourself, and one objective a day that finds you when the moment is right.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal, 24)
             Spacer()
@@ -207,7 +207,7 @@ struct OnboardingView: View {
             } label: {
                 Text("Begin").frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent).controlSize(.large).padding(.horizontal, 24)
+            .buttonStyle(PixelButtonStyle(selected: true)).controlSize(.large).padding(.horizontal, 24)
             RestoreFileButton(title: "I already have a copy")
                 .padding(.horizontal, 24)
             Text("One suggested objective a day at most. Optional outside reminders are yours to set.")

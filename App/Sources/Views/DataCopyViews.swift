@@ -66,7 +66,7 @@ struct KeepCopySheet: View {
                 Text("Pick one. iCloud Drive is safest. Every change writes there. After a new install, pick the same folder and the paths come back.")
                     .foregroundStyle(.secondary)
                 KeepCopyButton(title: "Pick a folder") { dismiss() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PixelButtonStyle(selected: true))
                     .controlSize(.large)
                 Spacer()
             }

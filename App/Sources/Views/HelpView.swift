@@ -3,7 +3,7 @@ import SwiftUI
 /// The cheat sheet. Opened from Settings and from New path, so the owner does not have to ask again.
 struct HelpView: View {
     var body: some View {
-        List {
+        PixelList {
             Section {
                 Text("A milestone is something you achieve on the path. You tick it when you have reached it. A quest is a small step that might get you there, and may show up tonight.")
                     .font(.subheadline)
@@ -30,7 +30,7 @@ struct HelpView: View {
 
     private func row(_ title: String, _ body: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.headline)
+            Text(title).font(.system(.headline, design: .monospaced)).foregroundStyle(Ink.brass)
             Text(body).font(.subheadline).foregroundStyle(Ink.muted)
         }
         .padding(.vertical, 4)
