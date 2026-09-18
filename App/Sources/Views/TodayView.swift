@@ -33,13 +33,11 @@ struct TodayView: View {
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
-    @State private var scrollY: CGFloat = 0
     @State private var showOuting = false
     @State private var reminderTime = Date().addingTimeInterval(15 * 60)
     @State private var reminderDenied = false
 
     private var due: [Objective] { store.dueToday() }
-    private var collapse: CGFloat { min(1, max(0, scrollY / 56)) }
     private var showKind: Bool { sort == .when }
     private var dateSlot: CGFloat { 68 }
 
@@ -75,7 +73,7 @@ struct TodayView: View {
             ZStack {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: Self.stamp)
-                        .font(.system(size: 28 - 10 * collapse, weight: .bold))
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(Ink.words)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
@@ -200,11 +198,6 @@ struct TodayView: View {
         .scrollContentBackground(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
         .environment(\.defaultMinListHeaderHeight, 0)
-        .onScrollGeometryChange(for: CGFloat.self) { geo in
-            max(0, geo.contentOffset.y + geo.contentInsets.top)
-        } action: { _, y in
-            scrollY = y
-        }
     }
 
     @ViewBuilder
