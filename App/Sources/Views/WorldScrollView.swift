@@ -110,36 +110,33 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     }
 }
 
-/// Vector layers avoid allocating a world-sized Canvas bitmap when the map grows.
+/// Separate wall and floor geometry: the selected floor is always underneath walls.
 struct WorldCorridors: UIViewRepresentable {
-    var base: CGPath
+    var walls: CGPath
+    var floorWidth: CGFloat
     var selected: CGPath?
 
     func makeUIView(context: Context) -> WorldCorridorLayerView { WorldCorridorLayerView() }
     func updateUIView(_ view: WorldCorridorLayerView, context: Context) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        view.walls.path = base
-        view.floor.path = base
-        view.glow.path = selected
+        view.walls.path = walls
         view.highlight.path = selected
+        view.highlight.lineWidth = floorWidth
         CATransaction.commit()
     }
 }
 
 final class WorldCorridorLayerView: UIView {
-    let glow = CAShapeLayer()
     let walls = CAShapeLayer()
-    let floor = CAShapeLayer()
     let highlight = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         isUserInteractionEnabled = false
         for (shape, color, width) in [
-            (walls, Ink.line.opacity(0.8), CGFloat(6)), (floor, Ink.ground, CGFloat(2)),
-            (glow, Ink.brass.opacity(0.18), CGFloat(10)),
-            (highlight, Ink.brass, CGFloat(4))
+            (highlight, Ink.brass.opacity(0.55), CGFloat(12)),
+            (walls, Ink.brass.opacity(0.45), CGFloat(2))
         ] {
             shape.fillColor = nil
             shape.strokeColor = UIColor(color).cgColor
@@ -155,7 +152,7 @@ final class WorldCorridorLayerView: UIView {
         super.layoutSubviews()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for shape in [walls, floor, glow, highlight] { shape.frame = bounds }
+        for shape in [highlight, walls] { shape.frame = bounds }
         CATransaction.commit()
     }
 }

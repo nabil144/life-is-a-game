@@ -142,6 +142,7 @@ struct WorldRoom: Identifiable {
     var pathID: UUID?
     var workID: UUID?
     var center: CGPoint
+    var frame: CGRect
     var title: String
     var subtitle: String
     var glyph: String
@@ -153,31 +154,45 @@ struct WorldMapSnapshot {
     var inputs: [WorldLayout.Input]
     var layout: WorldLayout
     var rooms: [WorldRoom]
-    var corridors: SwiftUI.Path
+    var walls: SwiftUI.Path
+    var floorWidth: CGFloat
     var routes: [String: SwiftUI.Path]
 
     init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
         inputs = paths.map { .init(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
         layout = geometry?.0 ?? (previous?.inputs == inputs ? previous!.layout : WorldLayout(paths: inputs))
+        let maze = previous?.inputs == inputs ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
+        if let maze {
+            layout.size = maze.size
+            for index in layout.rooms.indices {
+                if let frame = maze.roomFrames[layout.rooms[index].id] {
+                    layout.rooms[index].center = CGPoint(x: frame.midX,y: frame.midY)
+                }
+            }
+            layout.center = layout.rooms.first(where: { $0.id == "you" })?.center ?? layout.center
+        }
+        let previousFrames = Dictionary(uniqueKeysWithValues: (previous?.rooms ?? []).map { ($0.id,$0.frame) })
         let pathIndex = Dictionary(uniqueKeysWithValues: paths.map { ($0.id, $0) })
         let nodeIndex = Dictionary(uniqueKeysWithValues: paths.flatMap(\.nodes).map { ($0.id, $0) })
         rooms = layout.rooms.map { room in
             let path = room.pathID.flatMap { pathIndex[$0] }
             let node = room.workID.flatMap { nodeIndex[$0] }
             return WorldRoom(id: room.id, pathID: room.pathID, workID: room.workID, center: room.center,
+                             frame: maze?.roomFrames[room.id] ?? previousFrames[room.id] ?? room.frame,
                              title: node?.title ?? path?.name ?? "You",
                              subtitle: node.map { $0.kind == .practice ? "Routine" : "Quest" }
                                 ?? path.map { "\($0.nodes.filter(\.isOpen).count) quests & routines" } ?? "Your world",
                              glyph: path?.glyph ?? "brain", routine: node?.kind == .practice, work: path?.role == .work)
         }
         if let previous, previous.inputs == inputs {
-            corridors = previous.corridors; routes = previous.routes
+            walls = previous.walls; floorWidth = previous.floorWidth; routes = previous.routes
         } else {
-            corridors = SwiftUI.Path(); routes = [:]
-            let maze = geometry?.1 ?? WorldMaze(layout: layout)
-            for segment in maze.segments {
-                corridors.move(to: segment.from)
-                corridors.addLine(to: segment.to)
+            walls = SwiftUI.Path(); routes = [:]
+            let maze = maze!
+            floorWidth = maze.cellSize - 4
+            for segment in maze.walls {
+                walls.move(to: segment.from)
+                walls.addLine(to: segment.to)
             }
             for (id, points) in maze.routes {
                 var route = SwiftUI.Path(); route.addLines(points)
@@ -200,21 +215,20 @@ struct WorldMapContent: View {
     let selected: String?
     let select: (String) -> Void
 
-    private func revealed(_ room: WorldRoom, chosen: WorldRoom?) -> Bool {
-        if room.id == "you" || room.id == selected { return true }
-        guard let chosen,
-              let pathID = chosen.pathID, room.pathID == pathID else { return false }
-        return chosen.workID == nil || room.workID == nil
-    }
-
     var body: some View {
-        let chosen = map.rooms.first(where: { $0.id == selected })
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Ink.ground)
                 .contentShape(Rectangle())
                 .onTapGesture { select("") }
                 .accessibilityHidden(true)
-            WorldCorridors(base: map.corridors.cgPath, selected: selected.flatMap { map.routes[$0]?.cgPath })
+            ForEach(map.rooms) { room in
+                Rectangle().fill(room.work ? Ink.workCard : Ink.card.opacity(0.55))
+                    .frame(width: room.frame.width, height: room.frame.height)
+                    .position(room.center)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            WorldCorridors(walls: map.walls.cgPath, floorWidth: map.floorWidth, selected: selected.flatMap { map.routes[$0]?.cgPath })
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
@@ -233,10 +247,8 @@ struct WorldMapContent: View {
                             .lineLimit(2).multilineTextAlignment(.center)
                     }
                     .padding(6)
-                    .frame(width: 136, height: 72)
+                    .frame(width: room.frame.width - 8, height: room.frame.height - 8)
                     .foregroundStyle(Ink.words)
-                    .background(room.work ? Ink.workCard : Ink.card, in: PixelPanel())
-                    .overlay(PixelPanel().stroke(revealed(room, chosen: chosen) ? Ink.brass : Ink.line, lineWidth: 2))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

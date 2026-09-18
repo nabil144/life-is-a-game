@@ -76,3 +76,27 @@ Metadata edits reuse it, and selections only change the highlighted vector path.
 The background grid adapts to world size; collinear roads are collapsed before
 rendering. Engine tests cover ancestry, continuity, a connected acyclic network,
 detours, deterministic regeneration, open-space density and 1,000-item worlds.
+
+## Build 43: walls enclose walkable floors
+
+Build 42 drew a road graph, which still made its lines read as connections.
+WorldMaze now models cells, chambers and doorways. Adjacent cells keep a wall
+unless a doorway is carved between them. Rooms have wall-free interiors and real
+openings; their labels no longer have a closed decorative outline.
+
+The compact ownership layout guides winding walks from You to paths and from
+paths to their children. These journeys are carved first. The remaining doors
+form a spanning tree, so there is exactly one route between chambers/cells.
+Selection fills a 12-point strip down the middle of 16-point passages. Two-point
+walls use separate geometry and render above the floor; the highlight never
+replaces a wall. Room positions snap by at most eight points to the maze grid.
+
+Generation remains cancellable and off the UI thread. Large worlds use coarser
+background chambers away from rooms and reserved journey areas, while keeping
+those areas detailed. The 1,000-item fixture generates about 67,000 merged wall
+segments instead of 234,000. Metadata edits and selection reuse the cached maze.
+
+Tests verify wall/door agreement, connected acyclic passage topology, highlight
+clearance, parent gateways across varied families, determinism, room separation,
+non-direct journeys, and the 1,000-item case. A rendered geometry preview was
+reviewed locally; that preview is not an iOS interaction test.

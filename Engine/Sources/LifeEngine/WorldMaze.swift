@@ -3,244 +3,283 @@ import Foundation
 import CoreGraphics
 #endif
 
-/// One deterministic tree: the journeys and the unused branches share the same roads.
-/// Generated only when rooms change, never while panning or selecting.
+/// A perfect maze of walkable cells and multi-cell rooms. Walls are the closed
+/// boundaries; routes traverse open doorways, never the wall geometry.
 public struct WorldMaze: Sendable {
     public struct Segment: Equatable, Sendable {
         public var from: CGPoint
         public var to: CGPoint
     }
-    public var segments: [Segment] = []
-    public var routes: [String: [CGPoint]] = [:]
-
-    private struct Cell: Hashable, Comparable {
-        var x: Int
-        var y: Int
-        init(_ point: CGPoint) { x = Int((point.x / 4).rounded()); y = Int((point.y / 4).rounded()) }
-        init(_ x: Int, _ y: Int) { self.x = x; self.y = y }
-        var point: CGPoint { CGPoint(x: x * 4, y: y * 4) }
-        static func < (a: Self, b: Self) -> Bool { a.y == b.y ? a.x < b.x : a.y < b.y }
+    public struct Door: Equatable, Sendable {
+        public var a: Int
+        public var b: Int
     }
-    private struct Edge: Hashable, Comparable {
-        var a: Cell
-        var b: Cell
-        init(_ a: Cell, _ b: Cell) { self.a = min(a, b); self.b = max(a, b) }
-        static func < (a: Self, b: Self) -> Bool { a.a == b.a ? a.b < b.b : a.a < b.a }
+    public var walls: [Segment] = []
+    public var passages: [Door] = []
+    public var routes: [String: [CGPoint]] = [:]
+    public var roomFrames: [String: CGRect] = [:]
+    public var cellSize: CGFloat = 16
+    public private(set) var ownershipRouted = true
+    public var columns: Int = 0
+    public var rows: Int = 0
+    /// Cells in a chamber share one node. Every other cell is a separate node.
+    public var owners: [Int] = []
+    public var size: CGSize { CGSize(width: CGFloat(columns) * cellSize, height: CGFloat(rows) * cellSize) }
+    public func center(of cell: Int) -> CGPoint {
+        CGPoint(x: (CGFloat(cell % columns) + 0.5) * cellSize,
+                y: (CGFloat(cell / columns) + 0.5) * cellSize)
+    }
+
+    private struct Edge: Hashable {
+        var a: Int
+        var b: Int
+        init(_ a: Int, _ b: Int) { self.a = min(a,b); self.b = max(a,b) }
     }
     private struct Random {
-        var seed: UInt64 = 0x4D415A454C494645
+        var seed: UInt64 = 0x4D415A4557414C4C
         mutating func next(_ count: Int) -> Int {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
             return Int((seed >> 32) % UInt64(count))
         }
         mutating func shuffle<T>(_ values: inout [T]) {
             guard values.count > 1 else { return }
-            for i in stride(from: values.count - 1, through: 1, by: -1) {
-                values.swapAt(i, next(i + 1))
-            }
+            for i in stride(from: values.count - 1, through: 1, by: -1) { values.swapAt(i, next(i+1)) }
         }
     }
     private struct Forest {
-        var ids: [Cell: Int] = [:]
-        var parents: [Int] = []
-        var sizes: [Int] = []
-        mutating func root(_ cell: Cell) -> Int {
-            let index: Int
-            if let existing = ids[cell] { index = existing }
-            else {
-                index = parents.count; ids[cell] = index
-                parents.append(index); sizes.append(1)
-            }
-            var current = index
-            while parents[current] != current {
-                parents[current] = parents[parents[current]]
-                current = parents[current]
-            }
-            return current
+        var parent: [Int]
+        var size: [Int]
+        init(_ count: Int) { parent = Array(0..<count); size = Array(repeating: 1, count: count) }
+        mutating func root(_ value: Int) -> Int {
+            var x = value
+            while parent[x] != x { parent[x] = parent[parent[x]]; x = parent[x] }
+            return x
         }
-        mutating func join(_ a: Cell, _ b: Cell) -> Bool {
+        mutating func join(_ a: Int, _ b: Int) -> Bool {
             var x = root(a), y = root(b)
             guard x != y else { return false }
-            if sizes[x] < sizes[y] { swap(&x, &y) }
-            parents[y] = x; sizes[x] += sizes[y]
-            return true
+            if size[x] < size[y] { swap(&x,&y) }
+            parent[y] = x; size[x] += size[y]; return true
         }
-    }
-
-    private static func cells(_ a: Cell, _ b: Cell) -> [Cell] {
-        let dx = a.x == b.x ? 0 : (a.x < b.x ? 1 : -1)
-        let dy = a.y == b.y ? 0 : (a.y < b.y ? 1 : -1)
-        let length = abs(b.x - a.x) + abs(b.y - a.y)
-        return (0...length).map { Cell(a.x + dx * $0, a.y + dy * $0) }
     }
 
     public init(layout: WorldLayout) {
-        var random = Random()
-        var backbone = Set<Edge>()
-        for corridor in layout.corridors {
-            for (a, b) in zip(corridor.points, corridor.points.dropFirst()) {
-                let line = Self.cells(Cell(a), Cell(b))
-                for (a, b) in zip(line, line.dropFirst()) { backbone.insert(Edge(a, b)) }
-            }
-        }
-        if backbone.isEmpty {
-            let root = Cell(layout.center)
-            let line = Self.cells(root, Cell(root.x + 22, root.y))
-            for (a, b) in zip(line, line.dropFirst()) { backbone.insert(Edge(a, b)) }
-        }
-        var occupied = Set(backbone.flatMap { [$0.a, $0.b] })
-        occupied.insert(Cell(layout.center))
-        // Raster masks keep collision checks independent of the number of rooms.
-        var rooms = Set<Cell>()
-        for room in layout.rooms {
-            let rect = room.frame.insetBy(dx: -4, dy: -4)
-            for y in Int(rect.minY / 4)...Int(rect.maxY / 4) {
-                for x in Int(rect.minX / 4)...Int(rect.maxX / 4) { rooms.insert(Cell(x, y)) }
-            }
-        }
-        var neighbors: [Cell: [Cell]] = [:]
-        for edge in backbone.sorted() {
-            neighbors[edge.a, default: []].append(edge.b)
-            neighbors[edge.b, default: []].append(edge.a)
-        }
-        // Bend straight runs into U-shaped excursions where there is clearance.
-        // Junctions stay in place, so room ownership and shared trunks are preserved.
-        let anchors = Set(neighbors.keys.filter { cell in
-            let links = neighbors[cell]!
-            return links.count != 2 || (links[0].x != links[1].x && links[0].y != links[1].y)
-        })
-        for start in anchors.sorted() {
-            if Task.isCancelled { return }
-            for first in neighbors[start] ?? [] {
-                var run = [start, first]
-                while let last = run.last, !anchors.contains(last) {
-                    let previous = run[run.count - 2]
-                    guard let next = neighbors[last]?.first(where: { $0 != previous }) else { break }
-                    run.append(next)
-                }
-                guard let end = run.last, start < end, run.count >= 5 else { continue }
-                // Use the longest exposed part of the run, leaving room interiors alone.
-                var best: [Cell] = [], current: [Cell] = []
-                for cell in run.dropFirst().dropLast() {
-                    if rooms.contains(cell) {
-                        if current.count > best.count { best = current }; current = []
-                    } else { current.append(cell) }
-                }
-                if current.count > best.count { best = current }
-                guard best.count >= 5 else { continue }
-                best = Array(best.dropFirst().dropLast())
-                guard let a = best.first, let b = best.last else { continue }
-                let original = Set(best)
-                let connections = Set(run.filter { cell in
-                    abs(cell.x-a.x) + abs(cell.y-a.y) <= 1 || abs(cell.x-b.x) + abs(cell.y-b.y) <= 1
-                })
-                let sign = random.next(2) == 0 ? 1 : -1
-                for direction in [sign, -sign] {
-                    let distance = 6 + random.next(3) * 2 // 24–40 points off the direct road.
-                    let dx = a.x == b.x ? direction * distance : 0
-                    let dy = a.y == b.y ? direction * distance : 0
-                    let c = Cell(a.x + dx, a.y + dy), d = Cell(b.x + dx, b.y + dy)
-                    let detour = Self.cells(a, c) + Self.cells(c, d).dropFirst() + Self.cells(d, b).dropFirst()
-                    let valid = detour.allSatisfy { cell in
-                        guard cell.x > 1, cell.y > 1,
-                              cell.point.x < layout.size.width - 8, cell.point.y < layout.size.height - 8,
-                              !rooms.contains(cell) else { return false }
-                        for y in -1...1 { for x in -1...1 {
-                            let near = Cell(cell.x + x, cell.y + y)
-                            if occupied.contains(near), !original.contains(near), !connections.contains(near) { return false }
-                        } }
-                        return true
-                    }
-                    guard valid else { continue }
-                    let old = best
-                    for (a, b) in zip(old, old.dropFirst()) { backbone.remove(Edge(a, b)) }
-                    occupied.subtract(original.subtracting([a, b]))
-                    for (a, b) in zip(detour, detour.dropFirst()) { backbone.insert(Edge(a, b)) }
-                    occupied.formUnion(detour)
-                    break
-                }
-            }
-        }
-
-        var forest = Forest()
-        var tree: [Edge] = []
-        var roads = backbone.sorted()
-        random.shuffle(&roads)
-        for edge in roads where forest.join(edge.a, edge.b) { tree.append(edge) }
-        _ = forest.root(Cell(layout.center))
-
-        // Coarse maze grid fills the world. Split crossings at exact backbone cells,
-        // then graft branches with Kruskal: never a shortcut or a second route.
-        let step = max(6, Int(ceil(sqrt(layout.size.width * layout.size.height / 8000) / 4)))
-        let width = Int(layout.size.width / 4), height = Int(layout.size.height / 4)
-        var candidates: [Edge] = []
-        func offer(_ a: Cell, _ b: Cell) {
-            let line = Self.cells(a, b)
-            guard line.allSatisfy({ !rooms.contains($0) }) else { return }
-            var previous = a
-            for cell in line.dropFirst() where occupied.contains(cell) || cell == b {
-                candidates.append(Edge(previous, cell)); previous = cell
-            }
-        }
-        for y in stride(from: step / 2, to: height - step / 2, by: step) {
-            if Task.isCancelled { return }
-            for x in stride(from: step / 2, to: width - step / 2, by: step) {
-                let at = Cell(x, y)
-                if x + step < width - step / 2 { offer(at, Cell(x + step, y)) }
-                if y + step < height - step / 2 { offer(at, Cell(x, y + step)) }
-            }
-        }
-        random.shuffle(&candidates)
-        for edge in candidates where forest.join(edge.a, edge.b) { tree.append(edge) }
-
-        let root = Cell(layout.center)
-        let component = forest.root(root)
-        tree = tree.filter { forest.root($0.a) == component }
-        neighbors = [:]
-        for edge in tree {
-            neighbors[edge.a, default: []].append(edge.b)
-            neighbors[edge.b, default: []].append(edge.a)
-        }
-        var parents: [Cell: Cell] = [root: root]
-        var stack = [root]
-        while let cell = stack.popLast() {
-            for next in neighbors[cell] ?? [] where parents[next] == nil {
-                parents[next] = cell; stack.append(next)
-            }
-        }
-        for room in layout.rooms {
-            var cell = Cell(room.center)
-            guard parents[cell] != nil else { continue }
-            var route = [cell.point]
-            while cell != root {
-                cell = parents[cell]!
-                route.append(cell.point)
-            }
-            routes[room.id] = Self.simplify(Array(route.reversed()))
-        }
-        // Collapse straight runs for small native vector paths, even in large worlds.
-        let endpoints = Set(neighbors.keys.filter { cell in
-            let links = neighbors[cell]!
-            return links.count != 2 || (links[0].x != links[1].x && links[0].y != links[1].y)
-        })
-        for start in endpoints.sorted() {
-            for first in neighbors[start] ?? [] {
-                var previous = start, end = first
-                while !endpoints.contains(end) {
-                    guard let next = neighbors[end]?.first(where: { $0 != previous }) else { break }
-                    previous = end; end = next
-                }
-                if start < end { segments.append(Segment(from: start.point, to: end.point)) }
-            }
+        self.init(layout: layout, wandering: true)
+        if !ownershipRouted && !Task.isCancelled {
+            self.init(layout: layout, wandering: false)
         }
     }
 
-    private static func simplify(_ points: [CGPoint]) -> [CGPoint] {
+    private init(layout: WorldLayout, wandering: Bool) {
+        columns = max(12, Int(ceil(layout.size.width / cellSize)))
+        rows = max(8, Int(ceil(layout.size.height / cellSize)))
+        let count = columns * rows
+        owners = Array(0..<count)
+        var roomNodes: [String: Int] = [:]
+        var roomCenters: [Int: Int] = [:]
+        for (index, room) in layout.rooms.enumerated() {
+            let x = min(columns-5, max(4, Int(room.center.x / cellSize)))
+            let y = min(rows-3, max(2, Int(room.center.y / cellSize)))
+            let node = count + index
+            roomNodes[room.id] = node
+            roomCenters[node] = y * columns + x
+            roomFrames[room.id] = CGRect(x: CGFloat(x-4)*cellSize, y: CGFloat(y-2)*cellSize,
+                                         width: 9*cellSize, height: 5*cellSize)
+            for row in (y-2)...(y+2) { for col in (x-4)...(x+4) { owners[row*columns+col] = node } }
+        }
+        // Keep detailed cells around rooms, but use larger chambers in the distant
+        // wilderness of very large worlds. This bounds vector complexity at overview.
+        let block = max(1, Int(ceil(sqrt(Double(count) / 16000))))
+        if block > 1 {
+            var detailed = Set<Int>()
+            for corridor in layout.corridors {
+                for (a,b) in zip(corridor.points,corridor.points.dropFirst()) {
+                    let ax = Int(a.x/cellSize), ay = Int(a.y/cellSize)
+                    let bx = Int(b.x/cellSize), by = Int(b.y/cellSize)
+                    for y in max(0,min(ay,by)-3)...min(rows-1,max(ay,by)+3) {
+                        for x in max(0,min(ax,bx)-3)...min(columns-1,max(ax,bx)+3) { detailed.insert(y*columns+x) }
+                    }
+                }
+            }
+            for y in stride(from: 0, to: rows, by: block) {
+                for x in stride(from: 0, to: columns, by: block) {
+                    let cells = (y..<min(rows,y+block)).flatMap { row in
+                        (x..<min(columns,x+block)).map { row*columns+$0 }
+                    }
+                    if cells.allSatisfy({ owners[$0] < count && !detailed.contains($0) }), let first = cells.first {
+                        for cell in cells { owners[cell] = first }
+                    }
+                }
+            }
+        }
+        var random = Random()
+        var doors: [Edge: Door] = [:]
+        var edges: [Edge] = []
+        var neighbors = Array(repeating: [Int](), count: count + layout.rooms.count)
+        func offer(_ a: Int, _ b: Int) {
+            let edge = Edge(owners[a], owners[b])
+            guard edge.a != edge.b, doors[edge] == nil else { return }
+            doors[edge] = Door(a: a, b: b); edges.append(edge)
+            neighbors[edge.a].append(edge.b); neighbors[edge.b].append(edge.a)
+        }
+        for y in 0..<rows { for x in 0..<columns {
+            let at = y*columns+x
+            if x+1 < columns { offer(at,at+1) }
+            if y+1 < rows { offer(at,at+columns) }
+        } }
+        for node in neighbors.indices { random.shuffle(&neighbors[node]) }
+        let root = roomNodes["you"]!
+        var used: Set<Int> = [root]
+        var roots: Set<Int> = [root]
+        var branches: [UUID: Set<Int>] = [:]
+        var tree = Set<Edge>()
+
+        // Route through a narrow, irregular area around the compact ownership layout.
+        // Random depth-first walks add real corners; a breadth-first fallback handles
+        // crowded chambers. Joining the existing family once preserves unique ancestry.
+        func connect(_ corridor: WorldLayout.Corridor) -> Bool {
+            let targetName = corridor.workID.map { "work-\($0)" } ?? "path-\(corridor.pathID)"
+            guard let target = roomNodes[targetName],
+                  let parent = roomNodes[corridor.workID == nil ? "you" : "path-\(corridor.pathID)"] else { return false }
+            var sources = corridor.workID == nil ? roots : (branches[corridor.pathID] ?? [])
+            sources.insert(parent)
+            var guide = Set<Int>()
+            for (a,b) in zip(corridor.points,corridor.points.dropFirst()) {
+                let ax = Int(a.x/cellSize), ay = Int(a.y/cellSize)
+                let bx = Int(b.x/cellSize), by = Int(b.y/cellSize)
+                for y in max(1,min(ay,by)-2)...min(rows-2,max(ay,by)+2) {
+                    for x in max(1,min(ax,bx)-2)...min(columns-2,max(ax,bx)+2) { guide.insert(owners[y*columns+x]) }
+                }
+            }
+            func allowed(_ node: Int, narrow: Bool) -> Bool {
+                if node >= count { return node == target || node == parent }
+                if used.contains(node) { return sources.contains(node) }
+                let x = node % columns, y = node / columns
+                return x > 0 && y > 0 && x < columns-1 && y < rows-1 && (!narrow || guide.contains(node))
+            }
+            func search(narrow: Bool) -> [Int]? {
+                var previous: [Int: Int] = [target: target]
+                var frontier = [target], head = 0
+                while narrow && wandering ? !frontier.isEmpty : head < frontier.count {
+                    let at: Int
+                    if narrow && wandering { at = frontier.removeLast() } else { at = frontier[head]; head += 1 }
+                    if sources.contains(at) {
+                        var journey = [at], cursor = at
+                        while cursor != target { cursor = previous[cursor]!; journey.append(cursor) }
+                        return journey
+                    }
+                    for next in neighbors[at] where previous[next] == nil && allowed(next,narrow: narrow) {
+                        previous[next] = at; frontier.append(next)
+                    }
+                }
+                return nil
+            }
+            guard let journey = search(narrow: true) ?? search(narrow: false) else { return false }
+            for (a,b) in zip(journey,journey.dropFirst()) { tree.insert(Edge(a,b)) }
+            used.formUnion(journey)
+            let outside = journey.filter { $0 < count }
+            if corridor.workID == nil { roots.formUnion(outside) }
+            else { branches[corridor.pathID, default: []].formUnion(outside) }
+            return true
+        }
+        var routed = true
+        for corridor in layout.corridors.filter({ $0.workID == nil }) + layout.corridors.filter({ $0.workID != nil }) {
+            if Task.isCancelled { return }
+            if !connect(corridor) { routed = false; break }
+        }
+        // Preserve all carved journeys, then remove additional walls until every cell
+        // belongs to one tree. Unchosen neighboring cells retain a separating wall.
+        var forest = Forest(count + layout.rooms.count)
+        for edge in tree { _ = forest.join(edge.a,edge.b) }
+        random.shuffle(&edges)
+        for edge in edges where forest.join(edge.a,edge.b) { tree.insert(edge) }
+        // Order output independently of Set/Dictionary iteration.
+        let ordered = tree.sorted { $0.a == $1.a ? $0.b < $1.b : $0.a < $1.a }
+        var open = Set<Edge>()
+        var carved = Array(repeating: [Int](), count: neighbors.count)
+        for edge in ordered {
+            guard let door = doors[edge] else { continue }
+            passages.append(door); open.insert(Edge(door.a,door.b))
+            carved[edge.a].append(edge.b); carved[edge.b].append(edge.a)
+        }
+        // Walls are cell boundaries, including capped dead ends and the outer border.
+        // Chamber interiors have no walls; entrances use the same open-door data.
+        for y in 0...rows {
+            if Task.isCancelled { return }
+            var start: Int?
+            for x in 0...columns {
+                let closed: Bool
+                if x == columns { closed = false }
+                else if y == 0 || y == rows { closed = true }
+                else {
+                    let a = (y-1)*columns+x, b = y*columns+x
+                    closed = owners[a] != owners[b] && !open.contains(Edge(a,b))
+                }
+                if closed && start == nil { start = x }
+                if !closed, let begin = start {
+                    walls.append(Segment(from: CGPoint(x: CGFloat(begin)*cellSize,y: CGFloat(y)*cellSize),
+                                         to: CGPoint(x: CGFloat(x)*cellSize,y: CGFloat(y)*cellSize)))
+                    start = nil
+                }
+            }
+        }
+        for x in 0...columns {
+            if Task.isCancelled { return }
+            var start: Int?
+            for y in 0...rows {
+                let closed: Bool
+                if y == rows { closed = false }
+                else if x == 0 || x == columns { closed = true }
+                else {
+                    let a = y*columns+x-1, b = y*columns+x
+                    closed = owners[a] != owners[b] && !open.contains(Edge(a,b))
+                }
+                if closed && start == nil { start = y }
+                if !closed, let begin = start {
+                    walls.append(Segment(from: CGPoint(x: CGFloat(x)*cellSize,y: CGFloat(begin)*cellSize),
+                                         to: CGPoint(x: CGFloat(x)*cellSize,y: CGFloat(y)*cellSize)))
+                    start = nil
+                }
+            }
+        }
+        var ancestors = [root: root], stack = [root]
+        while let at = stack.popLast() {
+            for next in carved[at] where ancestors[next] == nil { ancestors[next] = at; stack.append(next) }
+        }
+        for room in layout.rooms {
+            guard let target = roomNodes[room.id], ancestors[target] != nil else { continue }
+            var nodes = [target], at = target
+            while at != root { at = ancestors[at]!; nodes.append(at) }
+            nodes.reverse()
+            var points = [center(of: roomCenters[root]!)]
+            for (a,b) in zip(nodes,nodes.dropFirst()) {
+                let door = doors[Edge(a,b)]!
+                let entry = owners[door.a] == a ? door.a : door.b
+                let exit = entry == door.a ? door.b : door.a
+                appendInsideRoom(center(of: entry), to: &points)
+                points.append(center(of: exit))
+                if let middle = roomCenters[b] { appendInsideRoom(center(of: middle), to: &points) }
+            }
+            routes[room.id] = simplify(points)
+        }
+        // Exposed for invariants: every child must retain its ownership gateway.
+        // The tests exercise crowded layouts as well as empty/small worlds.
+        ownershipRouted = routed
+    }
+
+    private func appendInsideRoom(_ point: CGPoint, to points: inout [CGPoint]) {
+        if let last = points.last, last.x != point.x && last.y != point.y {
+            points.append(CGPoint(x: point.x,y: last.y))
+        }
+        if points.last != point { points.append(point) }
+    }
+    private func simplify(_ points: [CGPoint]) -> [CGPoint] {
         var result: [CGPoint] = []
         for point in points {
             if result.count >= 2 {
-                let a = result[result.count - 2], b = result[result.count - 1]
-                if (a.x == b.x && b.x == point.x) || (a.y == b.y && b.y == point.y) { result.removeLast() }
+                let a = result[result.count-2], b = result[result.count-1]
+                if ((a.x == b.x && b.x == point.x) || (a.y == b.y && b.y == point.y)),
+                   (b.x-a.x)*(point.x-b.x)+(b.y-a.y)*(point.y-b.y) >= 0 { result.removeLast() }
             }
             result.append(point)
         }
