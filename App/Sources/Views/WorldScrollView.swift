@@ -45,6 +45,7 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         scroll.maximumZoomScale = 2
         view.addSubview(scroll)
         addChild(host)
+        host.safeAreaRegions = []
         scroll.addSubview(host.view)
         host.view.backgroundColor = UIColor(Ink.ground)
         host.didMove(toParent: self)
@@ -143,4 +144,12 @@ final class WorldCorridorLayerView: UIView {
         }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for shape in [walls, floor, highlight] { shape.frame = bounds }
+        CATransaction.commit()
+    }
 }

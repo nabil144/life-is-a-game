@@ -1,6 +1,14 @@
 # Pixel World redesign proposal
 
-Status: researched proposal, 2026-09-18. No app implementation yet.
+Status: first implementation, build 37, 2026-09-18. Original research and proposal follow the implementation notes below.
+
+## Implementation notes
+
+WorldLayout now uses four cardinal regions and disjoint lanes, a constrained version of the proposed radial sectors. This makes monotone orthogonal routing deterministic without a general obstacle-routing solver. Rooms are 136×72; transverse lanes reserve 160 points and grow with quest count. Large worlds need pan/zoom or the Paths menu; fitting every title legibly on one phone screen is not possible.
+
+The layout and corridor geometry are cached by path/work IDs. Native UIScrollView handles pan/zoom without SwiftUI gesture-state updates. CAShapeLayer draws the corridors as vectors instead of a world-sized Canvas bitmap. Selection is immediate with no queued Task or delayed travel animation. Real SwiftUI buttons expose room labels and actions; Paths and Quests menus provide access when overview targets are too small. Open edits the selected quest or opens its path. Recenter and overview are explicit controls. Reduce Motion disables camera animation.
+
+Tests cover outward segments, axis alignment, room clearance, branches crossing other paths, deterministic output, empty and uneven populations, and a 1,000-quest placement benchmark (about 2 ms locally in a debug Linux test; not a device rendering benchmark). On-device frame rate, VoiceOver navigation during zoom, and large Dynamic Type still need hands-on verification. Fixed-size map labels may truncate; the selection panel and menus show the full names. Structural edits may rearrange lanes; ordinary selection/panning does not recalculate the layout.
 
 ## Goal
 
