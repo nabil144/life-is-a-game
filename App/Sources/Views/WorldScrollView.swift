@@ -110,49 +110,94 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     }
 }
 
-/// Separate wall and floor geometry: the selected floor is always underneath walls.
+/// Cached walls and masked floor layers. Core Animation reveals branches without
+/// rebuilding maze geometry or publishing frame-by-frame SwiftUI state.
 struct WorldCorridors: UIViewRepresentable {
     var walls: CGPath
+    var floorMask: CGPath
     var floorWidth: CGFloat
-    var selected: CGPath?
+    var route: WorldLightRoute?
+    var generation: UUID
+    var selection: String?
+    var animated: Bool
 
     func makeUIView(context: Context) -> WorldCorridorLayerView { WorldCorridorLayerView() }
     func updateUIView(_ view: WorldCorridorLayerView, context: Context) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        view.walls.path = walls
-        view.highlight.path = selected
-        view.highlight.lineWidth = floorWidth
-        CATransaction.commit()
+        view.update(walls: walls, mask: floorMask, width: floorWidth, route: route,
+                    generation: generation, selection: selection, animated: animated)
     }
 }
 
 final class WorldCorridorLayerView: UIView {
-    let walls = CAShapeLayer()
-    let highlight = CAShapeLayer()
+    private let walls = CAShapeLayer()
+    private let light = CALayer()
+    private let floorMask = CAShapeLayer()
+    private var generation: UUID?
+    private var selection: String?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         isUserInteractionEnabled = false
-        for (shape, color, width) in [
-            (highlight, Ink.brass.opacity(0.55), CGFloat(12)),
-            (walls, Ink.brass.opacity(0.45), CGFloat(2))
-        ] {
-            shape.fillColor = nil
-            shape.strokeColor = UIColor(color).cgColor
-            shape.lineWidth = width
-            shape.lineCap = .square
-            shape.lineJoin = .miter
-            layer.addSublayer(shape)
-        }
+        floorMask.fillRule = .evenOdd
+        floorMask.fillColor = UIColor.black.cgColor
+        light.mask = floorMask
+        layer.addSublayer(light)
+        walls.fillColor = nil
+        walls.strokeColor = UIColor(Ink.brass.opacity(0.45)).cgColor
+        walls.lineWidth = 2
+        walls.lineCap = .square
+        walls.lineJoin = .miter
+        layer.addSublayer(walls)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func update(walls path: CGPath, mask: CGPath, width: CGFloat, route: WorldLightRoute?,
+                generation: UUID, selection: String?, animated: Bool) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        let changed = self.generation != generation || self.selection != selection
+        if self.generation != generation {
+            walls.path = path; floorMask.path = mask
+        }
+        guard changed else {
+            if !animated { light.sublayers?.forEach { $0.removeAllAnimations() } }
+            return
+        }
+        self.generation = generation; self.selection = selection
+        light.sublayers?.forEach { $0.removeAllAnimations(); $0.removeFromSuperlayer() }
+        guard let route, route.distance > 0 else { return }
+        let duration = min(6, max(2.5, Double(route.distance / 160)))
+        let start = CACurrentMediaTime()
+        for stroke in route.strokes {
+            let shape = CAShapeLayer()
+            shape.frame = bounds
+            shape.path = stroke.path
+            shape.fillColor = nil
+            shape.strokeColor = UIColor(Ink.brass.opacity(0.55)).cgColor
+            shape.lineWidth = width
+            shape.lineCap = .butt
+            shape.lineJoin = .miter
+            shape.strokeEnd = 1
+            light.addSublayer(shape)
+            if animated && !UIAccessibility.isReduceMotionEnabled {
+                let reveal = CABasicAnimation(keyPath: "strokeEnd")
+                reveal.fromValue = 0; reveal.toValue = 1
+                reveal.beginTime = start + duration * Double(stroke.start / route.distance)
+                reveal.duration = max(0.01, duration * Double(stroke.length / route.distance))
+                reveal.timingFunction = CAMediaTimingFunction(name: .linear)
+                reveal.fillMode = .backwards
+                shape.add(reveal, forKey: "reveal")
+            }
+        }
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for shape in [highlight, walls] { shape.frame = bounds }
+        walls.frame = bounds; light.frame = bounds; floorMask.frame = bounds
+        light.sublayers?.forEach { $0.frame = bounds }
         CATransaction.commit()
     }
 }

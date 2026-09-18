@@ -150,13 +150,33 @@ struct WorldRoom: Identifiable {
     var work: Bool
 }
 
+struct WorldLightRoute {
+    struct Stroke {
+        var path: CGPath
+        var start: CGFloat
+        var length: CGFloat
+    }
+    var strokes: [Stroke]
+    var distance: CGFloat
+
+    init(_ reveal: WorldReveal) {
+        strokes = reveal.strokes.map { stroke in
+            var path = SwiftUI.Path(); path.addLines(stroke.points)
+            return Stroke(path: path.cgPath, start: stroke.start, length: stroke.length)
+        }
+        distance = reveal.distance
+    }
+}
+
 struct WorldMapSnapshot {
     var inputs: [WorldLayout.Input]
     var layout: WorldLayout
     var rooms: [WorldRoom]
     var walls: SwiftUI.Path
     var floorWidth: CGFloat
-    var routes: [String: SwiftUI.Path]
+    var routes: [String: WorldLightRoute]
+    var floorMask: SwiftUI.Path
+    var generation: UUID
 
     init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
         inputs = paths.map { .init(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
@@ -186,31 +206,25 @@ struct WorldMapSnapshot {
         }
         if let previous, previous.inputs == inputs {
             walls = previous.walls; floorWidth = previous.floorWidth; routes = previous.routes
+            floorMask = previous.floorMask; generation = previous.generation
         } else {
             walls = SwiftUI.Path(); routes = [:]
             let maze = maze!
             floorWidth = maze.cellSize - 4
+            generation = UUID()
+            floorMask = SwiftUI.Path(CGRect(origin: .zero, size: layout.size))
+            for room in rooms { floorMask.addRect(room.frame) }
             for segment in maze.walls {
                 walls.move(to: segment.from)
                 walls.addLine(to: segment.to)
             }
-            for (id, points) in maze.routes {
-                var route = SwiftUI.Path(); route.addLines(points)
-                routes[id] = route
-            }
-            // Selecting a path reveals its whole family. A child reveals only its journey.
-            for input in inputs {
-                var family = routes["path-\(input.id)"] ?? SwiftUI.Path()
-                for id in input.work {
-                    if let route = routes["work-\(id)"] { family.addPath(route) }
-                }
-                routes["path-\(input.id)"] = family
-            }
+            routes = maze.reveals.mapValues(WorldLightRoute.init)
         }
     }
 }
 
 struct WorldMapContent: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let map: WorldMapSnapshot
     let selected: String?
     let select: (String) -> Void
@@ -228,7 +242,9 @@ struct WorldMapContent: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
-            WorldCorridors(walls: map.walls.cgPath, floorWidth: map.floorWidth, selected: selected.flatMap { map.routes[$0]?.cgPath })
+            WorldCorridors(walls: map.walls.cgPath, floorMask: map.floorMask.cgPath,
+                           floorWidth: map.floorWidth, route: selected.flatMap { map.routes[$0] },
+                           generation: map.generation, selection: selected, animated: !reduceMotion)
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)

@@ -17,6 +17,7 @@ public struct WorldMaze: Sendable {
     public var walls: [Segment] = []
     public var passages: [Door] = []
     public var routes: [String: [CGPoint]] = [:]
+    public var reveals: [String: WorldReveal] = [:]
     public var roomFrames: [String: CGRect] = [:]
     public var cellSize: CGFloat = 16
     public private(set) var ownershipRouted = true
@@ -96,8 +97,8 @@ public struct WorldMaze: Sendable {
                 for (a,b) in zip(corridor.points,corridor.points.dropFirst()) {
                     let ax = Int(a.x/cellSize), ay = Int(a.y/cellSize)
                     let bx = Int(b.x/cellSize), by = Int(b.y/cellSize)
-                    for y in max(0,min(ay,by)-3)...min(rows-1,max(ay,by)+3) {
-                        for x in max(0,min(ax,bx)-3)...min(columns-1,max(ax,bx)+3) { detailed.insert(y*columns+x) }
+                    for y in max(0,min(ay,by)-2)...min(rows-1,max(ay,by)+2) {
+                        for x in max(0,min(ax,bx)-2)...min(columns-1,max(ax,bx)+2) { detailed.insert(y*columns+x) }
                     }
                 }
             }
@@ -261,6 +262,15 @@ public struct WorldMaze: Sendable {
                 if let middle = roomCenters[b] { appendInsideRoom(center(of: middle), to: &points) }
             }
             routes[room.id] = simplify(points)
+        }
+        for room in layout.rooms {
+            if Task.isCancelled { return }
+            guard let route = routes[room.id] else { continue }
+            var journeys = [route]
+            if room.workID == nil, let pathID = room.pathID {
+                journeys += layout.rooms.filter { $0.pathID == pathID && $0.workID != nil }.compactMap { routes[$0.id] }
+            }
+            reveals[room.id] = WorldReveal(routes: journeys, step: cellSize)
         }
         // Exposed for invariants: every child must retain its ownership gateway.
         // The tests exercise crowded layouts as well as empty/small worlds.

@@ -100,3 +100,24 @@ Tests verify wall/door agreement, connected acyclic passage topology, highlight
 clearance, parent gateways across varied families, determinism, room separation,
 non-direct journeys, and the 1,000-item case. A rendered geometry preview was
 reviewed locally; that preview is not an iOS interaction test.
+
+## Build 44: even spacing, doorway stops, outward light
+
+Room placement uses a regular 176-point pitch instead of per-room jitter and
+mixed horizontal/vertical spacing. The four inner paths have equal distance from
+You. Larger families retain clearance for their outward branches. Symmetric,
+maze-aligned bounds keep You at the exact center, even with uneven family sizes.
+
+An even-odd floor mask excludes every chamber interior. Selected passages reach
+the doorway, disappear through the room, and continue from the exit doorway;
+the labels and room interiors never receive the route highlight.
+
+WorldReveal builds a prefix tree of the selected journeys. Shared passages light
+once, then child branches start when the light reaches their junction. Cached
+native layer animations reveal the route in 2.5–6 seconds without per-frame
+SwiftUI state. Deselecting or changing destinations removes previous animations;
+metadata changes do not replay them. Reduce Motion shows the full route directly.
+
+Tests cover shared-prefix timing, duplicate-route suppression, preserved corners,
+centered bounds after maze snapping, and equal inner-path spacing, alongside the
+existing maze clearance, ancestry and large-world checks.
