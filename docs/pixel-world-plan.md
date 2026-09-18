@@ -1,16 +1,16 @@
 # Pixel World redesign proposal
 
-Status: independent inner path layer, build 39, 2026-09-18. Original research and proposal follow the implementation notes below.
+Status: irregular local quest clusters, build 40, 2026-09-18. Original research and proposal follow the implementation notes below.
 
 ## Implementation notes
 
-WorldLayout now uses four cardinal regions and disjoint lanes, a constrained version of the proposed radial sectors. This makes monotone orthogonal routing deterministic without a general obstacle-routing solver. Rooms are 136×72; transverse lanes reserve 96 points in east/west regions and 152 in north/south regions, growing with quest count. Paths start at a 160-point radius and expand only to fit other path rooms. Quest count no longer changes path positions relative to You. Independent outer quest fans use nested orthogonal routing lanes to preserve outward travel without crossings. Outer margins remain 64 points. Large worlds need pan/zoom or the Paths menu; fitting every title legibly on one phone screen is not possible.
+WorldLayout retains four outward regions for safe routing, but no longer places work on a shared outer ring. Each path's quests and routines fill compact staggered clusters, with short local connections and stable ID-derived variations in room depth, transverse spacing, branch direction, and path offset. Crowded paths fill two dimensions instead of forming one long row. All real routes remain orthogonal and outward-only. Path rooms stay independent of quest population. Rooms are 136×72 points; the first work room of each of four paths stays within 300 points of its parent even when a different path has 50 quests (regression tested). Large worlds still require pan/zoom or the menus.
 
-Unused space now contains a deterministic decorative maze forest, capped at 8,000 grid cells and buffered away from real rooms/corridors. Its dim vector strokes are noninteractive and have no quest data. Geometry is regenerated only when structure changes; a 1,000-quest decoration benchmark takes about 8 ms locally.
+Unused space now contains a deterministic decorative maze forest, capped at 8,000 grid cells and buffered away from real rooms/corridors. Its dim vector strokes are noninteractive and have no quest data. Geometry is regenerated only when structure changes; a 1,000-quest decoration benchmark takes about 107 ms locally for the more detailed build-40 corridors.
 
 The layout and corridor geometry are cached by path/work IDs. Native UIScrollView handles pan/zoom without SwiftUI gesture-state updates. CAShapeLayer draws the corridors as vectors instead of a world-sized Canvas bitmap. Selection is immediate with no queued Task or delayed travel animation. Real SwiftUI buttons expose room labels and actions; Paths and Quests menus provide access when overview targets are too small. Open edits the selected quest or opens its path. Recenter and overview are explicit controls. Reduce Motion disables camera animation.
 
-Tests cover outward segments, axis alignment, room clearance, branches crossing other paths, deterministic output, empty and uneven populations, and a 1,000-quest placement benchmark (about 2 ms locally in a debug Linux test; not a device rendering benchmark). On-device frame rate, VoiceOver navigation during zoom, and large Dynamic Type still need hands-on verification. Fixed-size map labels may truncate; the selection panel and menus show the full names. Structural edits may rearrange lanes; ordinary selection/panning does not recalculate the layout.
+Tests cover outward segments, axis alignment, room clearance, branches crossing other paths, deterministic output, empty and uneven populations, and a 1,000-quest placement benchmark (about 30 ms locally in a debug Linux test; not a device rendering benchmark). On-device frame rate, VoiceOver navigation during zoom, and large Dynamic Type still need hands-on verification. Fixed-size map labels may truncate; the selection panel and menus show the full names. Structural edits may rearrange lanes; ordinary selection/panning does not recalculate the layout.
 
 ## Goal
 

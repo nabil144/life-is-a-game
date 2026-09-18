@@ -45,7 +45,7 @@ final class WorldDecorationTests: XCTestCase {
     func testSmallWorldKeepsPathsCloseToYou() {
         let layout = WorldLayout(paths: (0..<4).map { _ in .init(id: UUID(), work: [UUID()]) })
         for room in layout.rooms where room.pathID != nil && room.workID == nil {
-            XCTAssertEqual(hypot(room.center.x-layout.center.x, room.center.y-layout.center.y), 160, accuracy: 0.001)
+            XCTAssertLessThanOrEqual(hypot(room.center.x-layout.center.x, room.center.y-layout.center.y), 192)
         }
     }
 }
