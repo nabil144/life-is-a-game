@@ -72,12 +72,16 @@ struct TodayView: View {
         VStack(spacing: 4) {
             ZStack {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(context.date, format: Self.stamp)
+                    VStack(spacing: 2) {
+                        Text(context.date, format: Self.dateStamp)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        Text(context.date, format: Self.timeStamp)
+                    }
                         .font(.system(size: 28, weight: .bold, design: .monospaced))
                         .monospacedDigit()
                         .foregroundStyle(Ink.words)
                         .multilineTextAlignment(.center)
-                        .lineLimit(2)
+                        .lineLimit(1)
                         .minimumScaleFactor(0.65)
                         .padding(.horizontal, 36)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -215,11 +219,13 @@ struct TodayView: View {
         }
     }
 
-    private static let stamp = Date.FormatStyle()
+    private static let dateStamp = Date.FormatStyle()
         .weekday(.wide)
         .month(.wide)
         .day()
         .year()
+
+    private static let timeStamp = Date.FormatStyle()
         .hour()
         .minute()
         .second()
@@ -232,14 +238,29 @@ struct TodayView: View {
             let entries = store.recentLog()
             if !entries.isEmpty {
                 Section {
-                    ForEach(entries) { LogRow(entry: $0) }
+                    ForEach(entries) { entry in
+                        LogRow(entry: entry, pixelStyle: true)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(
+                                PixelPanel().fill(Ink.card)
+                                    .overlay(PixelPanel().stroke(Ink.line, lineWidth: 2))
+                                    .clipShape(PixelPanel())
+                                    .padding(.horizontal, 1)
+                                    .padding(.vertical, 3)
+                            )
+                    }
                 } header: {
                     Text("Recently")
-                        .foregroundStyle(Ink.muted)
+                        .font(.system(.caption, design: .monospaced).weight(.bold))
+                        .textCase(.uppercase)
+                        .tracking(2)
+                        .foregroundStyle(Ink.brass)
                 }
             }
         }
         .scrollContentBackground(.hidden)
+        .scrollIndicators(.hidden)
         .listStyle(.plain)
         // Each card reserves its own gap, including across bucket boundaries.
         .listRowSpacing(0)
@@ -511,19 +532,34 @@ struct PathRow: View {
 struct LogRow: View {
     @Environment(Store.self) private var store
     let entry: LogEntry
+    var pixelStyle = false
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: pixelStyle ? 8 : 14) {
             if let f = entry.photoFile, let img = UIImage(contentsOfFile: store.photoURL(f).path) {
-                Image(uiImage: img).resizable().scaledToFill().frame(width: 36, height: 36).clipShape(RoundedRectangle(cornerRadius: 8))
+                if pixelStyle {
+                    Image(uiImage: img).resizable().scaledToFill()
+                        .frame(width: 32, height: 32).clipShape(PixelPanel())
+                } else {
+                    Image(uiImage: img).resizable().scaledToFill().frame(width: 36, height: 36).clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             } else {
+                if pixelStyle {
+                    Image(systemName: entry.milestoneID == nil ? "checkmark" : "flag.checkered")
+                        .font(.caption.weight(.bold)).foregroundStyle(Ink.brass)
+                        .frame(width: 28, height: 28)
+                        .overlay(PixelPanel().stroke(Ink.brass, lineWidth: 1))
+                } else {
                 Image(systemName: entry.milestoneID == nil ? "checkmark.circle" : "flag.checkered").font(.title2).frame(width: 36)
+                }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.text).font(.body)
-                Text(entry.day.description).font(.caption).foregroundStyle(.secondary)
+                Text(entry.day.description)
+                    .font(pixelStyle ? .system(.caption, design: .monospaced) : .caption)
+                    .foregroundStyle(pixelStyle ? Ink.muted : .secondary)
             }
             Spacer()
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, pixelStyle ? 0 : 6)
     }
 }
