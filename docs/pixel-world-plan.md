@@ -1,10 +1,10 @@
 # Pixel World redesign proposal
 
-Status: compact maze iteration, build 38, 2026-09-18. Original research and proposal follow the implementation notes below.
+Status: independent inner path layer, build 39, 2026-09-18. Original research and proposal follow the implementation notes below.
 
 ## Implementation notes
 
-WorldLayout now uses four cardinal regions and disjoint lanes, a constrained version of the proposed radial sectors. This makes monotone orthogonal routing deterministic without a general obstacle-routing solver. Rooms are 136×72; transverse lanes reserve 96 points in east/west regions and 152 in north/south regions, growing with quest count. Paths start at a 192-point radius (expanded only for clearance), quest connections are 192 points, and outer margins are 64 points. Large worlds need pan/zoom or the Paths menu; fitting every title legibly on one phone screen is not possible.
+WorldLayout now uses four cardinal regions and disjoint lanes, a constrained version of the proposed radial sectors. This makes monotone orthogonal routing deterministic without a general obstacle-routing solver. Rooms are 136×72; transverse lanes reserve 96 points in east/west regions and 152 in north/south regions, growing with quest count. Paths start at a 160-point radius and expand only to fit other path rooms. Quest count no longer changes path positions relative to You. Independent outer quest fans use nested orthogonal routing lanes to preserve outward travel without crossings. Outer margins remain 64 points. Large worlds need pan/zoom or the Paths menu; fitting every title legibly on one phone screen is not possible.
 
 Unused space now contains a deterministic decorative maze forest, capped at 8,000 grid cells and buffered away from real rooms/corridors. Its dim vector strokes are noninteractive and have no quest data. Geometry is regenerated only when structure changes; a 1,000-quest decoration benchmark takes about 8 ms locally.
 

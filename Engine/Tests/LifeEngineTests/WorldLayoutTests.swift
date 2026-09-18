@@ -5,6 +5,21 @@ import CoreGraphics
 @testable import LifeEngine
 
 final class WorldLayoutTests: XCTestCase {
+    func testAddingQuestsDoesNotMovePathsAwayFromYou() {
+        for count in [1, 4, 5, 8, 12] {
+            let ids = (0..<count).map { _ in UUID() }
+            let sparse = WorldLayout(paths: ids.map { .init(id: $0, work: [UUID()]) })
+            let crowded = WorldLayout(paths: ids.enumerated().map { i, id in
+                .init(id: id, work: (0..<(i == 0 ? 50 : 3)).map { _ in UUID() })
+            })
+            for room in sparse.rooms where room.workID == nil {
+                let other = crowded.rooms.first { $0.id == room.id }!
+                XCTAssertEqual(room.center.x - sparse.center.x, other.center.x - crowded.center.x)
+                XCTAssertEqual(room.center.y - sparse.center.y, other.center.y - crowded.center.y)
+            }
+        }
+    }
+
     func testOutwardRoutingAndNonoverlappingRooms() {
         for counts in [[], [0], [1], [20, 1, 0, 3, 8, 2], Array(repeating: 12, count: 12)] {
             let inputs = counts.map { count in WorldLayout.Input(id: UUID(), work: (0..<count).map { _ in UUID() }) }

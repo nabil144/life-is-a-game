@@ -35,21 +35,40 @@ public struct WorldLayout {
             var input: Input
             var side: Int
             var values: [CGFloat]
+            var parentY: CGFloat
+            var rank: Int
         }
         var lanes: [Lane] = []
         for side in 0..<4 {
             let group = paths.enumerated().filter { $0.offset % 4 == side }.map(\.element)
-            let slots = group.reduce(0) { $0 + max(1, $1.work.count) + 1 }
-            var cursor = -CGFloat(max(0, slots - 2)) * (side % 2 == 0 ? 48 : 76)
-            for input in group {
+            let pitch: CGFloat = side % 2 == 0 ? 96 : 152
+            var ends: [CGFloat] = [0, 0]
+            for (index, input) in group.enumerated() {
                 let count = max(1, input.work.count)
-                let values = (0..<count).map { cursor + CGFloat($0) * (side % 2 == 0 ? 96 : 152) }
-                lanes.append(Lane(input: input, side: side, values: values))
-                cursor += CGFloat(count + 1) * (side % 2 == 0 ? 96 : 152)
+                if group.count == 1 {
+                    let values = (0..<count).map { (CGFloat($0) - CGFloat(count - 1) / 2) * pitch }
+                    lanes.append(Lane(input: input, side: side, values: values, parentY: 0, rank: 0))
+                } else {
+                    let signIndex = index % 2
+                    let sign: CGFloat = signIndex == 0 ? 1 : -1
+                    let rank = index / 2
+                    let parentY = (CGFloat(rank) + 0.5) * pitch
+                    let start = max(parentY, ends[signIndex])
+                    let values = (0..<count).map { sign * (start + CGFloat($0) * pitch) }
+                    ends[signIndex] = start + CGFloat(count + 1) * pitch
+                    lanes.append(Lane(input: input, side: side, values: values,
+                                      parentY: sign * parentY, rank: rank))
+                }
             }
         }
-        let extent = lanes.flatMap(\.values).map { abs($0) }.max() ?? 0
-        let radius = max(192, extent + 112)
+        // Only the number of PATH rooms determines their distance from You.
+        // Crowded quest fans expand the outer layer, never this inner layer.
+        let parentExtent = lanes.map { abs($0.parentY) }.max() ?? 0
+        let radius = max(160, parentExtent + 112)
+        let childExtent = lanes.flatMap(\.values).map { abs($0) }.max() ?? 0
+        let outerBase = max(radius + 96, childExtent + 112)
+        let ranks = (lanes.map(\.rank).max() ?? 0) + 1
+        let outerEdge = outerBase + CGFloat(ranks - 1) * 24 + 96
         func rotate(_ x: CGFloat, _ y: CGFloat, _ side: Int) -> CGPoint {
             switch side {
             case 0: return CGPoint(x: x, y: y)
@@ -60,20 +79,20 @@ public struct WorldLayout {
         }
         rooms.append(Room(id: "you", center: .zero))
         for lane in lanes {
-            let lo = lane.values.first!, hi = lane.values.last!
-            // Closest transverse point to You: every child then travels outward.
-            let y: CGFloat = lo > 0 ? lo : (hi < 0 ? hi : 0)
+            let y = lane.parentY
+            // Nested lanes let compressed parents reach disjoint outer fans without crossing.
+            let trunk = outerBase + CGFloat(ranks - lane.rank - 1) * 24
             let at = rotate(radius, y, lane.side)
             rooms.append(Room(id: "path-\(lane.input.id)", pathID: lane.input.id, center: at))
             corridors.append(Corridor(pathID: lane.input.id, points: [
                 .zero, rotate(radius - 80, 0, lane.side), rotate(radius - 80, y, lane.side), at
             ]))
             for (index, work) in lane.input.work.enumerated() {
-                let target = rotate(radius + 192, lane.values[index], lane.side)
+                let target = rotate(outerEdge, lane.values[index], lane.side)
                 rooms.append(Room(id: "work-\(work)", pathID: lane.input.id, workID: work, center: target))
                 corridors.append(Corridor(pathID: lane.input.id, workID: work, points: [
-                    at, rotate(radius + 96, y, lane.side),
-                    rotate(radius + 96, lane.values[index], lane.side), target
+                    at, rotate(trunk, y, lane.side),
+                    rotate(trunk, lane.values[index], lane.side), target
                 ]))
             }
         }
