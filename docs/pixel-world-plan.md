@@ -56,3 +56,23 @@ No third-party layout runtime is recommended initially: this app has a shallow t
 - Apple Canvas: individual drawn elements have no built-in interaction/accessibility; retain real controls above the drawing: https://developer.apple.com/documentation/swiftui/canvas
 
 The proposed grid routing, interaction design, and implementation sequence are project-specific recommendations, not guarantees supplied by these libraries.
+
+## Build 42: one discoverable maze
+
+WorldMaze replaces the separate decorative forest and visible ownership roads.
+Room positions remain compact and irregular. The ownership backbone is bent into
+clear U-shaped detours, then a seeded spanning tree grafts the surrounding maze
+onto it. All unselected roads share the same native vector style. There is one
+route to each destination; a child's journey goes through its own path. Unused
+branches are connected possibilities, not a disconnected background drawing.
+
+Selecting a path reveals its route and children's routes. Selecting a child
+reveals only its journey from You. Tapping the maze or the selected room clears
+it. Room taps preserve the camera so the route remains visible; the Paths/Quests
+menus still focus distant rooms. Open continues to navigate/edit the selection.
+
+Geometry runs in a cancellable detached task and is cached until room IDs change.
+Metadata edits reuse it, and selections only change the highlighted vector path.
+The background grid adapts to world size; collinear roads are collapsed before
+rendering. Engine tests cover ancestry, continuity, a connected acyclic network,
+detours, deterministic regeneration, open-space density and 1,000-item worlds.

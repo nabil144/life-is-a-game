@@ -113,25 +113,22 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
 /// Vector layers avoid allocating a world-sized Canvas bitmap when the map grows.
 struct WorldCorridors: UIViewRepresentable {
     var base: CGPath
-    var decoration: CGPath
     var selected: CGPath?
 
     func makeUIView(context: Context) -> WorldCorridorLayerView { WorldCorridorLayerView() }
     func updateUIView(_ view: WorldCorridorLayerView, context: Context) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        view.unexploredWalls.path = decoration
-        view.unexploredFloor.path = decoration
         view.walls.path = base
         view.floor.path = base
+        view.glow.path = selected
         view.highlight.path = selected
         CATransaction.commit()
     }
 }
 
 final class WorldCorridorLayerView: UIView {
-    let unexploredWalls = CAShapeLayer()
-    let unexploredFloor = CAShapeLayer()
+    let glow = CAShapeLayer()
     let walls = CAShapeLayer()
     let floor = CAShapeLayer()
     let highlight = CAShapeLayer()
@@ -140,9 +137,8 @@ final class WorldCorridorLayerView: UIView {
         super.init(frame: frame)
         isUserInteractionEnabled = false
         for (shape, color, width) in [
-            (unexploredWalls, Ink.line.opacity(0.55), CGFloat(6)),
-            (unexploredFloor, Ink.ground, CGFloat(2)),
-            (walls, Ink.line, CGFloat(10)), (floor, Ink.ground, CGFloat(4)),
+            (walls, Ink.line.opacity(0.8), CGFloat(6)), (floor, Ink.ground, CGFloat(2)),
+            (glow, Ink.brass.opacity(0.18), CGFloat(10)),
             (highlight, Ink.brass, CGFloat(4))
         ] {
             shape.fillColor = nil
@@ -159,7 +155,7 @@ final class WorldCorridorLayerView: UIView {
         super.layoutSubviews()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for shape in [unexploredWalls, unexploredFloor, walls, floor, highlight] { shape.frame = bounds }
+        for shape in [walls, floor, glow, highlight] { shape.frame = bounds }
         CATransaction.commit()
     }
 }

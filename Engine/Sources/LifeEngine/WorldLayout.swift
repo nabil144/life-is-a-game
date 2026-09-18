@@ -5,13 +5,13 @@ import CoreGraphics
 
 /// A shallow ownership tree laid out as four outward-growing, grid-aligned regions.
 /// Independent of the viewport and selection; no physics or per-frame layout work.
-public struct WorldLayout {
-    public struct Input: Equatable {
+public struct WorldLayout: Sendable {
+    public struct Input: Equatable, Sendable {
         public var id: UUID
         public var work: [UUID]
         public init(id: UUID, work: [UUID]) { self.id = id; self.work = work }
     }
-    public struct Room: Identifiable {
+    public struct Room: Identifiable, Sendable {
         public var id: String
         public var pathID: UUID?
         public var workID: UUID?
@@ -20,7 +20,7 @@ public struct WorldLayout {
             CGRect(x: center.x - 68, y: center.y - 36, width: 136, height: 72)
         }
     }
-    public struct Corridor {
+    public struct Corridor: Sendable {
         public var pathID: UUID
         public var workID: UUID?
         public var points: [CGPoint]

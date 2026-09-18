@@ -16,9 +16,10 @@ struct AtlasView: View {
     @State private var selected: String?
     @State private var camera = WorldCamera()
     @State private var editor: WorldEditor?
+    @State private var generating = false
 
     var body: some View {
-        WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: select),
+        WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: { select($0) }),
                         size: map.layout.size, camera: camera, animated: !reduceMotion)
             .background(Ink.ground)
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -28,7 +29,7 @@ struct AtlasView: View {
                     Spacer()
                     Menu {
                         ForEach(store.activePaths) { path in
-                            Button(path.name) { select("path-\(path.id)") }
+                            Button(path.name) { select("path-\(path.id)", focusDestination: true) }
                         }
                     } label: { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
                     .disabled(store.activePaths.isEmpty)
@@ -40,9 +41,26 @@ struct AtlasView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 selectionPanel
             }
-            .onChange(of: store.activePaths, initial: true) { _, paths in
+            .task(id: store.activePaths) {
+                let paths = store.activePaths
+                let inputs = paths.map { WorldLayout.Input(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
+                if inputs == map.inputs {
+                    map = WorldMapSnapshot(paths: paths, previous: map)
+                    generating = false
+                    return
+                }
+                generating = true
+                let build = Task.detached(priority: .userInitiated) {
+                    let layout = WorldLayout(paths: inputs)
+                    return (layout, WorldMaze(layout: layout))
+                }
+                let geometry = await withTaskCancellationHandler {
+                    await build.value
+                } onCancel: { build.cancel() }
+                guard !Task.isCancelled else { return }
                 let previousCenter = map.layout.center
-                map = WorldMapSnapshot(paths: paths, previous: map)
+                map = WorldMapSnapshot(paths: paths, geometry: geometry)
+                generating = false
                 if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
                     if previousCenter != map.layout.center { focus(room.center) }
                 } else if selected != nil {
@@ -59,11 +77,12 @@ struct AtlasView: View {
         camera = WorldCamera(center: point)
     }
 
-    private func select(_ id: String) {
+    private func select(_ id: String, focusDestination: Bool = false) {
+        if id.isEmpty { selected = nil; return }
         if id == "you" { selected = nil; focus(map.layout.center); return }
         if selected == id { selected = nil; return }
         selected = id
-        if let room = map.rooms.first(where: { $0.id == id }) { focus(room.center) }
+        if focusDestination, let room = map.rooms.first(where: { $0.id == id }) { focus(room.center) }
     }
 
     @ViewBuilder private var selectionPanel: some View {
@@ -78,7 +97,7 @@ struct AtlasView: View {
                    let path = store.activePaths.first(where: { $0.id == pathID }) {
                     Menu("Quests") {
                         ForEach(path.nodes.filter(\.isOpen)) { node in
-                            Button(node.title) { select("work-\(node.id)") }
+                            Button(node.title) { select("work-\(node.id)", focusDestination: true) }
                         }
                     }
                     .disabled(!path.nodes.contains(where: \.isOpen))
@@ -98,7 +117,7 @@ struct AtlasView: View {
             .padding(8)
         } else {
             VStack(spacing: 4) {
-                Text(store.activePaths.isEmpty ? "Add a path to grow your world." : "Tap to focus · tap again to deselect")
+                Text(generating ? "Growing your maze…" : (store.activePaths.isEmpty ? "Add a path to grow your world." : "Tap a destination to reveal its route · tap the maze to clear"))
                 if store.activePaths.isEmpty { RestoreFileButton() }
             }
             .font(.caption).foregroundStyle(Ink.muted)
@@ -135,12 +154,11 @@ struct WorldMapSnapshot {
     var layout: WorldLayout
     var rooms: [WorldRoom]
     var corridors: SwiftUI.Path
-    var decoration: SwiftUI.Path
     var routes: [String: SwiftUI.Path]
 
-    init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil) {
+    init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
         inputs = paths.map { .init(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
-        layout = previous?.inputs == inputs ? previous!.layout : WorldLayout(paths: inputs)
+        layout = geometry?.0 ?? (previous?.inputs == inputs ? previous!.layout : WorldLayout(paths: inputs))
         let pathIndex = Dictionary(uniqueKeysWithValues: paths.map { ($0.id, $0) })
         let nodeIndex = Dictionary(uniqueKeysWithValues: paths.flatMap(\.nodes).map { ($0.id, $0) })
         rooms = layout.rooms.map { room in
@@ -154,27 +172,24 @@ struct WorldMapSnapshot {
         }
         if let previous, previous.inputs == inputs {
             corridors = previous.corridors; routes = previous.routes
-            decoration = previous.decoration
         } else {
             corridors = SwiftUI.Path(); routes = [:]
-            decoration = SwiftUI.Path()
-            for segment in WorldDecoration(layout: layout).segments {
-                decoration.move(to: segment.from)
-                decoration.addLine(to: segment.to)
+            let maze = geometry?.1 ?? WorldMaze(layout: layout)
+            for segment in maze.segments {
+                corridors.move(to: segment.from)
+                corridors.addLine(to: segment.to)
             }
-            // Parent routes are built first, so a selected child can highlight its whole ancestry.
-            for edge in layout.corridors where edge.workID == nil {
-                var line = SwiftUI.Path(); line.addLines(edge.points)
-                corridors.addPath(line)
-                routes["path-\(edge.pathID)"] = line
+            for (id, points) in maze.routes {
+                var route = SwiftUI.Path(); route.addLines(points)
+                routes[id] = route
             }
-            for edge in layout.corridors {
-                guard let workID = edge.workID else { continue }
-                var line = SwiftUI.Path(); line.addLines(edge.points)
-                corridors.addPath(line)
-                var route = routes["path-\(edge.pathID)"] ?? SwiftUI.Path()
-                route.addPath(line)
-                routes["work-\(workID)"] = route
+            // Selecting a path reveals its whole family. A child reveals only its journey.
+            for input in inputs {
+                var family = routes["path-\(input.id)"] ?? SwiftUI.Path()
+                for id in input.work {
+                    if let route = routes["work-\(id)"] { family.addPath(route) }
+                }
+                routes["path-\(input.id)"] = family
             }
         }
     }
@@ -185,10 +200,21 @@ struct WorldMapContent: View {
     let selected: String?
     let select: (String) -> Void
 
+    private func revealed(_ room: WorldRoom, chosen: WorldRoom?) -> Bool {
+        if room.id == "you" || room.id == selected { return true }
+        guard let chosen,
+              let pathID = chosen.pathID, room.pathID == pathID else { return false }
+        return chosen.workID == nil || room.workID == nil
+    }
+
     var body: some View {
+        let chosen = map.rooms.first(where: { $0.id == selected })
         ZStack(alignment: .topLeading) {
-            WorldCorridors(base: map.corridors.cgPath, decoration: map.decoration.cgPath,
-                           selected: selected.flatMap { map.routes[$0]?.cgPath })
+            Rectangle().fill(Ink.ground)
+                .contentShape(Rectangle())
+                .onTapGesture { select("") }
+                .accessibilityHidden(true)
+            WorldCorridors(base: map.corridors.cgPath, selected: selected.flatMap { map.routes[$0]?.cgPath })
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
@@ -210,13 +236,14 @@ struct WorldMapContent: View {
                     .frame(width: 136, height: 72)
                     .foregroundStyle(Ink.words)
                     .background(room.work ? Ink.workCard : Ink.card, in: PixelPanel())
-                    .overlay(PixelPanel().stroke(selected == room.id || room.id == "you" ? Ink.brass : Ink.line, lineWidth: 2))
+                    .overlay(PixelPanel().stroke(revealed(room, chosen: chosen) ? Ink.brass : Ink.line, lineWidth: 2))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(room.title)
                 .accessibilityValue(room.subtitle)
-                .accessibilityHint("Select and focus. Tap again to deselect. Use Open for details.")
+                .accessibilityAddTraits(selected == room.id ? .isSelected : [])
+                .accessibilityHint("Reveal the maze route. Tap again to deselect. Use Open for details.")
                 .position(room.center)
             }
         }
