@@ -7,7 +7,6 @@ struct PathsView: View {
     @AppStorage(Prefs.pathsStyleKey) private var style: PathsStyle = .atlas
     @State private var newPath = false
     @State private var settings = false
-    @State private var openPath: UUID?
 
     var body: some View {
         NavigationStack {
@@ -15,21 +14,13 @@ struct PathsView: View {
                 if style == .list {
                     list
                 } else {
-                    AtlasView(openPath: $openPath)
+                    AtlasView(capture: $capture)
                 }
             }
             .navigationTitle("Paths")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: UUID.self) { id in
                 PathDetailView(pathID: id, capture: $capture)
-            }
-            .navigationDestination(isPresented: Binding(
-                get: { openPath != nil },
-                set: { if !$0 { openPath = nil } }
-            )) {
-                if let id = openPath {
-                    PathDetailView(pathID: id, capture: $capture)
-                }
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {

@@ -1,15 +1,25 @@
 import SwiftUI
 import UIKit
 
+/// Plain reference storage: scroll gestures never publish SwiftUI updates.
+@MainActor
+final class WorldViewport {
+    var center: CGPoint?
+    var zoom: CGFloat = 1
+    var generation: UUID?
+    var cameraID: UUID?
+}
+
 /// UIKit performs panning/zooming without publishing every gesture frame to SwiftUI.
 struct WorldScrollView: UIViewControllerRepresentable {
     var content: WorldMapContent
     var size: CGSize
     var camera: WorldCamera
     var animated: Bool
+    var viewport: WorldViewport
 
     func makeUIViewController(context: Context) -> WorldScrollController {
-        WorldScrollController(content: content)
+        WorldScrollController(content: content, viewport: viewport)
     }
 
     func updateUIViewController(_ controller: WorldScrollController, context: Context) {
@@ -25,8 +35,12 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     private var applied: UUID?
     private var lastViewport = CGSize.zero
     private var animateCamera = false
+    private let viewport: WorldViewport
+    private var generation: UUID?
+    private var updating = false
 
-    init(content: WorldMapContent) {
+    init(content: WorldMapContent, viewport: WorldViewport) {
+        self.viewport = viewport
         host = UIHostingController(rootView: content)
         super.init(nibName: nil, bundle: nil)
     }
@@ -53,6 +67,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
 
     func update(content: WorldMapContent, size: CGSize, camera: WorldCamera, animated: Bool) {
         loadViewIfNeeded()
+        updating = true
+        defer { updating = false }
+        generation = content.map.generation
         host.rootView = content
         if size != worldSize {
             // The initial empty snapshot is replaced after loading the stored paths.
@@ -72,6 +89,8 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        updating = true
+        defer { updating = false; rememberViewport() }
         let resized = lastViewport != view.bounds.size
         let savedCenter = CGPoint(x: (scroll.contentOffset.x + scroll.bounds.width / 2) / scroll.zoomScale,
                                   y: (scroll.contentOffset.y + scroll.bounds.height / 2) / scroll.zoomScale)
@@ -79,9 +98,14 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         guard worldSize.width > 0, worldSize.height > 0, scroll.bounds.width > 0, scroll.bounds.height > 0 else { return }
         let fit = min(scroll.bounds.width / worldSize.width, scroll.bounds.height / worldSize.height)
         scroll.minimumZoomScale = min(1, fit)
-        if applied != request.id || (resized && request.center == nil) {
+        if applied != request.id {
+            let restore = applied == nil && viewport.generation == generation && viewport.cameraID == request.id
             applied = request.id
-            if let center = request.center {
+            if restore, let center = viewport.center {
+                scroll.setZoomScale(min(2, max(scroll.minimumZoomScale, viewport.zoom)), animated: false)
+                centerContent()
+                place(center)
+            } else if let center = request.center {
                 let zoom: CGFloat = 1
                 let rect = CGRect(x: center.x - scroll.bounds.width / (2 * zoom),
                                   y: center.y - scroll.bounds.height / (2 * zoom),
@@ -93,15 +117,34 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
                 scroll.contentOffset = CGPoint(x: -scroll.contentInset.left, y: -scroll.contentInset.top)
             }
         } else if resized {
-            scroll.contentOffset = CGPoint(x: savedCenter.x * scroll.zoomScale - scroll.bounds.width / 2,
-                                           y: savedCenter.y * scroll.zoomScale - scroll.bounds.height / 2)
+            place(savedCenter)
         }
         lastViewport = view.bounds.size
         centerContent()
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { host.view }
-    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerContent() }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerContent(); rememberViewport() }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) { rememberViewport() }
+
+    private func place(_ center: CGPoint) {
+        centerContent()
+        let minX = -scroll.contentInset.left, minY = -scroll.contentInset.top
+        let maxX = max(minX, scroll.contentSize.width - scroll.bounds.width + scroll.contentInset.right)
+        let maxY = max(minY, scroll.contentSize.height - scroll.bounds.height + scroll.contentInset.bottom)
+        scroll.contentOffset = CGPoint(
+            x: min(maxX, max(minX, center.x * scroll.zoomScale - scroll.bounds.width / 2)),
+            y: min(maxY, max(minY, center.y * scroll.zoomScale - scroll.bounds.height / 2)))
+    }
+
+    private func rememberViewport() {
+        guard !updating, applied == request.id, scroll.bounds.width > 0, scroll.bounds.height > 0 else { return }
+        viewport.center = CGPoint(x: (scroll.contentOffset.x + scroll.bounds.width / 2) / scroll.zoomScale,
+                                  y: (scroll.contentOffset.y + scroll.bounds.height / 2) / scroll.zoomScale)
+        viewport.zoom = scroll.zoomScale
+        viewport.generation = generation
+        viewport.cameraID = request.id
+    }
 
     private func centerContent() {
         let horizontal = max(0, (scroll.bounds.width - worldSize.width * scroll.zoomScale) / 2)

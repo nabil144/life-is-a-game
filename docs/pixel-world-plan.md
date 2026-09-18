@@ -121,3 +121,27 @@ metadata changes do not replay them. Reduce Motion shows the full route directly
 Tests cover shared-prefix timing, duplicate-route suppression, preserved corners,
 centered bounds after maze snapping, and equal inner-path spacing, alongside the
 existing maze clearance, ancestry and large-world checks.
+
+## Build 45: nested mazes
+
+The main World scene projects only non-archived paths around You. An inner scene
+projects only its parent's open quests/routines around that path. The same wall,
+doorway, spacing and reveal systems serve both levels; domain IDs and saved data
+are unchanged. Child edits do not invalidate outer geometry. Scenes build only
+when visited and cache their geometry while on the navigation stack.
+
+First tap selects and enlarges the room's icon/title by 20% within its chamber,
+without moving walls or blocking doors. Second tap enters a path or opens a
+quest/routine editor. The selection panel supplies explicit Enter/Open actions;
+Details still opens the normal path screen. Tapping empty maze space deselects.
+The inner center opens path details, and its plus button adds directly to that
+path. Empty paths have an Add action; archived/deleted parents dismiss the maze.
+
+Native Back/swipe-back returns to the outer scene. Selection, zoom and pan are
+kept per level in non-publishing viewport storage. Restored positions are clamped
+to the new viewport bounds; showing a selection panel no longer refits the map.
+
+Engine coverage verifies level isolation, resting/archive handling, open-node
+filtering, centered inner layouts, and unchanged outer inputs after child edits.
+Phone review should exercise select/second-tap entry, Back after pan/zoom, editing
+or completing a child, empty paths, and archiving a parent from its Details screen.

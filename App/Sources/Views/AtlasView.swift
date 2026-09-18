@@ -7,45 +7,75 @@ enum PathsStyle: String, CaseIterable, Identifiable {
     var label: String { self == .atlas ? "World" : "List" }
 }
 
-/// Layout is cached when data changes. Native UIScrollView owns camera gestures.
+/// Each navigation level owns its snapshot, selection and native viewport.
+/// Opening a path never builds or displays another path's children.
 struct AtlasView: View {
     @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Binding var openPath: UUID?
+    @Binding var capture: CaptureRequest?
+    var scene: WorldScene = .world
     @State private var map = WorldMapSnapshot(paths: [])
     @State private var selected: String?
     @State private var camera = WorldCamera()
+    @State private var viewport = WorldViewport()
     @State private var editor: WorldEditor?
+    @State private var enterPath: UUID?
+    @State private var details: UUID?
     @State private var generating = false
+
+    private var parent: LifeEngine.Path? { scene.pathID.flatMap { store.path($0) } }
 
     var body: some View {
         WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: { select($0) }),
-                        size: map.layout.size, camera: camera, animated: !reduceMotion)
+                        size: map.layout.size, camera: camera, animated: !reduceMotion, viewport: viewport)
             .background(Ink.ground)
+            .overlay {
+                if map.scene != scene { ProgressView().frame(maxWidth: .infinity,maxHeight: .infinity).background(Ink.ground) }
+            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 HStack(spacing: 8) {
                     Button("Overview") { selected = nil; camera = WorldCamera() }
-                    Button("You") { selected = nil; focus(map.layout.center) }
+                    Button(scene == .world ? "You" : "Center") { selected = nil; focus(map.layout.center) }
                     Spacer()
                     Menu {
-                        ForEach(store.activePaths) { path in
-                            Button(path.name) { select("path-\(path.id)", focusDestination: true) }
+                        ForEach(map.rooms.filter { $0.id != "you" }) { room in
+                            Button(room.title) { select(room.id, focusDestination: true) }
                         }
-                    } label: { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
-                    .disabled(store.activePaths.isEmpty)
+                    } label: { Label(scene == .world ? "Paths" : "Items", systemImage: "point.3.connected.trianglepath.dotted") }
+                    .disabled(map.rooms.count <= 1 || map.scene != scene)
                 }
                 .buttonStyle(PixelButtonStyle(compact: true))
+                .disabled(generating || map.scene != scene)
                 .padding(.horizontal, 12)
                 .background(Ink.ground)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                selectionPanel
+            .safeAreaInset(edge: .bottom, spacing: 0) { selectionPanel }
+            .navigationTitle(parent?.name ?? "Paths")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if let pathID = scene.pathID {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { capture = CaptureRequest(pathID: pathID) } label: { Image(systemName: "plus") }
+                            .buttonStyle(PixelButtonStyle(compact: true))
+                            .accessibilityLabel("Add quest or routine")
+                    }
+                }
+            }
+            .navigationDestination(item: $enterPath) { id in
+                AtlasView(capture: $capture, scene: .path(id))
+            }
+            .navigationDestination(item: $details) { id in
+                PathDetailView(pathID: id, capture: $capture)
             }
             .task(id: store.activePaths) {
                 let paths = store.activePaths
-                let inputs = paths.map { WorldLayout.Input(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
-                if inputs == map.inputs {
-                    map = WorldMapSnapshot(paths: paths, previous: map)
+                if let pathID = scene.pathID, !paths.contains(where: { $0.id == pathID }) {
+                    dismiss(); return
+                }
+                let inputs = scene.inputs(paths: paths)
+                if map.scene == scene && inputs == map.inputs {
+                    map = WorldMapSnapshot(paths: paths, scene: scene, previous: map)
                     generating = false
                     return
                 }
@@ -59,30 +89,35 @@ struct AtlasView: View {
                 } onCancel: { build.cancel() }
                 guard !Task.isCancelled else { return }
                 let previousCenter = map.layout.center
-                map = WorldMapSnapshot(paths: paths, geometry: geometry)
+                map = WorldMapSnapshot(paths: paths, scene: scene, geometry: geometry)
                 generating = false
                 if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
                     if previousCenter != map.layout.center { focus(room.center) }
                 } else if selected != nil {
-                    self.selected = nil
-                    camera = WorldCamera()
+                    self.selected = nil; camera = WorldCamera()
                 }
             }
-            .sheet(item: $editor) { item in
-                NodeEditView(pathID: item.pathID, node: item.node)
-            }
+            .sheet(item: $editor) { item in NodeEditView(pathID: item.pathID, node: item.node) }
     }
 
-    private func focus(_ point: CGPoint) {
-        camera = WorldCamera(center: point)
-    }
+    private func focus(_ point: CGPoint) { camera = WorldCamera(center: point) }
 
     private func select(_ id: String, focusDestination: Bool = false) {
+        guard map.scene == scene else { return }
         if id.isEmpty { selected = nil; return }
-        if id == "you" { selected = nil; focus(map.layout.center); return }
-        if selected == id { selected = nil; return }
+        if id == "you" && scene == .world { selected = nil; focus(map.layout.center); return }
+        guard let room = map.rooms.first(where: { $0.id == id }) else { return }
+        if selected == id && !focusDestination { activate(room); return }
         selected = id
-        if focusDestination, let room = map.rooms.first(where: { $0.id == id }) { focus(room.center) }
+        if focusDestination { focus(room.center) }
+    }
+
+    private func activate(_ room: WorldRoom) {
+        guard let pathID = room.pathID else { return }
+        if let workID = room.workID, let (_,node) = store.node(workID) {
+            editor = WorldEditor(pathID: pathID, node: node)
+        } else if scene == .world { enterPath = pathID }
+        else { details = pathID }
     }
 
     @ViewBuilder private var selectionPanel: some View {
@@ -93,32 +128,28 @@ struct AtlasView: View {
                     Text(room.subtitle).font(.caption).foregroundStyle(Ink.muted)
                 }
                 Spacer()
-                if room.workID == nil, let pathID = room.pathID,
-                   let path = store.activePaths.first(where: { $0.id == pathID }) {
-                    Menu("Quests") {
-                        ForEach(path.nodes.filter(\.isOpen)) { node in
-                            Button(node.title) { select("work-\(node.id)", focusDestination: true) }
-                        }
-                    }
-                    .disabled(!path.nodes.contains(where: \.isOpen))
+                if scene == .world, let pathID = room.pathID {
+                    Button("Details") { details = pathID }
+                        .buttonStyle(PixelButtonStyle(compact: true))
                 }
-                Button("Open") {
-                    guard let pathID = room.pathID else { return }
-                    if let workID = room.workID, let (_, node) = store.node(workID) {
-                        editor = WorldEditor(pathID: pathID, node: node)
-                    } else { openPath = pathID }
-                }
-                .buttonStyle(PixelButtonStyle(selected: true, compact: true))
-                Button { self.selected = nil } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                Button(scene == .world ? "Enter" : "Open") { activate(room) }
+                    .buttonStyle(PixelButtonStyle(selected: true, compact: true))
+                Button { self.selected = nil } label: { Image(systemName: "xmark").frame(width: 44,height: 44) }
                     .accessibilityLabel("Deselect")
             }
-            .padding(12)
-            .background(Ink.card, in: PixelPanel())
-            .padding(8)
+            .padding(12).background(Ink.card, in: PixelPanel()).padding(8)
         } else {
             VStack(spacing: 4) {
-                Text(generating ? "Growing your maze…" : (store.activePaths.isEmpty ? "Add a path to grow your world." : "Tap a destination to reveal its route · tap the maze to clear"))
-                if store.activePaths.isEmpty { RestoreFileButton() }
+                if generating || map.scene != scene { Text("Growing your maze…") }
+                else if map.rooms.count <= 1 {
+                    Text(scene == .world ? "Add a path to grow your world." : "No open quests or routines on this path.")
+                    if let pathID = scene.pathID {
+                        Button("Add quest or routine") { capture = CaptureRequest(pathID: pathID) }
+                            .buttonStyle(PixelButtonStyle(compact: true))
+                    } else { RestoreFileButton() }
+                } else {
+                    Text(scene == .world ? "Tap to select · tap again to enter" : "Tap to select · tap again to edit")
+                }
             }
             .font(.caption).foregroundStyle(Ink.muted)
             .padding(8).frame(maxWidth: .infinity).background(Ink.ground)
@@ -169,6 +200,7 @@ struct WorldLightRoute {
 }
 
 struct WorldMapSnapshot {
+    var scene: WorldScene
     var inputs: [WorldLayout.Input]
     var layout: WorldLayout
     var rooms: [WorldRoom]
@@ -178,10 +210,12 @@ struct WorldMapSnapshot {
     var floorMask: SwiftUI.Path
     var generation: UUID
 
-    init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
-        inputs = paths.map { .init(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
-        layout = geometry?.0 ?? (previous?.inputs == inputs ? previous!.layout : WorldLayout(paths: inputs))
-        let maze = previous?.inputs == inputs ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
+    init(paths: [LifeEngine.Path], scene: WorldScene = .world, previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
+        self.scene = scene
+        inputs = scene.inputs(paths: paths)
+        let reusable = previous?.scene == scene && previous?.inputs == inputs
+        layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs))
+        let maze = reusable ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
         if let maze {
             layout.size = maze.size
             for index in layout.rooms.indices {
@@ -193,18 +227,19 @@ struct WorldMapSnapshot {
         }
         let previousFrames = Dictionary(uniqueKeysWithValues: (previous?.rooms ?? []).map { ($0.id,$0.frame) })
         let pathIndex = Dictionary(uniqueKeysWithValues: paths.map { ($0.id, $0) })
-        let nodeIndex = Dictionary(uniqueKeysWithValues: paths.flatMap(\.nodes).map { ($0.id, $0) })
+        let visibleNodes = scene.pathID.flatMap { pathIndex[$0]?.nodes } ?? []
+        let nodeIndex = Dictionary(uniqueKeysWithValues: visibleNodes.map { ($0.id, $0) })
         rooms = layout.rooms.map { room in
-            let path = room.pathID.flatMap { pathIndex[$0] }
-            let node = room.workID.flatMap { nodeIndex[$0] }
-            return WorldRoom(id: room.id, pathID: room.pathID, workID: room.workID, center: room.center,
+            let path = (scene.pathID ?? room.pathID).flatMap { pathIndex[$0] }
+            let node = scene.pathID == nil ? nil : room.pathID.flatMap { nodeIndex[$0] }
+            return WorldRoom(id: room.id, pathID: path?.id, workID: node?.id, center: room.center,
                              frame: maze?.roomFrames[room.id] ?? previousFrames[room.id] ?? room.frame,
                              title: node?.title ?? path?.name ?? "You",
                              subtitle: node.map { $0.kind == .practice ? "Routine" : "Quest" }
                                 ?? path.map { "\($0.nodes.filter(\.isOpen).count) quests & routines" } ?? "Your world",
                              glyph: path?.glyph ?? "brain", routine: node?.kind == .practice, work: path?.role == .work)
         }
-        if let previous, previous.inputs == inputs {
+        if let previous, reusable {
             walls = previous.walls; floorWidth = previous.floorWidth; routes = previous.routes
             floorMask = previous.floorMask; generation = previous.generation
         } else {
@@ -251,7 +286,7 @@ struct WorldMapContent: View {
             ForEach(map.rooms) { room in
                 Button { select(room.id) } label: {
                     VStack(spacing: 4) {
-                        if room.id == "you" {
+                        if room.id == "you" && room.pathID == nil {
                             Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 28, height: 28)
                         } else if room.workID != nil {
                             PixelQuestMark(routine: room.routine)
@@ -262,7 +297,10 @@ struct WorldMapContent: View {
                             .font(.system(.caption, design: .monospaced).weight(.semibold))
                             .lineLimit(2).multilineTextAlignment(.center)
                     }
-                    .padding(6)
+                    .padding(4)
+                    .frame(width: room.frame.width - 28, height: room.frame.height - 24)
+                    .scaleEffect(selected == room.id ? 1.2 : 1)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: selected == room.id)
                     .frame(width: room.frame.width - 8, height: room.frame.height - 8)
                     .foregroundStyle(Ink.words)
                     .contentShape(Rectangle())
@@ -271,7 +309,7 @@ struct WorldMapContent: View {
                 .accessibilityLabel(room.title)
                 .accessibilityValue(room.subtitle)
                 .accessibilityAddTraits(selected == room.id ? .isSelected : [])
-                .accessibilityHint("Reveal the maze route. Tap again to deselect. Use Open for details.")
+                .accessibilityHint(room.id == "you" && room.pathID == nil ? "Center on You." : (map.scene == .world ? "Select and enlarge. Tap again to enter this path's maze." : "Select and enlarge. Tap again to open details."))
                 .position(room.center)
             }
         }
