@@ -97,44 +97,18 @@ struct TodayView: View {
                 }
             }
             .frame(height: dateSlot)
-            HStack {
-                Button {
-                    store.setGoingOut(!store.goingOutToday)
-                    if store.goingOutToday && !store.outsideQuestsToday().isEmpty {
-                        reminderTime = Date().addingTimeInterval(900)
-                        reminderDenied = false
-                        showOuting = true
-                    }
-                } label: {
-                    Label(store.goingOutToday ? "Going out today · On" : "Going out today",
-                          systemImage: store.goingOutToday ? "checkmark.circle.fill" : "figure.walk")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    outingControls
+                    sortControls
                 }
-                .buttonStyle(PixelButtonStyle(selected: store.goingOutToday))
-                .accessibilityValue(store.goingOutToday ? "On" : "Off")
-                Spacer()
-                if store.goingOutToday {
-                    Button("Reminder") {
-                        reminderTime = max(store.world.outsideReminderAt ?? Date().addingTimeInterval(900), Date().addingTimeInterval(60))
-                        reminderDenied = false
-                        showOuting = true
-                    }
+                VStack(spacing: 2) {
+                    HStack { outingControls; Spacer() }
+                    sortControls
                 }
             }
             if let error = notifier.outsideReminderError {
                 Text(error).font(.caption).foregroundStyle(Ink.muted)
-            }
-            if !due.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(TodaySort.allCases) { s in
-                        Button { sort = s } label: {
-                            Text(s.label).frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(PixelButtonStyle(selected: sort == s))
-                        .accessibilityAddTraits(sort == s ? .isSelected : [])
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Sort")
             }
         }
         .padding(.horizontal, 12)
@@ -144,6 +118,52 @@ struct TodayView: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(Ink.brass.opacity(0.4)).frame(height: 2)
                 .accessibilityHidden(true)
+        }
+    }
+
+    private var outingControls: some View {
+        HStack(spacing: 4) {
+            Button {
+                store.setGoingOut(!store.goingOutToday)
+                if store.goingOutToday && !store.outsideQuestsToday().isEmpty {
+                    reminderTime = Date().addingTimeInterval(900)
+                    reminderDenied = false
+                    showOuting = true
+                }
+            } label: {
+                Label("Out", systemImage: store.goingOutToday ? "checkmark.square.fill" : "figure.walk")
+            }
+            .buttonStyle(PixelButtonStyle(selected: store.goingOutToday, compact: true))
+            .accessibilityLabel("Going out today")
+            .accessibilityValue(store.goingOutToday ? "On" : "Off")
+            if store.goingOutToday {
+                Button {
+                    reminderTime = max(store.world.outsideReminderAt ?? Date().addingTimeInterval(900), Date().addingTimeInterval(60))
+                    reminderDenied = false
+                    showOuting = true
+                } label: {
+                    Image(systemName: "bell")
+                }
+                .buttonStyle(PixelButtonStyle(compact: true))
+                .accessibilityLabel("Outside quest reminder")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sortControls: some View {
+        if !due.isEmpty {
+            HStack(spacing: 3) {
+                ForEach(TodaySort.allCases) { s in
+                    Button { sort = s } label: {
+                        Text(s.label).fixedSize(horizontal: true, vertical: false)
+                    }
+                    .buttonStyle(PixelButtonStyle(selected: sort == s, compact: true))
+                    .accessibilityAddTraits(sort == s ? .isSelected : [])
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Sort")
         }
     }
 
@@ -351,9 +371,8 @@ private struct TodayRow: View {
     var body: some View {
         if let (path, node) = store.node(objective.nodeID) {
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top, spacing: 8) {
+                HStack(alignment: .center, spacing: 8) {
                     PixelQuestMark(routine: node.kind == .practice)
-                        .padding(.top, 3)
                     Button(action: onAsk) {
                         VStack(alignment: .leading, spacing: 2) {
                             if showKind {

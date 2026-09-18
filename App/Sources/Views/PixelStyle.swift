@@ -26,15 +26,18 @@ struct PixelPanel: Shape {
 
 struct PixelButtonStyle: ButtonStyle {
     var selected = false
+    var compact = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(.subheadline, design: .monospaced).weight(.bold))
-            .padding(.horizontal, 12)
-            .frame(minHeight: 44)
+            .font(.system(compact ? .caption : .subheadline, design: .monospaced).weight(.bold))
+            .padding(.horizontal, compact ? 8 : 12)
+            .frame(minWidth: 28, minHeight: compact ? 30 : 44)
             .foregroundStyle(selected ? Ink.ground : Ink.brass)
             .background(selected ? Ink.brass : Ink.card, in: PixelPanel())
             .overlay(PixelPanel().stroke(Ink.brass.opacity(0.65), lineWidth: 1))
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
             .offset(y: configuration.isPressed ? 2 : 0)
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
