@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Two square steps at each corner, drawn natively so the edges stay crisp.
 struct PixelPanel: Shape {
-    func path(in rect: CGRect) -> Path {
+    func path(in rect: CGRect) -> SwiftUI.Path {
         let s = min(4, min(rect.width, rect.height) / 6)
         let x = rect.minX, y = rect.minY, r = rect.maxX, b = rect.maxY
         let points: [CGPoint] = [
@@ -17,7 +17,7 @@ struct PixelPanel: Shape {
             .init(x: x, y: y+2*s), .init(x: x+s, y: y+2*s),
             .init(x: x+s, y: y+s), .init(x: x+2*s, y: y+s),
         ]
-        var path = Path()
+        var path = SwiftUI.Path()
         path.addLines(points)
         path.closeSubpath()
         return path
