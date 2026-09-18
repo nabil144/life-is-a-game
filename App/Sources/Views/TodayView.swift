@@ -241,7 +241,8 @@ struct TodayView: View {
         }
         .scrollContentBackground(.hidden)
         .listStyle(.plain)
-        .listRowSpacing(4)
+        // Each card reserves its own gap, including across bucket boundaries.
+        .listRowSpacing(0)
         .padding(.horizontal, 12)
         .contentMargins(.top, 0, for: .scrollContent)
         .environment(\.defaultMinListHeaderHeight, 0)
@@ -279,7 +280,7 @@ struct TodayView: View {
         TodayRow(
             objective: o,
             confirming: pendingID == o.nodeID,
-            showKind: showKind || (store.goingOutToday && store.node(o.nodeID)?.1.isOutsideQuest == true),
+            showKind: showKind,
             onAsk: { pendingID = pendingID == o.nodeID ? nil : o.nodeID },
             onCancel: { pendingID = nil },
             onDone: { markDone(o.nodeID) },
@@ -446,7 +447,7 @@ private struct TodayRow: View {
                     .accessibilityElement(children: .contain)
                 }
             }
-            .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 6))
+            .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 6))
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
@@ -461,11 +462,14 @@ private struct TodayRow: View {
                     .overlay {
                         PixelPanel()
                             .stroke(store.goingOutToday && node.isOutsideQuest ? Ink.brass : Ink.line,
-                                    lineWidth: store.goingOutToday && node.isOutsideQuest ? 2 : 1)
+                                    lineWidth: 2)
                             .shadow(color: store.goingOutToday && node.isOutsideQuest ? Ink.brass.opacity(0.4) : .clear,
                                     radius: 5)
                     }
-                    .padding(1)
+                    // Keep the highlight inside the card so it cannot fill the gap.
+                    .clipShape(PixelPanel())
+                    .padding(.horizontal, 1)
+                    .padding(.vertical, 3)
                     .allowsHitTesting(false)
             )
             .animation(.easeInOut(duration: 0.2), value: confirming)
