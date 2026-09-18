@@ -101,12 +101,17 @@ struct TodayView: View {
             }
             .frame(height: dateSlot)
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     outingControls
+                        .frame(minWidth: 64, alignment: .leading)
+                    Spacer(minLength: 0)
                     sortControls
+                    Spacer(minLength: 0)
+                    reminderControl
+                        .frame(minWidth: 64, alignment: .trailing)
                 }
                 VStack(spacing: 2) {
-                    HStack { outingControls; Spacer() }
+                    HStack { outingControls; Spacer(); reminderControl }
                     sortControls
                 }
             }
@@ -134,11 +139,16 @@ struct TodayView: View {
                     showOuting = true
                 }
             } label: {
-                Label("Out", systemImage: store.goingOutToday ? "checkmark.square.fill" : "figure.walk")
+                Label("Out", systemImage: "figure.walk")
             }
             .buttonStyle(PixelButtonStyle(selected: store.goingOutToday, compact: true))
             .accessibilityLabel("Going out today")
             .accessibilityValue(store.goingOutToday ? "On" : "Off")
+        }
+    }
+
+    private var reminderControl: some View {
+        HStack(spacing: 0) {
             if store.goingOutToday {
                 Button {
                     reminderTime = max(store.world.outsideReminderAt ?? Date().addingTimeInterval(900), Date().addingTimeInterval(60))
