@@ -69,7 +69,7 @@ struct TodayView: View {
     }
 
     private var pin: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 4) {
             ZStack {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: Self.stamp)
@@ -124,7 +124,7 @@ struct TodayView: View {
                 Text(error).font(.caption).foregroundStyle(Ink.muted)
             }
             if !due.isEmpty {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     ForEach(TodaySort.allCases) { s in
                         Button { sort = s } label: {
                             Text(s.label).frame(maxWidth: .infinity)
@@ -137,9 +137,9 @@ struct TodayView: View {
                 .accessibilityLabel("Sort")
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.top, 4)
-        .padding(.bottom, 10)
+        .padding(.bottom, 6)
         .background(Ink.ground)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Ink.brass.opacity(0.4)).frame(height: 2)
@@ -208,8 +208,8 @@ struct TodayView: View {
         }
         .scrollContentBackground(.hidden)
         .listStyle(.plain)
-        .listRowSpacing(10)
-        .padding(.horizontal, 16)
+        .listRowSpacing(4)
+        .padding(.horizontal, 12)
         .contentMargins(.top, 0, for: .scrollContent)
         .environment(\.defaultMinListHeaderHeight, 0)
     }
@@ -350,12 +350,12 @@ private struct TodayRow: View {
 
     var body: some View {
         if let (path, node) = store.node(objective.nodeID) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
                     PixelQuestMark(routine: node.kind == .practice)
                         .padding(.top, 3)
                     Button(action: onAsk) {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             if showKind {
                                 Text(node.kind == .practice ? "Routine" : "Quest")
                                     .font(.caption.weight(.bold))
@@ -379,14 +379,16 @@ private struct TodayRow: View {
                                 .foregroundStyle(Ink.muted)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(minHeight: 44, alignment: .leading)
                     }
                     .buttonStyle(.plain)
 
                     Button { onOpenPath(path.id) } label: {
                         Image(systemName: path.glyph).foregroundStyle(Ink.brass)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .frame(width: 28)
                     .accessibilityLabel(path.name)
                 }
 
@@ -410,7 +412,7 @@ private struct TodayRow: View {
                     .accessibilityElement(children: .contain)
                 }
             }
-            .padding(.vertical, 8)
+            .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 6))
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
