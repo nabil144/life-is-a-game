@@ -73,7 +73,8 @@ struct TodayView: View {
             ZStack {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     Text(context.date, format: Self.stamp)
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
                         .foregroundStyle(Ink.words)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
@@ -88,7 +89,9 @@ struct TodayView: View {
                         Image(systemName: "plus")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Ink.brass)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 44, height: 44)
+                            .background(Ink.card, in: PixelPanel())
+                            .overlay(PixelPanel().stroke(Ink.brass, lineWidth: 1))
                     }
                     .accessibilityLabel("Capture")
                 }
@@ -106,7 +109,7 @@ struct TodayView: View {
                     Label(store.goingOutToday ? "Going out today · On" : "Going out today",
                           systemImage: store.goingOutToday ? "checkmark.circle.fill" : "figure.walk")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(PixelButtonStyle(selected: store.goingOutToday))
                 .accessibilityValue(store.goingOutToday ? "On" : "Off")
                 Spacer()
                 if store.goingOutToday {
@@ -121,19 +124,27 @@ struct TodayView: View {
                 Text(error).font(.caption).foregroundStyle(Ink.muted)
             }
             if !due.isEmpty {
-                Picker("Sort", selection: $sort) {
+                HStack(spacing: 8) {
                     ForEach(TodaySort.allCases) { s in
-                        Text(s.label).tag(s)
+                        Button { sort = s } label: {
+                            Text(s.label).frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(PixelButtonStyle(selected: sort == s))
+                        .accessibilityAddTraits(sort == s ? .isSelected : [])
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Sort")
             }
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
         .padding(.bottom, 10)
         .background(Ink.ground)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Ink.brass.opacity(0.4)).frame(height: 2)
+                .accessibilityHidden(true)
+        }
     }
 
     private var outingSettings: some View {
@@ -196,6 +207,9 @@ struct TodayView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .listStyle(.plain)
+        .listRowSpacing(10)
+        .padding(.horizontal, 16)
         .contentMargins(.top, 0, for: .scrollContent)
         .environment(\.defaultMinListHeaderHeight, 0)
     }
@@ -214,7 +228,11 @@ struct TodayView: View {
             }
         } header: {
             if let title = bucket.title {
-                Text(title).foregroundStyle(Ink.muted)
+                Text(title)
+                    .font(.system(.caption, design: .monospaced).weight(.bold))
+                    .textCase(.uppercase)
+                    .tracking(2)
+                    .foregroundStyle(Ink.brass)
             }
         } footer: {
                             if bucket.id == buckets.last?.id {
@@ -334,6 +352,8 @@ private struct TodayRow: View {
         if let (path, node) = store.node(objective.nodeID) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
+                    PixelQuestMark(routine: node.kind == .practice)
+                        .padding(.top, 3)
                     Button(action: onAsk) {
                         VStack(alignment: .leading, spacing: 4) {
                             if showKind {
@@ -385,12 +405,12 @@ private struct TodayRow: View {
                             .foregroundStyle(Ink.ground)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
-                            .background(Ink.brass, in: Capsule())
+                            .background(Ink.brass, in: PixelPanel())
                     }
                     .accessibilityElement(children: .contain)
                 }
             }
-            .padding(.vertical, store.goingOutToday && node.isOutsideQuest ? 6 : 0)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
@@ -398,16 +418,19 @@ private struct TodayRow: View {
                 }
                 .tint(Ink.brass)
             }
+            .listRowSeparator(.hidden)
             .listRowBackground(
-                (path.role == .work ? Ink.workCard : Ink.card)
+                PixelPanel()
+                    .fill(path.role == .work ? Ink.workCard : Ink.card)
                     .overlay {
-                        if store.goingOutToday && node.isOutsideQuest {
-                            RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(Ink.brass.opacity(0.85), lineWidth: 1.5)
-                                .shadow(color: Ink.brass.opacity(0.45), radius: 6)
-                                .allowsHitTesting(false)
-                        }
+                        PixelPanel()
+                            .stroke(store.goingOutToday && node.isOutsideQuest ? Ink.brass : Ink.line,
+                                    lineWidth: store.goingOutToday && node.isOutsideQuest ? 2 : 1)
+                            .shadow(color: store.goingOutToday && node.isOutsideQuest ? Ink.brass.opacity(0.4) : .clear,
+                                    radius: 5)
                     }
+                    .padding(1)
+                    .allowsHitTesting(false)
             )
             .animation(.easeInOut(duration: 0.2), value: confirming)
         }
