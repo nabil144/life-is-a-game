@@ -63,7 +63,17 @@ extension Role {
         }
     }
 
-    static let glyphs = ["star", "guitars", "wand.and.stars", "laptopcomputer", "car", "book", "figure.run", "paintpalette", "camera", "hammer", "leaf", "music.note", "cpu", "wrench.and.screwdriver", "signpost.right.and.left", "sparkles"]
+    static let glyphs = [
+        "star", "guitars", "wand.and.stars", "laptopcomputer", "car", "book",
+        "figure.run", "paintpalette", "camera", "hammer", "leaf", "music.note",
+        "cpu", "wrench.and.screwdriver", "signpost.right.and.left", "sparkles",
+        "banknote",       // Finance
+        "house",          // Home
+        "person.3",       // Family
+        "cross.case",     // Health
+        "heart",          // Relationships
+        "airplane",       // Travel
+    ]
 }
 
 struct NewPathView: View {
