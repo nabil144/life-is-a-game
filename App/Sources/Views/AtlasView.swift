@@ -4,337 +4,215 @@ import LifeEngine
 enum PathsStyle: String, CaseIterable, Identifiable {
     case atlas, list
     var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .atlas: "World"
-        case .list: "List"
-        }
-    }
+    var label: String { self == .atlas ? "World" : "List" }
 }
 
-/// You in the middle. Paths as orbs on branches. Quests and practices as twigs.
+/// Layout is cached when data changes. Native UIScrollView owns camera gestures.
 struct AtlasView: View {
     @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var openPath: UUID?
-    @State private var pick: AtlasPick?
-    @State private var glow: AtlasPick?
-    @State private var travel: CGFloat = 0
-    @State private var hop = 0
-    @State private var scale: CGFloat = 1
-    @State private var lastScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
+    @State private var map = WorldMapSnapshot(paths: [])
+    @State private var selected: String?
+    @State private var camera = WorldCamera()
+    @State private var editor: WorldEditor?
 
     var body: some View {
-        GeometryReader { geo in
-            let layout = AtlasLayout(paths: store.activePaths, in: geo.size)
-            ZStack {
-                NeuronSky()
-                Canvas { ctx, _ in
-                    for node in layout.nodes {
-                        strokeBranch(
-                            &ctx,
-                            from: layout.center,
-                            to: node.at,
-                            fill: pathFill(node.path.id)
-                        )
-                        for sat in node.neurons {
-                            strokeBranch(
-                                &ctx,
-                                from: node.at,
-                                to: sat.at,
-                                fill: workFill(sat.work.id),
-                                twig: true
-                            )
+        WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: select),
+                        size: map.layout.size, camera: camera, animated: !reduceMotion)
+            .background(Ink.ground)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack(spacing: 8) {
+                    Button("Overview") { selected = nil; camera = WorldCamera() }
+                    Button("You") { selected = nil; focus(map.layout.center) }
+                    Spacer()
+                    Menu {
+                        ForEach(store.activePaths) { path in
+                            Button(path.name) { select("path-\(path.id)") }
+                        }
+                    } label: { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
+                    .disabled(store.activePaths.isEmpty)
+                }
+                .buttonStyle(PixelButtonStyle(compact: true))
+                .padding(.horizontal, 12)
+                .background(Ink.ground)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                selectionPanel
+            }
+            .onChange(of: store.activePaths, initial: true) { _, paths in
+                let previousCenter = map.layout.center
+                map = WorldMapSnapshot(paths: paths, previous: map)
+                if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
+                    if previousCenter != map.layout.center { focus(room.center) }
+                } else if selected != nil {
+                    self.selected = nil
+                    camera = WorldCamera()
+                }
+            }
+            .sheet(item: $editor) { item in
+                NodeEditView(pathID: item.pathID, node: item.node)
+            }
+    }
+
+    private func focus(_ point: CGPoint) {
+        camera = WorldCamera(center: point)
+    }
+
+    private func select(_ id: String) {
+        if id == "you" { selected = nil; focus(map.layout.center); return }
+        if selected == id { selected = nil; return }
+        selected = id
+        if let room = map.rooms.first(where: { $0.id == id }) { focus(room.center) }
+    }
+
+    @ViewBuilder private var selectionPanel: some View {
+        if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(room.title).font(.headline)
+                    Text(room.subtitle).font(.caption).foregroundStyle(Ink.muted)
+                }
+                Spacer()
+                if room.workID == nil, let pathID = room.pathID,
+                   let path = store.activePaths.first(where: { $0.id == pathID }) {
+                    Menu("Quests") {
+                        ForEach(path.nodes.filter(\.isOpen)) { node in
+                            Button(node.title) { select("work-\(node.id)") }
                         }
                     }
+                    .disabled(!path.nodes.contains(where: \.isOpen))
                 }
-                .allowsHitTesting(false)
-
-                ForEach(layout.nodes, id: \.path.id) { node in
-                    ForEach(node.neurons) { sat in
-                        neuronPip(sat.work, at: sat.at, pathID: node.path.id)
-                    }
-                    pathOrb(node.path, at: node.at)
+                Button("Open") {
+                    guard let pathID = room.pathID else { return }
+                    if let workID = room.workID, let (_, node) = store.node(workID) {
+                        editor = WorldEditor(pathID: pathID, node: node)
+                    } else { openPath = pathID }
                 }
-
-                selfOrb
-                    .position(layout.center)
+                .buttonStyle(PixelButtonStyle(selected: true, compact: true))
+                Button { self.selected = nil } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Deselect")
             }
-            .scaleEffect(scale)
-            .offset(offset)
-            .gesture(pan.simultaneously(with: pinch))
-            .onTapGesture(count: 2, perform: toggleZoom)
-        }
-        .background(Ink.ground)
-        .overlay(alignment: .bottom) {
-            VStack(spacing: 10) {
-                if store.activePaths.isEmpty {
-                    Text("Name one thing you want to evolve.")
-                        .font(.subheadline)
-                    RestoreFileButton()
-                } else {
-                    Text(pick == nil
-                         ? "Tap a path or a quest. Tap You to clear."
-                         : "Tap again to open. Tap You to let go.")
-                }
-            }
-            .font(.footnote)
-            .foregroundStyle(Ink.muted)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 8)
-        }
-    }
-
-    private func strokeBranch(_ ctx: inout GraphicsContext, from: CGPoint, to: CGPoint, fill: CGFloat, twig: Bool = false) {
-        var line = SwiftUI.Path()
-        line.move(to: from)
-        line.addQuadCurve(to: to, control: Neuron.bend(from: from, to: to))
-        ctx.stroke(
-            line,
-            with: .color(Ink.wine.opacity(twig ? 0.45 : 0.55)),
-            style: StrokeStyle(lineWidth: twig ? 1.3 : 1.6, lineCap: .round)
-        )
-        let t = min(1, max(0, fill))
-        guard t > 0.01 else { return }
-        let beam = line.trimmedPath(from: 0, to: t)
-        ctx.stroke(beam, with: .color(Ink.brass.opacity(0.28)), style: StrokeStyle(lineWidth: twig ? 10 : 14, lineCap: .round))
-        ctx.stroke(beam, with: .color(Ink.brass.opacity(0.9)), style: StrokeStyle(lineWidth: twig ? 2.4 : 3.2, lineCap: .round))
-    }
-
-    private func pathFill(_ id: UUID) -> CGFloat {
-        switch glow {
-        case .path(let p) where p == id: min(1, travel)
-        case .work(let p, _) where p == id: min(1, travel)
-        default: 0
-        }
-    }
-
-    private func workFill(_ id: UUID) -> CGFloat {
-        if case .work(_, let n) = glow, n == id { return min(1, max(0, travel - 1)) }
-        return 0
-    }
-
-    private func pathLit(_ id: UUID) -> Bool { pathFill(id) > 0.35 }
-
-    private func workLit(_ id: UUID) -> Bool { workFill(id) > 0.35 }
-
-    private func namesOn(_ pathID: UUID) -> Bool {
-        switch pick {
-        case .path(let p): p == pathID
-        case .work(let p, _): p == pathID
-        case nil: false
-        }
-    }
-
-    private func target(_ pick: AtlasPick?) -> CGFloat {
-        switch pick {
-        case .path: 1
-        case .work: 2
-        case nil: 0
-        }
-    }
-
-    private func select(_ new: AtlasPick?) {
-        if pick == new, let new {
-            switch new {
-            case .path(let id), .work(let id, _): openPath = id
-            }
-            return
-        }
-        hop += 1
-        let token = hop
-        if glow != nil, travel > 0.02 {
-            withAnimation(.easeInOut(duration: 0.22)) { travel = 0 }
-            pick = nil
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(230))
-                guard token == hop else { return }
-                glow = new
-                pick = new
-                if new != nil {
-                    withAnimation(.easeInOut(duration: 0.28)) { travel = target(new) }
-                }
-            }
+            .padding(12)
+            .background(Ink.card, in: PixelPanel())
+            .padding(8)
         } else {
-            glow = new
-            pick = new
-            withAnimation(.easeInOut(duration: 0.28)) { travel = target(new) }
-        }
-    }
-
-    private func tapPath(_ id: UUID) { select(.path(id)) }
-
-    private func tapWork(pathID: UUID, nodeID: UUID) { select(.work(pathID: pathID, nodeID: nodeID)) }
-
-    private var selfOrb: some View {
-        Button {
-            select(nil)
-        } label: {
-            VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(Ink.brass.opacity(0.18))
-                        .frame(width: 92, height: 92)
-                    Circle()
-                        .stroke(Ink.brass.opacity(pick == nil ? 0.55 : 0.85), lineWidth: 2)
-                        .frame(width: 78, height: 78)
-                    Image(systemName: "leaf")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(Ink.brass)
-                }
-                .shadow(color: Ink.brass.opacity(pick == nil ? 0.15 : 0.4), radius: 16)
-                Text("You")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Ink.muted)
+            VStack(spacing: 4) {
+                Text(store.activePaths.isEmpty ? "Add a path to grow your world." : "Tap to focus · tap again to deselect")
+                if store.activePaths.isEmpty { RestoreFileButton() }
             }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("You, clear the glow")
-    }
-
-    private func pathOrb(_ path: Path, at point: CGPoint) -> some View {
-        let on = pathLit(path.id)
-        return Button { tapPath(path.id) } label: {
-            ZStack {
-                Circle()
-                    .fill(path.isEvolved ? Ink.brass.opacity(0.16) : Ink.card)
-                Circle()
-                    .stroke(on ? Ink.brass : Ink.line, lineWidth: on ? 2.5 : 1)
-                Image(systemName: path.glyph)
-                    .font(.system(size: 20))
-                    .foregroundStyle(path.isEvolved || on ? Ink.brass : Ink.words)
-            }
-            .frame(width: 58, height: 58)
-            .shadow(color: on ? Ink.brass.opacity(0.5) : .clear, radius: 14)
-            .overlay(alignment: .top) {
-                Text(path.name)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Ink.words)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(width: 96)
-                    .offset(y: 62)
-            }
-        }
-        .buttonStyle(.plain)
-        .frame(width: 58, height: 58)
-        .position(point)
-        .opacity(path.status == .resting ? 0.55 : 1)
-    }
-
-    private func neuronPip(_ work: LifeEngine.Node, at point: CGPoint, pathID: UUID) -> some View {
-        let on = workLit(work.id)
-        return Button { tapWork(pathID: pathID, nodeID: work.id) } label: {
-            Circle()
-                .fill(on ? Ink.brass.opacity(0.35) : (work.kind == .practice ? Ink.brass.opacity(0.22) : Ink.card))
-                .overlay(Circle().stroke(on || work.kind == .practice ? Ink.brass : Ink.line, lineWidth: on ? 2 : 1.4))
-                .frame(width: 16, height: 16)
-                .shadow(color: on ? Ink.brass.opacity(0.55) : .clear, radius: 8)
-                .overlay(alignment: .top) {
-                    if namesOn(pathID) {
-                        Text(work.title)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(on ? Ink.brass : Ink.words)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                            .frame(width: 72)
-                            .offset(y: 20)
-                            .transition(.opacity)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .frame(width: 16, height: 16)
-        .position(point)
-        .animation(.easeInOut(duration: 0.18), value: pick)
-        .accessibilityLabel(work.title)
-    }
-
-    private var pinch: some Gesture {
-        MagnifyGesture()
-            .onChanged { value in
-                scale = min(2.8, max(0.55, lastScale * value.magnification))
-            }
-            .onEnded { _ in lastScale = scale }
-    }
-
-    private var pan: some Gesture {
-        DragGesture()
-            .onChanged { value in
-                offset = CGSize(
-                    width: lastOffset.width + value.translation.width,
-                    height: lastOffset.height + value.translation.height
-                )
-            }
-            .onEnded { _ in lastOffset = offset }
-    }
-
-    private func toggleZoom() {
-        withAnimation(.easeInOut(duration: 0.28)) {
-            if scale > 1.15 {
-                scale = 1
-                lastScale = 1
-                offset = .zero
-                lastOffset = .zero
-            } else {
-                scale = 1.7
-                lastScale = 1.7
-            }
+            .font(.caption).foregroundStyle(Ink.muted)
+            .padding(8).frame(maxWidth: .infinity).background(Ink.ground)
         }
     }
 }
 
-private enum AtlasPick: Equatable {
-    case path(UUID)
-    case work(pathID: UUID, nodeID: UUID)
+private struct WorldEditor: Identifiable {
+    var pathID: UUID
+    var node: LifeEngine.Node
+    var id: UUID { node.id }
 }
 
-private struct AtlasLayout {
-    struct NeuronSat: Identifiable {
-        var work: LifeEngine.Node
-        var at: CGPoint
-        var id: UUID { work.id }
-    }
+struct WorldCamera {
+    var id = UUID()
+    var center: CGPoint? = nil
+}
 
-    struct Node {
-        var path: Path
-        var at: CGPoint
-        var neurons: [NeuronSat]
-    }
-
+struct WorldRoom: Identifiable {
+    var id: String
+    var pathID: UUID?
+    var workID: UUID?
     var center: CGPoint
-    var nodes: [Node]
+    var title: String
+    var subtitle: String
+    var glyph: String
+    var routine: Bool
+    var work: Bool
+}
 
-    init(paths: [Path], in size: CGSize) {
-        let origin = CGPoint(x: size.width / 2, y: size.height / 2 - 12)
-        let radius = min(size.width, size.height) * 0.34
-        let count = max(paths.count, 1)
-        let laid = paths.enumerated().map { i, item in
-            let angle = (Double(i) / Double(count)) * .pi * 2 - .pi / 2
-            let at = CGPoint(
-                x: origin.x + CGFloat(cos(angle)) * radius,
-                y: origin.y + CGFloat(sin(angle)) * radius
-            )
-            let open = item.nodes.filter(\.isOpen)
-            let outward = atan2(at.y - origin.y, at.x - origin.x)
-            let fan = Double.pi * 1.15
-            let twigOrbit: CGFloat = 62
-            let neurons = open.enumerated().map { j, n -> NeuronSat in
-                let t = open.count == 1 ? 0 : (Double(j) / Double(open.count - 1)) - 0.5
-                let a = outward + t * fan
-                return NeuronSat(
-                    work: n,
-                    at: CGPoint(
-                        x: at.x + CGFloat(cos(a)) * twigOrbit,
-                        y: at.y + CGFloat(sin(a)) * twigOrbit
-                    )
-                )
-            }
-            return Node(path: item, at: at, neurons: neurons)
+struct WorldMapSnapshot {
+    var inputs: [WorldLayout.Input]
+    var layout: WorldLayout
+    var rooms: [WorldRoom]
+    var corridors: SwiftUI.Path
+    var routes: [String: SwiftUI.Path]
+
+    init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil) {
+        inputs = paths.map { .init(id: $0.id, work: $0.nodes.filter(\.isOpen).map(\.id)) }
+        layout = previous?.inputs == inputs ? previous!.layout : WorldLayout(paths: inputs)
+        let pathIndex = Dictionary(uniqueKeysWithValues: paths.map { ($0.id, $0) })
+        let nodeIndex = Dictionary(uniqueKeysWithValues: paths.flatMap(\.nodes).map { ($0.id, $0) })
+        rooms = layout.rooms.map { room in
+            let path = room.pathID.flatMap { pathIndex[$0] }
+            let node = room.workID.flatMap { nodeIndex[$0] }
+            return WorldRoom(id: room.id, pathID: room.pathID, workID: room.workID, center: room.center,
+                             title: node?.title ?? path?.name ?? "You",
+                             subtitle: node.map { $0.kind == .practice ? "Routine" : "Quest" }
+                                ?? path.map { "\($0.nodes.filter(\.isOpen).count) quests & routines" } ?? "Your world",
+                             glyph: path?.glyph ?? "brain", routine: node?.kind == .practice, work: path?.role == .work)
         }
-        center = origin
-        nodes = laid
+        if let previous, previous.inputs == inputs {
+            corridors = previous.corridors; routes = previous.routes
+        } else {
+            corridors = SwiftUI.Path(); routes = [:]
+            // Parent routes are built first, so a selected child can highlight its whole ancestry.
+            for edge in layout.corridors where edge.workID == nil {
+                var line = SwiftUI.Path(); line.addLines(edge.points)
+                corridors.addPath(line)
+                routes["path-\(edge.pathID)"] = line
+            }
+            for edge in layout.corridors {
+                guard let workID = edge.workID else { continue }
+                var line = SwiftUI.Path(); line.addLines(edge.points)
+                corridors.addPath(line)
+                var route = routes["path-\(edge.pathID)"] ?? SwiftUI.Path()
+                route.addPath(line)
+                routes["work-\(workID)"] = route
+            }
+        }
+    }
+}
+
+struct WorldMapContent: View {
+    let map: WorldMapSnapshot
+    let selected: String?
+    let select: (String) -> Void
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            WorldCorridors(base: map.corridors.cgPath, selected: selected.flatMap { map.routes[$0]?.cgPath })
+                .frame(width: map.layout.size.width, height: map.layout.size.height)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            ForEach(map.rooms) { room in
+                Button { select(room.id) } label: {
+                    VStack(spacing: 4) {
+                        if room.id == "you" {
+                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 28, height: 28)
+                        } else if room.workID != nil {
+                            PixelQuestMark(routine: room.routine)
+                        } else {
+                            Image(systemName: room.glyph).font(.body.weight(.bold)).foregroundStyle(Ink.brass)
+                        }
+                        Text(room.title)
+                            .font(.system(.caption, design: .monospaced).weight(.semibold))
+                            .lineLimit(2).multilineTextAlignment(.center)
+                    }
+                    .padding(6)
+                    .frame(width: 136, height: 72)
+                    .foregroundStyle(Ink.words)
+                    .background(room.work ? Ink.workCard : Ink.card, in: PixelPanel())
+                    .overlay(PixelPanel().stroke(selected == room.id || room.id == "you" ? Ink.brass : Ink.line, lineWidth: 2))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(room.title)
+                .accessibilityValue(room.subtitle)
+                .accessibilityHint("Select and focus. Tap again to deselect. Use Open for details.")
+                .position(room.center)
+            }
+        }
+        .frame(width: map.layout.size.width, height: map.layout.size.height)
+        .background(Ink.ground)
     }
 }
