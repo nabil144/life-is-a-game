@@ -54,6 +54,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         loadViewIfNeeded()
         host.rootView = content
         if size != worldSize {
+            // The initial empty snapshot is replaced after loading the stored paths.
+            // Refit the overview when its world bounds change.
+            if camera.center == nil { applied = nil }
             let oldZoom = scroll.zoomScale
             scroll.setZoomScale(1, animated: false)
             worldSize = size

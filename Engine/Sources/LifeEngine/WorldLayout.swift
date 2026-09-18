@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 
 /// A shallow ownership tree laid out as four outward-growing, grid-aligned regions.
 /// Independent of the viewport and selection; no physics or per-frame layout work.

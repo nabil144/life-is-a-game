@@ -1,4 +1,7 @@
 import XCTest
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 @testable import LifeEngine
 
 final class WorldLayoutTests: XCTestCase {
@@ -32,6 +35,28 @@ final class WorldLayoutTests: XCTestCase {
                 }
             }
             XCTAssertEqual(layout.rooms.map(\.center), WorldLayout(paths: inputs).rooms.map(\.center))
+            for (i, edge) in layout.corridors.enumerated() {
+                for other in layout.corridors.dropFirst(i + 1)
+                    where edge.pathID != other.pathID && (edge.workID != nil || other.workID != nil) {
+                    for (a, b) in zip(edge.points, edge.points.dropFirst()) where a != b {
+                        for (c, d) in zip(other.points, other.points.dropFirst()) where c != d {
+                            let overlapX = max(min(a.x, b.x), min(c.x, d.x)) <= min(max(a.x, b.x), max(c.x, d.x))
+                            let overlapY = max(min(a.y, b.y), min(c.y, d.y)) <= min(max(a.y, b.y), max(c.y, d.y))
+                            XCTAssertFalse(overlapX && overlapY, "Different path branches must not intersect")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testThousandQuestLayoutPerformance() {
+        let inputs = (0..<20).map { _ in
+            WorldLayout.Input(id: UUID(), work: (0..<50).map { _ in UUID() })
+        }
+        measure {
+            let layout = WorldLayout(paths: inputs)
+            XCTAssertEqual(layout.rooms.count, 1021)
         }
     }
 }
