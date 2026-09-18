@@ -87,12 +87,15 @@ struct TodayView: View {
                     Spacer()
                     Button { capture = CaptureRequest() } label: {
                         Image(systemName: "plus")
-                            .font(.body.weight(.semibold))
+                            .font(.caption.weight(.bold))
                             .foregroundStyle(Ink.brass)
-                            .frame(width: 44, height: 44)
+                            .frame(width: 30, height: 30)
                             .background(Ink.card, in: PixelPanel())
                             .overlay(PixelPanel().stroke(Ink.brass, lineWidth: 1))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Capture")
                 }
             }
@@ -267,7 +270,7 @@ struct TodayView: View {
             objective: o,
             confirming: pendingID == o.nodeID,
             showKind: showKind || (store.goingOutToday && store.node(o.nodeID)?.1.isOutsideQuest == true),
-            onAsk: { pendingID = o.nodeID },
+            onAsk: { pendingID = pendingID == o.nodeID ? nil : o.nodeID },
             onCancel: { pendingID = nil },
             onDone: { markDone(o.nodeID) },
             onOpenPath: { openPath = OpenPath(id: $0) }
@@ -401,6 +404,8 @@ private struct TodayRow: View {
                         .frame(minHeight: 44, alignment: .leading)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityValue(confirming ? "Selected" : "Not selected")
+                    .accessibilityHint(confirming ? "Hide quest actions" : "Show quest actions")
 
                     Button { onOpenPath(path.id) } label: {
                         Image(systemName: path.glyph).foregroundStyle(Ink.brass)
