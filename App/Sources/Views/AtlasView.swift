@@ -135,6 +135,7 @@ struct WorldMapSnapshot {
     var layout: WorldLayout
     var rooms: [WorldRoom]
     var corridors: SwiftUI.Path
+    var decoration: SwiftUI.Path
     var routes: [String: SwiftUI.Path]
 
     init(paths: [LifeEngine.Path], previous: WorldMapSnapshot? = nil) {
@@ -153,8 +154,14 @@ struct WorldMapSnapshot {
         }
         if let previous, previous.inputs == inputs {
             corridors = previous.corridors; routes = previous.routes
+            decoration = previous.decoration
         } else {
             corridors = SwiftUI.Path(); routes = [:]
+            decoration = SwiftUI.Path()
+            for segment in WorldDecoration(layout: layout).segments {
+                decoration.move(to: segment.from)
+                decoration.addLine(to: segment.to)
+            }
             // Parent routes are built first, so a selected child can highlight its whole ancestry.
             for edge in layout.corridors where edge.workID == nil {
                 var line = SwiftUI.Path(); line.addLines(edge.points)
@@ -180,7 +187,8 @@ struct WorldMapContent: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            WorldCorridors(base: map.corridors.cgPath, selected: selected.flatMap { map.routes[$0]?.cgPath })
+            WorldCorridors(base: map.corridors.cgPath, decoration: map.decoration.cgPath,
+                           selected: selected.flatMap { map.routes[$0]?.cgPath })
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)

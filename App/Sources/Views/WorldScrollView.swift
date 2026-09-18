@@ -113,12 +113,15 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
 /// Vector layers avoid allocating a world-sized Canvas bitmap when the map grows.
 struct WorldCorridors: UIViewRepresentable {
     var base: CGPath
+    var decoration: CGPath
     var selected: CGPath?
 
     func makeUIView(context: Context) -> WorldCorridorLayerView { WorldCorridorLayerView() }
     func updateUIView(_ view: WorldCorridorLayerView, context: Context) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        view.unexploredWalls.path = decoration
+        view.unexploredFloor.path = decoration
         view.walls.path = base
         view.floor.path = base
         view.highlight.path = selected
@@ -127,6 +130,8 @@ struct WorldCorridors: UIViewRepresentable {
 }
 
 final class WorldCorridorLayerView: UIView {
+    let unexploredWalls = CAShapeLayer()
+    let unexploredFloor = CAShapeLayer()
     let walls = CAShapeLayer()
     let floor = CAShapeLayer()
     let highlight = CAShapeLayer()
@@ -134,7 +139,12 @@ final class WorldCorridorLayerView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         isUserInteractionEnabled = false
-        for (shape, color, width) in [(walls, Ink.line, CGFloat(10)), (floor, Ink.ground, CGFloat(4)), (highlight, Ink.brass, CGFloat(4))] {
+        for (shape, color, width) in [
+            (unexploredWalls, Ink.line.opacity(0.55), CGFloat(6)),
+            (unexploredFloor, Ink.ground, CGFloat(2)),
+            (walls, Ink.line, CGFloat(10)), (floor, Ink.ground, CGFloat(4)),
+            (highlight, Ink.brass, CGFloat(4))
+        ] {
             shape.fillColor = nil
             shape.strokeColor = UIColor(color).cgColor
             shape.lineWidth = width
@@ -149,7 +159,7 @@ final class WorldCorridorLayerView: UIView {
         super.layoutSubviews()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        for shape in [walls, floor, highlight] { shape.frame = bounds }
+        for shape in [unexploredWalls, unexploredFloor, walls, floor, highlight] { shape.frame = bounds }
         CATransaction.commit()
     }
 }

@@ -40,16 +40,16 @@ public struct WorldLayout {
         for side in 0..<4 {
             let group = paths.enumerated().filter { $0.offset % 4 == side }.map(\.element)
             let slots = group.reduce(0) { $0 + max(1, $1.work.count) + 1 }
-            var cursor = -CGFloat(max(0, slots - 2)) * 80
+            var cursor = -CGFloat(max(0, slots - 2)) * (side % 2 == 0 ? 48 : 76)
             for input in group {
                 let count = max(1, input.work.count)
-                let values = (0..<count).map { cursor + CGFloat($0) * 160 }
+                let values = (0..<count).map { cursor + CGFloat($0) * (side % 2 == 0 ? 96 : 152) }
                 lanes.append(Lane(input: input, side: side, values: values))
-                cursor += CGFloat(count + 1) * 160
+                cursor += CGFloat(count + 1) * (side % 2 == 0 ? 96 : 152)
             }
         }
         let extent = lanes.flatMap(\.values).map { abs($0) }.max() ?? 0
-        let radius = max(256, extent + 224)
+        let radius = max(192, extent + 112)
         func rotate(_ x: CGFloat, _ y: CGFloat, _ side: Int) -> CGPoint {
             switch side {
             case 0: return CGPoint(x: x, y: y)
@@ -66,18 +66,18 @@ public struct WorldLayout {
             let at = rotate(radius, y, lane.side)
             rooms.append(Room(id: "path-\(lane.input.id)", pathID: lane.input.id, center: at))
             corridors.append(Corridor(pathID: lane.input.id, points: [
-                .zero, rotate(radius - 96, 0, lane.side), rotate(radius - 96, y, lane.side), at
+                .zero, rotate(radius - 80, 0, lane.side), rotate(radius - 80, y, lane.side), at
             ]))
             for (index, work) in lane.input.work.enumerated() {
-                let target = rotate(radius + 288, lane.values[index], lane.side)
+                let target = rotate(radius + 192, lane.values[index], lane.side)
                 rooms.append(Room(id: "work-\(work)", pathID: lane.input.id, workID: work, center: target))
                 corridors.append(Corridor(pathID: lane.input.id, workID: work, points: [
-                    at, rotate(radius + 144, y, lane.side),
-                    rotate(radius + 144, lane.values[index], lane.side), target
+                    at, rotate(radius + 96, y, lane.side),
+                    rotate(radius + 96, lane.values[index], lane.side), target
                 ]))
             }
         }
-        let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -96, dy: -96)
+        let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -64, dy: -64)
         center = CGPoint(x: -bounds.minX, y: -bounds.minY)
         size = bounds.size
         for i in rooms.indices {
