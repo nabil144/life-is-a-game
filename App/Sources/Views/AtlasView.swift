@@ -336,19 +336,27 @@ struct WorldMapContent: View {
                 .accessibilityHidden(true)
             ForEach(map.rooms) { room in
                 Button { select(room.id) } label: {
-                    HStack(spacing: 6) {
+                    Group {
                         if room.id == "you" && room.pathID == nil {
-                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 26, height: 26)
-                        } else if room.workID != nil {
-                            PixelQuestMark(routine: room.routine).frame(width: 26, height: 26)
+                            Image("WorldBrain")
+                                .resizable()
+                                .interpolation(.none)
+                                .scaledToFit()
+                                .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                         } else {
-                            Image(systemName: room.glyph).font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
-                                .frame(width: 26, height: 26)
+                            HStack(spacing: 6) {
+                                if room.workID != nil {
+                                    PixelQuestMark(routine: room.routine).frame(width: 26, height: 26)
+                                } else {
+                                    Image(systemName: room.glyph).font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
+                                        .frame(width: 26, height: 26)
+                                }
+                                Text(room.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .lineLimit(3).multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
-                        Text(room.title)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(3).multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                     .scaleEffect(selected == room.id ? 1.06 : 1)
