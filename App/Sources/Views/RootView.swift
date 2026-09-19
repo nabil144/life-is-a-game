@@ -15,22 +15,25 @@ struct RootView: View {
     var body: some View {
         Group {
             if store.world.onboarded {
-                TabView(selection: $selectedTab) {
-                    TodayView(capture: $captureFor)
-                        .toolbar(.hidden, for: .tabBar)
-                        .tabItem { Label("Today", systemImage: "sun.max") }
-                        .tag(0)
-                    PathsView(capture: $captureFor, worldVisit: worldVisit)
-                        .toolbar(.hidden, for: .tabBar)
-                        .tabItem { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
-                        .tag(1)
-                }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    HStack(spacing: 8) {
+                VStack(spacing: 0) {
+                    TabView(selection: $selectedTab) {
+                        TodayView(capture: $captureFor)
+                            .toolbar(.hidden, for: .tabBar)
+                            .tabItem { Label("Today", systemImage: "sun.max") }
+                            .tag(0)
+                        PathsView(capture: $captureFor, worldVisit: worldVisit)
+                            .toolbar(.hidden, for: .tabBar)
+                            .tabItem { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
+                            .tag(1)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Reserve real layout space, including for pushed detail screens.
+                    // A tab controller can otherwise lose an outer safe-area inset.
+                    HStack(spacing: 6) {
                         tabButton("Today", glyph: "sun.max", tab: 0)
                         tabButton("Paths", glyph: "point.3.connected.trianglepath.dotted", tab: 1)
                     }
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 6)
                     .padding(.vertical, 6)
                     .background(Ink.ground)
                     .overlay(alignment: .top) {
@@ -75,10 +78,12 @@ struct RootView: View {
             HStack(spacing: 8) {
                 Image(systemName: glyph)
                     .font(.system(size: 23, weight: .semibold))
-                    .scaleEffect(selectedTab == tab ? 1.1 : 1)
-                    .rotationEffect(.degrees(reduceMotion ? 0 : (selectedTab == tab ? (tab == 0 ? 45 : 12) : 0)))
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: selectedTab == tab)
-                    .frame(width: 30, height: 30)
+                    .scaleEffect(selectedTab == tab ? 1.15 : 1)
+                    .rotationEffect(.degrees(reduceMotion ? 0 : (tab == 0
+                        ? (selectedTab == tab ? 45 : 0)
+                        : (selectedTab == tab ? 30 : -30))))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.38), value: selectedTab == tab)
+                    .frame(width: 44, height: 36)
                     .accessibilityHidden(true)
                 Text(title)
             }
