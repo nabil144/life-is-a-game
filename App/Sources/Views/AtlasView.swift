@@ -334,13 +334,6 @@ struct WorldMapContent: View {
                 .contentShape(Rectangle())
                 .onTapGesture { select("") }
                 .accessibilityHidden(true)
-            ForEach(map.rooms) { room in
-                Rectangle().fill(room.work ? Ink.workCard : Ink.card.opacity(0.55))
-                    .frame(width: room.frame.width, height: room.frame.height)
-                    .position(room.center)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
             WorldCorridors(walls: map.walls.cgPath, floorMask: map.floorMask.cgPath,
                            floorWidth: map.floorWidth, route: selected.flatMap { map.routes[$0] },
                            generation: map.generation, selection: selected, animated: !reduceMotion)
