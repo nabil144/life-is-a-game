@@ -472,9 +472,11 @@ private struct TodayRow: View {
             .contentShape(Rectangle())
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(action: onDone) {
-                    Label("Done", systemImage: "checkmark")
+                    Image(uiImage: PixelSwipeArtwork.done)
+                        .renderingMode(.original)
                 }
-                .tint(Ink.brass)
+                .accessibilityLabel("Mark as done")
+                .tint(Ink.ground)
             }
             .listRowSeparator(.hidden)
             .listRowBackground(
