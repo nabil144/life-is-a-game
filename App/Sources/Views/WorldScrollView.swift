@@ -31,7 +31,7 @@ struct WorldScrollView: UIViewControllerRepresentable {
     }
 }
 
-final class WorldScrollController: UIViewController, UIScrollViewDelegate {
+final class WorldScrollController: UIViewController, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let scroll = UIScrollView()
     private let host: UIHostingController<WorldMapContent>
     private var worldSize = CGSize.zero
@@ -46,6 +46,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     private var gameView: MazeGameLayerView?
     private var beforeGame: (center: CGPoint, zoom: CGFloat)?
     private var gameSwipes: [UISwipeGestureRecognizer] = []
+    private let brainHold = UILongPressGestureRecognizer()
+    private var brainFrame: CGRect?
+    private var startGame: (() -> Void)?
 
     private var limits: WorldCameraLimits {
         WorldCameraLimits(world: worldSize, viewport: scroll.bounds.size)
@@ -77,6 +80,11 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         scroll.addSubview(host.view)
         host.view.backgroundColor = UIColor(Ink.ground)
         host.didMove(toParent: self)
+        brainHold.minimumPressDuration = 2
+        brainHold.allowableMovement = 24
+        brainHold.delegate = self
+        brainHold.addTarget(self, action: #selector(holdBrain(_:)))
+        view.addGestureRecognizer(brainHold)
         for direction: UISwipeGestureRecognizer.Direction in [.up, .right, .down, .left] {
             let swipe = UISwipeGestureRecognizer(target: self, action: #selector(steerGame(_:)))
             swipe.direction = direction; swipe.isEnabled = false
@@ -88,6 +96,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         loadViewIfNeeded()
         updating = true
         defer { updating = false }
+        brainFrame = content.map.scene == .world && content.map.gameBoard != nil
+            ? content.map.rooms.first(where: { $0.id == "you" })?.frame : nil
+        startGame = content.startGame
         generation = content.map.generation
         host.rootView = content
         if size != worldSize {
@@ -177,6 +188,24 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
             rememberViewport()
         }
         gameView?.onScore = onScore
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        guard gestureRecognizer === brainHold else { return true }
+        guard gameView == nil, let brainFrame else { return false }
+        // Convert into maze coordinates so the target follows pan and zoom exactly.
+        return brainFrame.insetBy(dx: -8, dy: -8).contains(touch.location(in: host.view))
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        gestureRecognizer === brainHold || otherGestureRecognizer === brainHold
+    }
+
+    @objc private func holdBrain(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, gameView == nil, brainFrame != nil else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        startGame?()
     }
 
     @objc private func steerGame(_ gesture: UISwipeGestureRecognizer) {

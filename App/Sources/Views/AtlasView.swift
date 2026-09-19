@@ -361,7 +361,6 @@ struct WorldMapContent: View {
     let select: (String) -> Void
     var playing = false
     var startGame: () -> Void = {}
-    @State private var holdingBrain = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -407,19 +406,10 @@ struct WorldMapContent: View {
                 }
                 .buttonStyle(.plain)
                 .opacity(playing ? 0.4 : 1)
-                .overlay(alignment: .bottom) {
-                    if holdingBrain && room.id == "you" {
-                        Text("Play").font(.caption2.monospaced()).foregroundStyle(Ink.brass)
+                .accessibilityActions {
+                    if room.id == "you" && room.pathID == nil {
+                        Button("Play maze game") { startGame() }
                     }
-                }
-                .onLongPressGesture(minimumDuration: 2, pressing: { down in
-                    if room.id == "you" && room.pathID == nil && !playing { holdingBrain = down }
-                }, perform: {
-                    if room.id == "you" && room.pathID == nil && !playing { startGame() }
-                    holdingBrain = false
-                })
-                .accessibilityAction(named: "Play maze game") {
-                    if room.id == "you" && room.pathID == nil { startGame() }
                 }
                 .accessibilityLabel(room.title)
                 .accessibilityValue(room.subtitle)
