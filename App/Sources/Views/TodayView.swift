@@ -427,7 +427,7 @@ private struct TodayRow: View {
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(Ink.muted)
                             }
-                            Text(node.title).font(.body.weight(.semibold)).foregroundStyle(Ink.words)
+                            Text(node.title).font(.title3.weight(.semibold)).foregroundStyle(Ink.words)
                             Text("\(path.name) · \(cueText(node.cue, kind: node.kind))")
                                 .font(.caption)
                                 .foregroundStyle(Ink.muted)
@@ -504,7 +504,7 @@ struct PathRow: View {
         HStack(spacing: 10) {
             Image(systemName: path.glyph).font(.title3).frame(width: 36, height: 36).pixelCard()
             VStack(alignment: .leading, spacing: 2) {
-                Text(path.name).font(.body.weight(.semibold))
+                Text(path.name).font(.title3.weight(.semibold))
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
