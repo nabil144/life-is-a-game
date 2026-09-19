@@ -41,6 +41,21 @@ final class PortraitWorldTests: XCTestCase {
         XCTAssertEqual(maze.routes.count,25)
     }
 
+    func testRoomRoadsTakeVisibleDetoursRatherThanDirectJourneys() {
+        for count in [1,4,9,16] {
+            let maze = WorldMaze(layout: WorldLayout(paths: inputs(count),portrait: true,compactCenter: true))
+            for (id, points) in maze.routes where id != "you" {
+                let road = WorldRoad(points: points,source: maze.roomFrames["you"]!,destination: maze.roomFrames[id]!)
+                let a = road.points.first!, b = road.points.last!
+                let direct = abs(a.x-b.x)+abs(a.y-b.y)
+                XCTAssertGreaterThan(road.length,direct + 48,"No visible detour for \(id), count \(count)")
+                XCTAssertGreaterThanOrEqual(road.points.count,6)
+            }
+            let again = WorldMaze(layout: WorldLayout(paths: inputs(count),portrait: true,compactCenter: true))
+            XCTAssertEqual(maze.routes,again.routes)
+        }
+    }
+
     func testBrainChamberIsCompactWhileTextChambersKeepTheirSize() {
         let destinations = inputs(4)
         let world = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true, compactCenter: true))

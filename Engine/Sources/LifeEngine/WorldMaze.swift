@@ -268,6 +268,67 @@ public struct WorldMaze: Sendable {
                 routed = true
             }
         }
+        if layout.separateRoads && routed {
+            // Add bounded side excursions after allocating every road. Reserving the
+            // complete tree first prevents a detour from stealing another room's road.
+            var routeNeighbors: [Int:[Int]] = [:]
+            var occupied = Set<Int>()
+            for edge in tree.sorted(by: { $0.a == $1.a ? $0.b < $1.b : $0.a < $1.a }) {
+                routeNeighbors[edge.a,default: []].append(edge.b)
+                routeNeighbors[edge.b,default: []].append(edge.a)
+                occupied.insert(edge.a); occupied.insert(edge.b)
+            }
+            var parent = [root: root], frontier = [root]
+            while let at = frontier.popLast() {
+                for next in routeNeighbors[at] ?? [] where parent[next] == nil {
+                    parent[next] = at; frontier.append(next)
+                }
+            }
+            for room in layout.rooms where room.id != "you" {
+                if Task.isCancelled { return }
+                guard let target = roomNodes[room.id], parent[target] != nil else { continue }
+                var journey = [target], cursor = target
+                while cursor != root { cursor = parent[cursor]!; journey.append(cursor) }
+                journey.reverse()
+                var candidates = Array(zip(journey,journey.dropFirst()))
+                random.shuffle(&candidates)
+                var added: CGFloat = 0
+                // A few deliberate U-bends, rather than making short journeys endless.
+                let budget: CGFloat = 192
+                for (a,b) in candidates where a < count && b < count && added < budget {
+                    let ax = a % columns, ay = a / columns, bx = b % columns, by = b / columns
+                    guard abs(ax-bx)+abs(ay-by) == 1 else { continue }
+                    var signs = [-1,1]; random.shuffle(&signs)
+                    var inserted = false
+                    for sign in signs {
+                        let dx = (by-ay)*sign, dy = (bx-ax)*sign
+                        for depth in [3,2,1] {
+                            var cells = [a]
+                            for step in 1...depth { cells.append((ay+dy*step)*columns+ax+dx*step) }
+                            for step in stride(from: depth, through: 0, by: -1) { cells.append((by+dy*step)*columns+bx+dx*step) }
+                            let inside = cells.dropFirst().dropLast()
+                            var valid = true
+                            for step in 1...depth {
+                                let x1 = ax + dx * step, y1 = ay + dy * step
+                                let x2 = bx + dx * step, y2 = by + dy * step
+                                if x1 < 1 || x1 >= columns-1 || y1 < 1 || y1 >= rows-1 { valid = false }
+                                if x2 < 1 || x2 >= columns-1 || y2 < 1 || y2 >= rows-1 { valid = false }
+                            }
+                            guard valid else { continue }
+                            guard inside.allSatisfy({ owners[$0] == $0 && !occupied.contains($0) }) else { continue }
+                            guard zip(cells,cells.dropFirst()).allSatisfy({ doors[Edge($0.0,$0.1)] != nil }) else { continue }
+                            tree.remove(Edge(a,b))
+                            for (from,to) in zip(cells,cells.dropFirst()) { tree.insert(Edge(from,to)) }
+                            occupied.formUnion(inside)
+                            added += CGFloat(2*depth)*cellSize
+                            inserted = true
+                            break
+                        }
+                        if inserted { break }
+                    }
+                }
+            }
+        }
         separateRoadsRouted = layout.separateRoads && routed
         // Preserve all carved journeys, then remove additional walls until every cell
         // belongs to one tree. Unchosen neighboring cells retain a separating wall.
