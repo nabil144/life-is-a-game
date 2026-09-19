@@ -357,19 +357,21 @@ struct WorldMapContent: View {
                                 .scaledToFit()
                                 .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                         } else {
-                            HStack(spacing: 6) {
+                            HStack(spacing: 4) {
                                 if room.milestoneID != nil {
                                     Image(systemName: room.reached ? "checkmark.square.fill" : "flag.fill")
-                                        .font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
-                                        .frame(width: 26, height: 26)
+                                        .font(.body.weight(.bold)).foregroundStyle(Ink.brass)
+                                        .frame(width: 20, height: 26)
                                 } else {
-                                    Image(systemName: room.glyph).font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
-                                        .frame(width: 26, height: 26)
+                                    Image(systemName: room.glyph).font(.body.weight(.bold)).foregroundStyle(Ink.brass)
+                                        .frame(width: 20, height: 26)
                                 }
                                 Text(room.title)
                                     .font(.subheadline.weight(.semibold))
                                     .lineLimit(3).multilineTextAlignment(.center)
                                     .frame(maxWidth: .infinity, alignment: .center)
+                                // Balance the icon so the title centers on the room itself.
+                                Color.clear.frame(width: 20, height: 26).accessibilityHidden(true)
                             }
                         }
                     }
