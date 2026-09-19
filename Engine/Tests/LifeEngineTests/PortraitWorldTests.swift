@@ -35,10 +35,11 @@ final class PortraitWorldTests: XCTestCase {
     }
 
     func testExhaustedDoorwaysKeepEveryRoomReachable() {
-        let maze = WorldMaze(layout: WorldLayout(paths: inputs(24),portrait: true,compactCenter: true))
+        // The enlarged brain has 28 exit cells; exceed that finite capacity.
+        let maze = WorldMaze(layout: WorldLayout(paths: inputs(32),portrait: true,compactCenter: true))
         XCTAssertTrue(maze.ownershipRouted)
         XCTAssertFalse(maze.separateRoadsRouted)
-        XCTAssertEqual(maze.routes.count,25)
+        XCTAssertEqual(maze.routes.count,33)
     }
 
     func testRoomRoadsTakeVisibleDetoursRatherThanDirectJourneys() {
@@ -60,7 +61,7 @@ final class PortraitWorldTests: XCTestCase {
         let destinations = inputs(4)
         let world = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true, compactCenter: true))
         let inner = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true))
-        XCTAssertEqual(world.roomFrames["you"]?.size, CGSize(width: 80, height: 80))
+        XCTAssertEqual(world.roomFrames["you"]?.size, CGSize(width: 112, height: 112))
         XCTAssertEqual(inner.roomFrames["you"]?.size, CGSize(width: 144, height: 80))
         XCTAssertEqual(world.roomFrames["you"]?.midX, world.size.width / 2)
         XCTAssertEqual(world.roomFrames["you"]?.midY, world.size.height / 2)

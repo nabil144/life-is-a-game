@@ -45,7 +45,7 @@ public struct WorldLayout: Sendable {
     private init(destinations: [Input], compactCenter: Bool) {
         separateRoads = true
         let roomSize = CGSize(width: 136, height: 72)
-        rooms = [Room(id: "you", center: .zero, size: compactCenter ? CGSize(width: 72, height: 72) : roomSize)]
+        rooms = [Room(id: "you", center: .zero, size: compactCenter ? CGSize(width: 104, height: 104) : roomSize)]
         for (index, input) in destinations.enumerated() {
             var ring = 0, slot = index
             while slot >= 8 * (ring + 1) {
