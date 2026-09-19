@@ -75,7 +75,7 @@ struct AtlasView: View {
                 .padding(.horizontal, 12)
                 .background(Ink.ground)
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) { selectionPanel }
+            .overlay(alignment: .bottom) { selectionPanel }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let parent {
                     Text(parent.name).font(.caption.monospaced().bold())

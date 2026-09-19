@@ -37,6 +37,20 @@ final class WorldRoadTests: XCTestCase {
         }
     }
 
+    func testInterruptedTravellerRetracesOnlyVisitedCorridors() {
+        let road = WorldRoad(points: [.zero,.init(x: 100,y: 0),.init(x: 100,y: 100)])
+        let returning = road.returning(after: 140)
+        XCTAssertEqual(returning.points,[.init(x: 100,y: 40),.init(x: 100,y: 0),.zero])
+        XCTAssertEqual(returning.length,140)
+        XCTAssertEqual(returning.points.first,road.position(at: 140))
+        XCTAssertEqual(road.returning(after: 1000).points,Array(road.points.reversed()))
+        XCTAssertEqual(road.returning(after: 0).length,0)
+        XCTAssertEqual(road.returning(after: -10).length,0)
+        XCTAssertEqual(road.position(at: 100),CGPoint(x: 100,y: 0))
+        XCTAssertEqual(road.position(at: 120),CGPoint(x: 100,y: 20))
+        XCTAssertEqual(road.position(at: 300),CGPoint(x: 100,y: 100))
+    }
+
     func testEmptyAndDuplicatePointsAreSafe() {
         let rect = CGRect(x: -40,y: -40,width: 80,height: 80)
         XCTAssertEqual(WorldRoad(points: [],source: rect,destination: rect).length,0)

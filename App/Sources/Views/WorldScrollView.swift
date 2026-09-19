@@ -197,6 +197,14 @@ final class WorldCorridorLayerView: UIView {
     private var generation: UUID?
     private var selection: String?
     private var motionEnabled: Bool?
+    private struct Journey {
+        let group: CALayer
+        let traveller: CAShapeLayer
+        let road: WorldRoad
+        let started: CFTimeInterval
+    }
+    private var active: Journey?
+    private var returns: [UUID: Task<Void, Never>] = [:]
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -220,75 +228,106 @@ final class WorldCorridorLayerView: UIView {
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
         let motion = animated && !UIAccessibility.isReduceMotionEnabled
-        let changed = self.generation != generation || self.selection != selection || motionEnabled != motion
-        if self.generation != generation {
+        let reset = self.generation != generation || motionEnabled != motion
+        guard reset || self.selection != selection else { return }
+        if reset {
             walls.path = path; floorMask.path = mask
+            clearJourneys()
+        } else {
+            sendHome()
         }
-        guard changed else { return }
         self.generation = generation; self.selection = selection
         motionEnabled = motion
-        light.sublayers?.forEach { $0.removeAllAnimations(); $0.removeFromSuperlayer() }
-        guard let route, route.road.length > 0, route.road.points.count > 1 else { return }
-        let road = route.road
-        let duration = Double(road.length / 100)
+        guard let road = route?.road, road.length > 0, road.points.count > 1 else { return }
         let start = light.convertTime(CACurrentMediaTime(), from: nil)
+        let group = CALayer()
+        group.frame = bounds
+        light.addSublayer(group)
 
-        func dots(opacity: CGFloat) -> CAShapeLayer {
-            let shape = CAShapeLayer()
-            shape.name = "road"
-            shape.frame = bounds
-            shape.path = route.path
-            shape.fillColor = nil
-            shape.strokeColor = UIColor(Ink.brass.opacity(Double(opacity))).cgColor
-            shape.lineWidth = 2
-            shape.lineCap = .round
-            shape.lineDashPattern = [2, 14]
-            light.addSublayer(shape)
-            return shape
+        // Individual dots never move or change dash phase. Each dims at arrival.
+        for index in 0...Int(road.length / 16) {
+            let distance = CGFloat(index) * 16
+            guard let point = road.position(at: distance) else { continue }
+            let dot = CAShapeLayer()
+            dot.bounds = CGRect(x: -1.5,y: -1.5,width: 3,height: 3)
+            dot.path = CGPath(ellipseIn: dot.bounds, transform: nil)
+            dot.position = point
+            dot.fillColor = UIColor(Ink.brass).cgColor
+            dot.opacity = motion ? 0.22 : 0.65
+            group.addSublayer(dot)
+            if motion {
+                let eat = CABasicAnimation(keyPath: "opacity")
+                eat.fromValue = 0.9; eat.toValue = 0.22
+                eat.beginTime = start + Double(distance / 100)
+                eat.duration = 0.01
+                eat.fillMode = .backwards
+                dot.add(eat, forKey: "eat")
+            }
         }
-        // The faint road remains legible after the brighter dots are eaten.
-        _ = dots(opacity: motion ? 0.22 : 0.65)
         guard motion else { return }
-        let food = dots(opacity: 0.9)
-        food.strokeStart = 1
-        let eat = CABasicAnimation(keyPath: "strokeStart")
-        eat.fromValue = 0; eat.toValue = 1; eat.duration = duration
-        eat.beginTime = start
-        eat.timingFunction = CAMediaTimingFunction(name: .linear)
-        food.add(eat, forKey: "eat")
-
         let traveller = CAShapeLayer()
         traveller.bounds = CGRect(x: -5,y: -5,width: 10,height: 10)
         traveller.fillColor = UIColor(Ink.brass).cgColor
         traveller.path = mouth(open: 0.12)
+        group.addSublayer(traveller)
+        animate(traveller, along: road, start: start)
+        active = Journey(group: group, traveller: traveller, road: road, started: start)
+    }
+
+    private func animate(_ traveller: CAShapeLayer, along road: WorldRoad, start: CFTimeInterval) {
+        guard road.length > 0, road.points.count > 1 else { return }
+        let duration = Double(road.length / 100)
+        traveller.removeAllAnimations()
         traveller.position = road.points.last!
         let angles = zip(road.points,road.points.dropFirst()).map { a,b in atan2(b.y-a.y,b.x-a.x) }
         traveller.setAffineTransform(CGAffineTransform(rotationAngle: angles.last!))
-        light.addSublayer(traveller)
-
         let times = road.distances.map { NSNumber(value: Double($0 / road.length)) }
         let walk = CAKeyframeAnimation(keyPath: "position")
         walk.values = road.points.map { NSValue(cgPoint: $0) }
-        walk.keyTimes = times
-        walk.calculationMode = .linear
-        walk.duration = duration
-        walk.beginTime = start
+        walk.keyTimes = times; walk.calculationMode = .linear
+        walk.duration = duration; walk.beginTime = start
         let turn = CAKeyframeAnimation(keyPath: "transform.rotation.z")
         turn.values = (angles + [angles.last!]).map { NSNumber(value: Double($0)) }
-        turn.keyTimes = times
-        turn.calculationMode = .discrete
-        turn.duration = duration
-        turn.beginTime = start
+        turn.keyTimes = times; turn.calculationMode = .discrete
+        turn.duration = duration; turn.beginTime = start
         let chomp = CABasicAnimation(keyPath: "path")
-        chomp.fromValue = mouth(open: 0.08)
-        chomp.toValue = mouth(open: .pi / 3)
-        chomp.duration = 0.14
-        chomp.beginTime = start
-        chomp.autoreverses = true
-        chomp.repeatDuration = duration
+        chomp.fromValue = mouth(open: 0.08); chomp.toValue = mouth(open: .pi / 3)
+        chomp.duration = 0.14; chomp.beginTime = start
+        chomp.autoreverses = true; chomp.repeatDuration = duration
         traveller.add(walk, forKey: "walk")
         traveller.add(turn, forKey: "turn")
         traveller.add(chomp, forKey: "chomp")
+    }
+
+    private func sendHome() {
+        guard let journey = active else {
+            // Reduce Motion has no traveller to return.
+            if motionEnabled == false { light.sublayers?.forEach { $0.removeFromSuperlayer() } }
+            return
+        }
+        active = nil
+        let now = light.convertTime(CACurrentMediaTime(), from: nil)
+        let road = journey.road.returning(after: CGFloat(max(0, now-journey.started)) * 100)
+        journey.group.sublayers?.forEach { $0.removeAllAnimations() }
+        guard road.length > 0 else { journey.group.removeFromSuperlayer(); return }
+        animate(journey.traveller, along: road, start: now)
+        let id = UUID()
+        returns[id] = Task { @MainActor [weak self, weak group = journey.group] in
+            do { try await Task.sleep(for: .seconds(Double(road.length / 100))) }
+            catch { return }
+            group?.removeFromSuperlayer()
+            self?.returns[id] = nil
+        }
+    }
+
+    private func clearJourneys() {
+        returns.values.forEach { $0.cancel() }
+        returns.removeAll()
+        active = nil
+        light.sublayers?.forEach { group in
+            group.sublayers?.forEach { $0.removeAllAnimations() }
+            group.removeFromSuperlayer()
+        }
     }
 
     private func mouth(open: CGFloat) -> CGPath {
@@ -301,7 +340,10 @@ final class WorldCorridorLayerView: UIView {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        if window == nil { light.sublayers?.forEach { $0.removeAllAnimations() } }
+        if window == nil {
+            clearJourneys()
+            selection = nil
+        }
     }
 
     override func layoutSubviews() {
@@ -309,8 +351,7 @@ final class WorldCorridorLayerView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         walls.frame = bounds; light.frame = bounds; floorMask.frame = bounds
-        // The traveller owns its small bounds; only road layers fill the canvas.
-        light.sublayers?.filter { $0.name == "road" }.forEach { $0.frame = bounds }
+        light.sublayers?.forEach { $0.frame = bounds }
         CATransaction.commit()
     }
 }
