@@ -19,28 +19,33 @@ final class WorldSceneTests: XCTestCase {
         var changed = a; changed.nodes.append(node("Another"))
         XCTAssertEqual(inputs,WorldScene.world.inputs(paths: [changed,b,archived]),"Child edits must not rebuild the outer maze")
     }
-    func testInnerMazeContainsOnlyItsOwnOpenQuestsAndRoutines() {
-        let quest = node("Quest"), routine = node("Routine",kind: .practice)
-        var done = node("Done"); done.state = .done(Day(Date()))
-        var canceled = node("Canceled"); canceled.state = .notTaken
-        var paused = node("Paused"); paused.state = .paused
-        let a = path("A",nodes: [quest,routine,done,canceled,paused])
-        let b = path("B",nodes: [node("Other")])
+    func testInnerMazeContainsOnlyItsOwnMilestonesIncludingReachedOnes() {
+        let pending = Milestone(text: "Can play a whole song")
+        let reached = Milestone(text: "Own a guitar", tickedOn: Day(Date()))
+        var a = path("A", nodes: [node("Quest"), node("Routine",kind: .practice)])
+        a.milestones = [pending,reached]
+        var b = path("B"); b.milestones = [Milestone(text: "Other")]
         let inputs = WorldScene.path(a.id).inputs(paths: [a,b])
-        XCTAssertEqual(inputs.map(\.id),[quest.id,routine.id])
+        XCTAssertEqual(inputs.map(\.id),[pending.id,reached.id])
         XCTAssertTrue(inputs.allSatisfy { $0.work.isEmpty })
-        let layout = WorldLayout(paths: inputs)
+        let layout = WorldLayout(paths: inputs, portrait: true)
         let maze = WorldMaze(layout: layout)
         XCTAssertEqual(layout.rooms.count,3)
         XCTAssertTrue(maze.ownershipRouted)
         XCTAssertEqual(maze.routes.count,3)
         XCTAssertEqual(maze.roomFrames["you"]?.midX,maze.size.width/2)
         XCTAssertEqual(maze.roomFrames["you"]?.midY,maze.size.height/2)
+        a.milestones[0].tickedOn = Day(Date())
+        a.nodes.append(node("Another quest"))
+        XCTAssertEqual(inputs,WorldScene.path(a.id).inputs(paths: [a,b]),
+                       "Completing a milestone or editing quests must not move maze rooms")
+        a.milestones.removeFirst()
+        XCTAssertEqual(WorldScene.path(a.id).inputs(paths: [a,b]).map(\.id),[reached.id])
     }
     func testEmptyDeletedAndArchivedPathsHaveNoChildDestinations() {
         var a = path("A")
         XCTAssertTrue(WorldScene.path(a.id).inputs(paths: [a]).isEmpty)
-        a.nodes = [node("Quest")]; a.status = .archived
+        a.milestones = [Milestone(text: "Milestone")]; a.status = .archived
         XCTAssertTrue(WorldScene.path(a.id).inputs(paths: [a]).isEmpty)
         XCTAssertTrue(WorldScene.path(a.id).inputs(paths: []).isEmpty)
     }

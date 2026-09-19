@@ -18,7 +18,7 @@ struct AtlasView: View {
     @State private var selected: String?
     @State private var camera = WorldCamera()
     @State private var viewport = WorldViewport()
-    @State private var editor: WorldEditor?
+    @State private var editor: WorldMilestoneEditor?
     @State private var savedWorld: WorldLevelState?
     @State private var details: UUID?
     @State private var generating = false
@@ -51,16 +51,22 @@ struct AtlasView: View {
                     }
                     Spacer()
                     if let pathID = scene.pathID {
-                        Button { capture = CaptureRequest(pathID: pathID) } label: {
+                        Button { editor = WorldMilestoneEditor(pathID: pathID, milestone: nil) } label: {
                             Image(systemName: "plus")
                         }
-                        .accessibilityLabel("Add quest or routine")
+                        .accessibilityLabel("Add milestone")
                     }
                     Menu {
                         ForEach(map.rooms.filter { $0.id != "you" }) { room in
                             Button(room.title) { select(room.id, focusDestination: true) }
                         }
-                    } label: { Label(scene == .world ? "Paths" : "Items", systemImage: "point.3.connected.trianglepath.dotted") }
+                    } label: {
+                        if scene == .world {
+                            Label("Paths", systemImage: "point.3.connected.trianglepath.dotted")
+                        } else {
+                            Image(systemName: "flag.fill").accessibilityLabel("Milestones")
+                        }
+                    }
                     .disabled(map.rooms.count <= 1 || map.scene != scene)
                     }
                     .disabled(generating || map.scene != scene)
@@ -111,7 +117,13 @@ struct AtlasView: View {
                     self.selected = nil; camera = WorldCamera()
                 }
             }
-            .sheet(item: $editor) { item in NodeEditView(pathID: item.pathID, node: item.node) }
+            .sheet(item: $editor) { item in
+                if let milestone = item.milestone, milestone.tickedOn != nil {
+                    MilestoneFactView(pathID: item.pathID, milestone: milestone)
+                } else {
+                    WorldMilestoneForm(pathID: item.pathID, milestone: item.milestone)
+                }
+            }
     }
 
     private func enter(_ pathID: UUID) {
@@ -152,8 +164,9 @@ struct AtlasView: View {
 
     private func activate(_ room: WorldRoom) {
         guard let pathID = room.pathID else { return }
-        if let workID = room.workID, let (_,node) = store.node(workID) {
-            editor = WorldEditor(pathID: pathID, node: node)
+        if let milestoneID = room.milestoneID,
+           let milestone = store.path(pathID)?.milestones.first(where: { $0.id == milestoneID }) {
+            editor = WorldMilestoneEditor(pathID: pathID, milestone: milestone)
         } else if scene == .world { enter(pathID) }
         else { details = pathID }
     }
@@ -180,9 +193,9 @@ struct AtlasView: View {
             VStack(spacing: 4) {
                 if generating || map.scene != scene { Text("Growing your maze…") }
                 else if map.rooms.count <= 1 {
-                    Text(scene == .world ? "Add a path to grow your world." : "No open quests or routines on this path.")
+                    Text(scene == .world ? "Add a path to grow your world." : "No milestones on this path yet.")
                     if let pathID = scene.pathID {
-                        Button("Add quest or routine") { capture = CaptureRequest(pathID: pathID) }
+                        Button("Add milestone") { editor = WorldMilestoneEditor(pathID: pathID, milestone: nil) }
                             .buttonStyle(PixelButtonStyle(compact: true))
                     } else { RestoreFileButton() }
                 } else {
@@ -207,10 +220,10 @@ private struct WorldLevelState {
     var viewport: WorldViewport
 }
 
-private struct WorldEditor: Identifiable {
+private struct WorldMilestoneEditor: Identifiable {
     var pathID: UUID
-    var node: LifeEngine.Node
-    var id: UUID { node.id }
+    var milestone: Milestone?
+    let id = UUID()
 }
 
 struct WorldCamera {
@@ -222,13 +235,13 @@ struct WorldCamera {
 struct WorldRoom: Identifiable {
     var id: String
     var pathID: UUID?
-    var workID: UUID?
+    var milestoneID: UUID?
     var center: CGPoint
     var frame: CGRect
     var title: String
     var subtitle: String
     var glyph: String
-    var routine: Bool
+    var reached: Bool
     var work: Bool
 }
 
@@ -278,17 +291,17 @@ struct WorldMapSnapshot {
         }
         let previousFrames = Dictionary(uniqueKeysWithValues: (previous?.rooms ?? []).map { ($0.id,$0.frame) })
         let pathIndex = Dictionary(uniqueKeysWithValues: paths.map { ($0.id, $0) })
-        let visibleNodes = scene.pathID.flatMap { pathIndex[$0]?.nodes } ?? []
-        let nodeIndex = Dictionary(uniqueKeysWithValues: visibleNodes.map { ($0.id, $0) })
+        let milestones = scene.pathID.flatMap { pathIndex[$0]?.milestones } ?? []
+        let milestoneIndex = Dictionary(uniqueKeysWithValues: milestones.map { ($0.id, $0) })
         rooms = layout.rooms.map { room in
             let path = (scene.pathID ?? room.pathID).flatMap { pathIndex[$0] }
-            let node = scene.pathID == nil ? nil : room.pathID.flatMap { nodeIndex[$0] }
-            return WorldRoom(id: room.id, pathID: path?.id, workID: node?.id, center: room.center,
+            let milestone = scene.pathID == nil ? nil : room.pathID.flatMap { milestoneIndex[$0] }
+            return WorldRoom(id: room.id, pathID: path?.id, milestoneID: milestone?.id, center: room.center,
                              frame: maze?.roomFrames[room.id] ?? previousFrames[room.id] ?? room.frame,
-                             title: node?.title ?? path?.name ?? "You",
-                             subtitle: node.map { $0.kind == .practice ? "Routine" : "Quest" }
-                                ?? path.map { "\($0.nodes.filter(\.isOpen).count) quests & routines" } ?? "Your world",
-                             glyph: path?.glyph ?? "brain", routine: node?.kind == .practice, work: path?.role == .work)
+                             title: milestone?.text ?? path?.name ?? "You",
+                             subtitle: milestone.map { $0.tickedOn.map { "Reached on \($0.description)" } ?? "Milestone · not reached yet" }
+                                ?? path.map { "\($0.milestones.filter { $0.tickedOn != nil }.count)/\($0.milestones.count) milestones reached" } ?? "Your world",
+                             glyph: path?.glyph ?? "brain", reached: milestone?.tickedOn != nil, work: path?.role == .work)
         }
         if let previous, reusable {
             walls = previous.walls; floorWidth = previous.floorWidth; routes = previous.routes
@@ -345,8 +358,10 @@ struct WorldMapContent: View {
                                 .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                         } else {
                             HStack(spacing: 6) {
-                                if room.workID != nil {
-                                    PixelQuestMark(routine: room.routine).frame(width: 26, height: 26)
+                                if room.milestoneID != nil {
+                                    Image(systemName: room.reached ? "checkmark.square.fill" : "flag.fill")
+                                        .font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
+                                        .frame(width: 26, height: 26)
                                 } else {
                                     Image(systemName: room.glyph).font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
                                         .frame(width: 26, height: 26)

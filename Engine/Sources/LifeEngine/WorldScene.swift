@@ -16,8 +16,8 @@ public enum WorldScene: Hashable, Sendable {
         case .world:
             return active.map { .init(id: $0.id, work: []) }
         case .path(let id):
-            return (active.first { $0.id == id }?.nodes ?? [])
-                .filter(\.isOpen).map { .init(id: $0.id, work: []) }
+            return (active.first { $0.id == id }?.milestones ?? [])
+                .map { .init(id: $0.id, work: []) }
         }
     }
 }
