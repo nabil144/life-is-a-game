@@ -35,17 +35,16 @@ struct PathEditView: View {
                 Section {
                     TextField("What are you evolving?", text: $name)
                     TextField("Who are you on this path? e.g. Guitarist", text: $identity)
-                    Picker("What kind of path is this?", selection: $role) {
+                    PixelMenuPicker("What kind of path is this?", selection: $role) {
                         ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     if role == .decision {
                         DatePicker("Decide by", selection: $deadline, in: Date()..., displayedComponents: .date)
                     }
-                    Picker("Glyph", selection: $glyph) {
+                    PixelMenuPicker("Glyph", selection: $glyph) {
                         Label("Follows the kind", systemImage: role.glyph).tag(role.glyph)
                         ForEach(Role.glyphs, id: \.self) { Image(systemName: $0).tag($0) }
                     }
-                    .pickerStyle(.navigationLink)
                 }
                 Section {
                     ForEach($milestones) { $m in

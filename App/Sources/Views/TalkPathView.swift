@@ -222,11 +222,9 @@ private struct SketchCard: View {
             }
             TextField("Who are you on this path?", text: $draft.identity)
                 .font(.subheadline).foregroundStyle(.secondary)
-            Picker("Kind", selection: $draft.role) {
+            PixelMenuPicker("Kind", selection: $draft.role) {
                 ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
             }
-            .pickerStyle(.menu)
-            .labelsHidden()
             if !draft.milestones.isEmpty {
                 Text("Milestones").font(.caption).foregroundStyle(.secondary)
                 ForEach(draft.milestones.indices, id: \.self) { i in

@@ -22,12 +22,11 @@ struct CaptureView: View {
                         .font(.title3)
                 }
                 Section("On which path") {
-                    Picker("Path", selection: $pathID) {
+                    PixelMenuPicker("Path", selection: $pathID) {
                         ForEach(store.activePaths) { p in
                             Label(p.name, systemImage: p.glyph).tag(Optional(p.id))
                         }
                     }
-                    .pickerStyle(.menu)
                 }
                 Section {
                     PixelChoices(title: "Kind", selection: $kind, options: [
@@ -51,7 +50,7 @@ struct CaptureView: View {
                     let open = path.nodes.filter { $0.isOpen && $0.kind == .quest }
                     if !open.isEmpty {
                         Section("Only after (optional)") {
-                            Picker("Blocker", selection: $after) {
+                            PixelMenuPicker("Blocker", selection: $after) {
                                 Text("Nothing").tag(UUID?.none)
                                 ForEach(open) { n in Text(n.title).tag(Optional(n.id)) }
                             }

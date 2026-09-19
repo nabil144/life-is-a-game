@@ -95,7 +95,7 @@ struct NodeEditView: View {
                     let others = path.nodes.filter { $0.isOpen && $0.kind == .quest && $0.id != node.id }
                     if !others.isEmpty {
                         Section("Only after (optional)") {
-                            Picker("Blocker", selection: $node.after) {
+                            PixelMenuPicker("Blocker", selection: $node.after) {
                                 Text("Nothing").tag(UUID?.none)
                                 ForEach(others) { n in Text(n.title).tag(Optional(n.id)) }
                             }

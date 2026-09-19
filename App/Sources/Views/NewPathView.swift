@@ -141,17 +141,16 @@ struct NewPathView: View {
                 Section {
                     DisclosureGroup("More", isExpanded: $more) {
                         TextField("Who are you on this path? e.g. Guitarist", text: $draft.identity)
-                        Picker("What kind of path is this?", selection: $draft.role) {
+                        PixelMenuPicker("What kind of path is this?", selection: $draft.role) {
                             ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                         if draft.role == .decision {
                             DatePicker("Decide by", selection: $deadline, in: Date()..., displayedComponents: .date)
                         }
-                        Picker("Glyph", selection: $draft.glyph) {
+                        PixelMenuPicker("Glyph", selection: $draft.glyph) {
                             Label("Follows the kind", systemImage: draft.role.glyph).tag("")
                             ForEach(Role.glyphs, id: \.self) { Image(systemName: $0).tag($0) }
                         }
-                        .pickerStyle(.navigationLink)
                         ForEach(draft.nodes.indices, id: \.self) { i in
                             HStack {
                                 Image(systemName: draft.nodes[i].kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise").foregroundStyle(.secondary)

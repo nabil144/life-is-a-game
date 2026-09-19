@@ -106,12 +106,15 @@ struct PixelChoices<Value: Hashable>: View {
     let title: String
     @Binding var selection: Value
     let options: [(String, Value)]
+    var fillsRow = true
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 4) { choices }
-            VStack(alignment: .leading, spacing: 2) { choices }
+            VStack(spacing: 2) { choices }
         }
+        .frame(maxWidth: fillsRow ? .infinity : nil, alignment: .center)
+        .listRowBackground(Color.clear)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
     }
@@ -124,5 +127,31 @@ struct PixelChoices<Value: Hashable>: View {
             .buttonStyle(PixelButtonStyle(selected: selection == options[index].1, compact: true))
             .accessibilityAddTraits(selection == options[index].1 ? .isSelected : [])
         }
+    }
+}
+
+/// A centered menu with its context retained above the selected value.
+/// Explicitly clears PixelList's default card for this control's row only.
+struct PixelMenuPicker<Value: Hashable, Content: View>: View {
+    let title: String
+    @Binding var selection: Value
+    let content: Content
+
+    init(_ title: String, selection: Binding<Value>, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self._selection = selection
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Picker(title, selection: $selection) { content }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(minHeight: 44)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .listRowBackground(Color.clear)
     }
 }

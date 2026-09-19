@@ -66,12 +66,8 @@ struct SettingsView: View {
     @ViewBuilder
     private var styleSection: some View {
         Section("Paths screen (prototype weeks)") {
-            Picker("View", selection: $pathsStyle) {
-                ForEach(PathsStyle.allCases) { s in
-                    Text(s.label).tag(s)
-                }
-            }
-            .pickerStyle(.inline)
+            PixelChoices(title: "View", selection: $pathsStyle,
+                         options: PathsStyle.allCases.map { ($0.label, $0) })
         }
     }
 
@@ -142,7 +138,7 @@ private struct HourPicker: View {
     @Binding var selection: Int
 
     var body: some View {
-        Picker(title, selection: $selection) {
+        PixelMenuPicker(title, selection: $selection) {
             ForEach(Array(hours), id: \.self) { h in
                 Text("\(h):00").tag(h)
             }

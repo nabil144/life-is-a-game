@@ -25,7 +25,7 @@ struct PathsView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     PixelChoices(title: "View", selection: $style,
-                                 options: PathsStyle.allCases.map { ($0.label, $0) })
+                                 options: PathsStyle.allCases.map { ($0.label, $0) }, fillsRow: false)
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button { newPath = true } label: { Image(systemName: "plus") }
