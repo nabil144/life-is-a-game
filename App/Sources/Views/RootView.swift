@@ -36,9 +36,6 @@ struct RootView: View {
                     .padding(.horizontal, 6)
                     .padding(.vertical, 6)
                     .background(Ink.ground)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Ink.line).frame(height: 1)
-                    }
                 }
             } else {
                 OnboardingView()

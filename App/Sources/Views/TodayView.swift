@@ -127,10 +127,6 @@ struct TodayView: View {
         .padding(.top, 4)
         .padding(.bottom, 6)
         .background(Ink.ground)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Ink.brass.opacity(0.4)).frame(height: 2)
-                .accessibilityHidden(true)
-        }
     }
 
     private var outingControls: some View {
