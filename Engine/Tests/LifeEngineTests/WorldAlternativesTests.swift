@@ -5,8 +5,8 @@ import CoreGraphics
 @testable import LifeEngine
 
 final class WorldAlternativesTests: XCTestCase {
-    private func layout(_ count: Int) -> WorldLayout {
-        WorldLayout(paths: (0..<count).map { .init(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", $0+1))!,work: []) },portrait: true,compactCenter: true)
+    private func layout(_ count: Int, compactCenter: Bool = true) -> WorldLayout {
+        WorldLayout(paths: (0..<count).map { .init(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", $0+1))!,work: []) },portrait: true,compactCenter: compactCenter)
     }
     func testFreshSeedChangesMazeButNeverMovesRooms() {
         let layout = layout(4)
@@ -16,6 +16,17 @@ final class WorldAlternativesTests: XCTestCase {
         XCTAssertNotEqual(a.walls.map { [$0.from,$0.to] },b.walls.map { [$0.from,$0.to] })
         XCTAssertNotEqual(a.routes,b.routes)
         XCTAssertEqual(a.alternateRoutes,WorldMaze(layout: layout,seed: 123,alternatives: true).alternateRoutes)
+    }
+    func testDistantFloorKeepsTheSameCellResolutionInBothScenes() {
+        for compactCenter in [true, false] {
+            let shape = layout(9, compactCenter: compactCenter)
+            let maze = WorldMaze(layout: shape, seed: 42, alternatives: true)
+            let count = maze.columns * maze.rows
+            XCTAssertGreaterThan(count, 16000)
+            for cell in 0..<count where maze.owners[cell] < count {
+                XCTAssertEqual(maze.owners[cell], cell, "Distant floor must not merge into open chambers")
+            }
+        }
     }
     func testAlternativesUseRealOpenFloorAndAvoidOtherRooms() {
         for count in [1,4,9,16] {

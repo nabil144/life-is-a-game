@@ -260,7 +260,8 @@ final class WorldCorridorLayerView: UIView {
             let distance = CGFloat(index) * 16
             guard let point = road.position(at: distance) else { continue }
             let dot = CAShapeLayer()
-            dot.bounds = CGRect(x: -1.5,y: -1.5,width: 3,height: 3)
+            let diameter: CGFloat = (index + 1).isMultiple(of: 5) ? 5 : 3
+            dot.bounds = CGRect(x: -diameter / 2, y: -diameter / 2, width: diameter, height: diameter)
             dot.path = CGPath(ellipseIn: dot.bounds, transform: nil)
             dot.position = point
             dot.fillColor = UIColor(Ink.brass).cgColor

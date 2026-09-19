@@ -102,9 +102,9 @@ public struct WorldMaze: Sendable {
                 for col in (x-halfColumns)...(x+halfColumns) { owners[row*columns+col] = node }
             }
         }
-        // Keep detailed cells around rooms, but use larger chambers in the distant
-        // wilderness of very large worlds. This bounds vector complexity at overview.
-        let block = max(1, Int(ceil(sqrt(Double(count) / 16000))))
+        // Keep normal mazes uniformly detailed. Only exceptionally large worlds
+        // need coarser distant cells to bound vector complexity.
+        let block = count <= 100000 ? 1 : Int(ceil(sqrt(Double(count) / 16000)))
         if block > 1 {
             var detailed = Set<Int>()
             if layout.separateRoads {
@@ -537,14 +537,19 @@ public struct WorldMaze: Sendable {
             // A crowded road can be isolated from large filler branches by rooms.
             // Two doorways let it visit one of those existing branches without
             // entering any foreign room or clearing a strip of walls.
-            if chosen.count == 1 {
+            // If needed, also try branches already attached to this road: two
+            // new doors can create a detour where a single new door could not.
+            for allowAttached in [false, true] where chosen.count == 1 {
                 var entrances: [(known: Int, unknown: Int, door: Door)] = []
                 var exits: [Int:[(known: Int, door: Door)]] = [:]
                 for door in candidates {
                     var a = owners[door.a], b = owners[door.b]
                     if attachment[a] == -1 { swap(&a,&b) }
-                    if attachment[a] >= 0 && attachment[b] == -1 {
+                    if attachment[a] >= 0 && (allowAttached || attachment[b] == -1) {
                         entrances.append((a,b,door)); exits[b,default: []].append((a,door))
+                        if allowAttached && attachment[b] >= 0 {
+                            entrances.append((b,a,door)); exits[a,default: []].append((b,door))
+                        }
                     }
                 }
                 for entrance in entrances {
@@ -560,7 +565,7 @@ public struct WorldMaze: Sendable {
                             _ = appendChoice(connection: connection,openings: [entrance.door,exit.door])
                             if chosen.count == 3 { break }
                         }
-                        for next in graph[at] where next < count && attachment[next] == -1 && previous[next] == nil {
+                        for next in graph[at] where next < count && (allowAttached || attachment[next] == -1) && previous[next] == nil {
                             previous[next] = at; pending.append(next)
                         }
                     }
