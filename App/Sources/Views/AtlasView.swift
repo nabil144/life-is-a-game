@@ -23,6 +23,8 @@ struct AtlasView: View {
     @State private var details: UUID?
     @State private var generating = false
     @State private var builtMaze = false
+    @State private var playing = false
+    @State private var gameScore = 0
     @State private var mazeSeed = UInt64.random(in: .min ... .max)
 
     private var mapReady: Bool { builtMaze && map.scene == scene }
@@ -32,8 +34,12 @@ struct AtlasView: View {
     var body: some View {
         Group {
             if mapReady {
-                WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: { select($0) }),
-                                size: map.layout.size, camera: camera, animated: !reduceMotion, viewport: viewport)
+                WorldScrollView(content: WorldMapContent(map: map, selected: playing ? nil : selected, select: { select($0) }, playing: playing, startGame: {
+                    guard scene == .world, map.gameBoard != nil else { return }
+                    gameScore = 0; playing = true
+                }),
+                                size: map.layout.size, camera: camera, animated: !reduceMotion, viewport: viewport,
+                                playing: playing, onScore: { gameScore = $0 })
                     .id(scene)
             } else {
                 ProgressView("Preparing your maze…")
@@ -43,6 +49,7 @@ struct AtlasView: View {
         }
             .background(Ink.ground)
             .safeAreaInset(edge: .top, spacing: 0) {
+                if !playing {
                 HStack(spacing: 8) {
                     if scene != .world {
                         Button { returnToWorld() } label: {
@@ -80,9 +87,10 @@ struct AtlasView: View {
                 .buttonStyle(PixelButtonStyle(compact: true))
                 .padding(.horizontal, 12)
                 .background(Ink.ground)
+                }
             }
             .overlay(alignment: .bottom) {
-                if mapReady { selectionPanel }
+                if mapReady && !playing { selectionPanel }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let parent {
@@ -90,12 +98,26 @@ struct AtlasView: View {
                         .frame(maxWidth: .infinity).padding(.vertical, 4).background(Ink.ground)
                 }
             }
+            .overlay(alignment: .topTrailing) {
+                if playing {
+                    HStack(spacing: 6) {
+                        Text("· \(gameScore)").font(.caption.monospaced()).accessibilityLabel("\(gameScore) dots collected")
+                        Button { playing = false } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                            .accessibilityLabel("Exit maze game")
+                    }
+                    .foregroundStyle(Ink.brass)
+                    .padding(.horizontal, 8)
+                    .background(Ink.ground.opacity(0.9), in: PixelPanel())
+                    .padding(8)
+                }
+            }
             .navigationTitle("Paths")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $details) { id in
                 PathDetailView(pathID: id, capture: $capture)
             }
-            .task(id: WorldBuildKey(scene: scene, paths: store.activePaths)) {
+            .task(id: WorldBuildKey(scene: scene, paths: store.activePaths, playing: playing)) {
+                guard !playing else { return }
                 let requestedScene = scene
                 let seed = mazeSeed
                 let paths = store.activePaths
@@ -111,14 +133,15 @@ struct AtlasView: View {
                 generating = true
                 let build = Task.detached(priority: .userInitiated) {
                     let layout = WorldLayout(paths: inputs, portrait: true, compactCenter: requestedScene == .world)
-                    return (layout, WorldMaze(layout: layout, seed: seed, alternatives: true))
+                    let maze = WorldMaze(layout: layout, seed: seed, alternatives: true)
+                    return (layout, maze, MazeGameBoard(maze: maze))
                 }
                 let geometry = await withTaskCancellationHandler {
                     await build.value
                 } onCancel: { build.cancel() }
                 guard !Task.isCancelled, scene == requestedScene else { return }
                 let previousCenter = map.layout.center
-                map = WorldMapSnapshot(paths: paths, scene: scene, geometry: geometry)
+                map = WorldMapSnapshot(paths: paths, scene: scene, geometry: (geometry.0, geometry.1), gameBoard: geometry.2)
                 builtMaze = true
                 generating = false
                 if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
@@ -215,6 +238,7 @@ struct AtlasView: View {
 private struct WorldBuildKey: Hashable {
     var scene: WorldScene
     var paths: [LifeEngine.Path]
+    var playing: Bool
 }
 
 private struct WorldLevelState {
@@ -268,16 +292,18 @@ struct WorldMapSnapshot {
     var rooms: [WorldRoom]
     var walls: SwiftUI.Path
     var floorWidth: CGFloat
+    var gameBoard: MazeGameBoard?
     var routes: [String: [WorldLightRoute]]
     var floorMask: SwiftUI.Path
     var generation: UUID
 
-    init(paths: [LifeEngine.Path], scene: WorldScene = .world, previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil) {
+    init(paths: [LifeEngine.Path], scene: WorldScene = .world, previous: WorldMapSnapshot? = nil, geometry: (WorldLayout, WorldMaze)? = nil, gameBoard: MazeGameBoard? = nil) {
         self.scene = scene
         inputs = scene.inputs(paths: paths)
         let reusable = previous?.scene == scene && previous?.inputs == inputs
         layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs, portrait: true, compactCenter: scene == .world))
         let maze = reusable ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
+        self.gameBoard = reusable ? previous?.gameBoard : gameBoard
         if let maze {
             layout.size = maze.size
             for index in layout.rooms.indices {
@@ -333,21 +359,24 @@ struct WorldMapContent: View {
     let map: WorldMapSnapshot
     let selected: String?
     let select: (String) -> Void
+    var playing = false
+    var startGame: () -> Void = {}
+    @State private var holdingBrain = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle().fill(Ink.ground)
                 .contentShape(Rectangle())
-                .onTapGesture { select("") }
+                .onTapGesture { if !playing { select("") } }
                 .accessibilityHidden(true)
             WorldCorridors(walls: map.walls.cgPath, floorMask: map.floorMask.cgPath,
                            floorWidth: map.floorWidth, routes: selected.flatMap { map.routes[$0] } ?? [],
-                           generation: map.generation, selection: selected, animated: !reduceMotion, history: map.history)
+                           generation: map.generation, selection: selected, animated: !reduceMotion && !playing, history: map.history)
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
             ForEach(map.rooms) { room in
-                Button { select(room.id) } label: {
+                Button { if !playing { select(room.id) } } label: {
                     Group {
                         if room.id == "you" && room.pathID == nil {
                             WorldBrainPulse()
@@ -377,6 +406,21 @@ struct WorldMapContent: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .opacity(playing ? 0.4 : 1)
+                .overlay(alignment: .bottom) {
+                    if holdingBrain && room.id == "you" {
+                        Text("Play").font(.caption2.monospaced()).foregroundStyle(Ink.brass)
+                    }
+                }
+                .onLongPressGesture(minimumDuration: 2, pressing: { down in
+                    if room.id == "you" && room.pathID == nil && !playing { holdingBrain = down }
+                }, perform: {
+                    if room.id == "you" && room.pathID == nil && !playing { startGame() }
+                    holdingBrain = false
+                })
+                .accessibilityAction(named: "Play maze game") {
+                    if room.id == "you" && room.pathID == nil { startGame() }
+                }
                 .accessibilityLabel(room.title)
                 .accessibilityValue(room.subtitle)
                 .accessibilityAddTraits(selected == room.id ? .isSelected : [])

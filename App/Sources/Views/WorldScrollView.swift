@@ -18,6 +18,8 @@ struct WorldScrollView: UIViewControllerRepresentable {
     var camera: WorldCamera
     var animated: Bool
     var viewport: WorldViewport
+    var playing: Bool
+    var onScore: (Int) -> Void
 
     func makeUIViewController(context: Context) -> WorldScrollController {
         WorldScrollController(content: content, viewport: viewport)
@@ -25,6 +27,7 @@ struct WorldScrollView: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: WorldScrollController, context: Context) {
         controller.update(content: content, size: size, camera: camera, animated: animated)
+        controller.setGame(playing: playing, board: content.map.gameBoard, onScore: onScore)
     }
 }
 
@@ -40,6 +43,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     private var generation: UUID?
     private var updating = false
     private var constraining = false
+    private var gameView: MazeGameLayerView?
+    private var beforeGame: (center: CGPoint, zoom: CGFloat)?
+    private var gameSwipes: [UISwipeGestureRecognizer] = []
 
     private var limits: WorldCameraLimits {
         WorldCameraLimits(world: worldSize, viewport: scroll.bounds.size)
@@ -71,6 +77,11 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         scroll.addSubview(host.view)
         host.view.backgroundColor = UIColor(Ink.ground)
         host.didMove(toParent: self)
+        for direction: UISwipeGestureRecognizer.Direction in [.up, .right, .down, .left] {
+            let swipe = UISwipeGestureRecognizer(target: self, action: #selector(steerGame(_:)))
+            swipe.direction = direction; swipe.isEnabled = false
+            view.addGestureRecognizer(swipe); gameSwipes.append(swipe)
+        }
     }
 
     func update(content: WorldMapContent, size: CGSize, camera: WorldCamera, animated: Bool) {
@@ -106,7 +117,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         guard worldSize.width > 0, worldSize.height > 0, scroll.bounds.width > 0, scroll.bounds.height > 0 else { return }
         scroll.maximumZoomScale = max(2, limits.minimumZoom)
         scroll.minimumZoomScale = limits.minimumZoom
-        if applied != request.id {
+        if gameView != nil {
+            // Gameplay owns the camera until the saved viewport is restored.
+        } else if applied != request.id {
             let restore = applied == nil && viewport.generation == generation && viewport.cameraID == request.id
             applied = request.id
             if restore, let center = viewport.center {
@@ -131,6 +144,57 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         }
         lastViewport = view.bounds.size
         updateMazeInsets()
+    }
+
+    func setGame(playing: Bool, board: MazeGameBoard?, onScore: @escaping (Int) -> Void) {
+        if playing, gameView == nil, let board {
+            let center = CGPoint(x: (scroll.contentOffset.x + scroll.bounds.width/2)/scroll.zoomScale,
+                                 y: (scroll.contentOffset.y + scroll.bounds.height/2)/scroll.zoomScale)
+            beforeGame = (center, scroll.zoomScale)
+            scroll.panGestureRecognizer.isEnabled = false
+            scroll.pinchGestureRecognizer?.isEnabled = false
+            host.view.isUserInteractionEnabled = false
+            let game = MazeGameLayerView(board: board)
+            game.frame = CGRect(origin: .zero, size: worldSize)
+            game.onPosition = { [weak self] point in self?.place(point) }
+            game.onScore = onScore
+            gameView = game
+            host.view.addSubview(game)
+            scroll.setZoomScale(max(1.35, scroll.minimumZoomScale), animated: !UIAccessibility.isReduceMotionEnabled)
+            place(board.doorway)
+            gameSwipes.forEach { $0.isEnabled = true }
+        } else if !playing, let game = gameView {
+            game.removeFromSuperview(); gameView = nil
+            scroll.panGestureRecognizer.isEnabled = true
+            scroll.pinchGestureRecognizer?.isEnabled = true
+            host.view.isUserInteractionEnabled = true
+            gameSwipes.forEach { $0.isEnabled = false }
+            if let saved = beforeGame {
+                scroll.setZoomScale(saved.zoom, animated: false)
+                place(saved.center)
+            }
+            beforeGame = nil
+            rememberViewport()
+        }
+        gameView?.onScore = onScore
+    }
+
+    @objc private func steerGame(_ gesture: UISwipeGestureRecognizer) {
+        switch gesture.direction {
+        case .up: gameView?.steer(.up)
+        case .right: gameView?.steer(.right)
+        case .down: gameView?.steer(.down)
+        case .left: gameView?.steer(.left)
+        default: break
+        }
+    }
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        gameView?.paused = false
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        gameView?.paused = true
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { host.view }
