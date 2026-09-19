@@ -21,6 +21,7 @@ public struct WorldMaze: Sendable {
     public var roomFrames: [String: CGRect] = [:]
     public var cellSize: CGFloat = 16
     public private(set) var ownershipRouted = true
+    public private(set) var separateRoadsRouted = false
     public var columns: Int = 0
     public var rows: Int = 0
     /// Cells in a chamber share one node. Every other cell is a separate node.
@@ -69,6 +70,13 @@ public struct WorldMaze: Sendable {
         if !ownershipRouted && !Task.isCancelled {
             self.init(layout: layout, wandering: false)
         }
+        // A fixed-size center has a finite number of door cells. Preserve a valid
+        // connected maze if an exceptionally large level exhausts those doorways.
+        if !ownershipRouted && layout.separateRoads && !Task.isCancelled {
+            var shared = layout
+            shared.separateRoads = false
+            self.init(layout: shared, wandering: false)
+        }
     }
 
     private init(layout: WorldLayout, wandering: Bool) {
@@ -97,6 +105,15 @@ public struct WorldMaze: Sendable {
         let block = max(1, Int(ceil(sqrt(Double(count) / 16000))))
         if block > 1 {
             var detailed = Set<Int>()
+            if layout.separateRoads {
+                for room in layout.rooms {
+                    let cx = Int(room.center.x / cellSize), cy = Int(room.center.y / cellSize)
+                    let radius = room.id == "you" ? 16 : 6
+                    for y in max(0,cy-radius)...min(rows-1,cy+radius) {
+                        for x in max(0,cx-radius)...min(columns-1,cx+radius) { detailed.insert(y*columns+x) }
+                    }
+                }
+            }
             for corridor in layout.corridors {
                 for (a,b) in zip(corridor.points,corridor.points.dropFirst()) {
                     let ax = Int(a.x/cellSize), ay = Int(a.y/cellSize)
@@ -146,7 +163,7 @@ public struct WorldMaze: Sendable {
             let targetName = corridor.workID.map { "work-\($0)" } ?? "path-\(corridor.pathID)"
             guard let target = roomNodes[targetName],
                   let parent = roomNodes[corridor.workID == nil ? "you" : "path-\(corridor.pathID)"] else { return false }
-            var sources = corridor.workID == nil ? roots : (branches[corridor.pathID] ?? [])
+            var sources = corridor.workID == nil ? (layout.separateRoads ? [root] : roots) : (branches[corridor.pathID] ?? [])
             sources.insert(parent)
             var guide = Set<Int>()
             for (a,b) in zip(corridor.points,corridor.points.dropFirst()) {
@@ -192,6 +209,66 @@ public struct WorldMaze: Sendable {
             if Task.isCancelled { return }
             if !connect(corridor) { routed = false; break }
         }
+        // Greedy wandering can trap a later road. Reroute all single-level roads
+        // together using vertex capacity: every floor node belongs to at most one road.
+        if layout.separateRoads && !routed {
+            struct FlowEdge { var to: Int; var capacity: Int }
+            let sink = neighbors.count * 2
+            let source = root * 2 + 1
+            var graph = Array(repeating: [Int](), count: sink + 1)
+            var flowEdges: [FlowEdge] = []
+            var physical: [(index: Int, a: Int, b: Int)] = []
+            func add(_ a: Int, _ b: Int) -> Int {
+                let index = flowEdges.count
+                flowEdges.append(FlowEdge(to: b, capacity: 1))
+                flowEdges.append(FlowEdge(to: a, capacity: 0))
+                graph[a].append(index); graph[b].append(index + 1)
+                return index
+            }
+            for at in neighbors.indices where !neighbors[at].isEmpty {
+                if at >= count && at != root {
+                    _ = add(at * 2, sink)
+                    continue
+                }
+                if at != root { _ = add(at * 2, at * 2 + 1) }
+                for next in neighbors[at] where next != root {
+                    let index = add(at * 2 + 1, next * 2)
+                    physical.append((index,at,next))
+                }
+            }
+            var connected = 0
+            while connected < layout.rooms.count - 1 {
+                if Task.isCancelled { return }
+                var previous = Array(repeating: -1, count: graph.count)
+                previous[source] = -2
+                var queue = [source], head = 0
+                while head < queue.count && previous[sink] == -1 {
+                    let at = queue[head]; head += 1
+                    for edge in graph[at] where flowEdges[edge].capacity > 0 {
+                        let next = flowEdges[edge].to
+                        guard previous[next] == -1 else { continue }
+                        previous[next] = edge; queue.append(next)
+                    }
+                }
+                guard previous[sink] != -1 else { break }
+                var at = sink
+                while at != source {
+                    let edge = previous[at]
+                    flowEdges[edge].capacity -= 1
+                    flowEdges[edge ^ 1].capacity += 1
+                    at = flowEdges[edge ^ 1].to
+                }
+                connected += 1
+            }
+            if connected == layout.rooms.count - 1 {
+                tree.removeAll()
+                for link in physical where flowEdges[link.index].capacity == 0 {
+                    tree.insert(Edge(link.a,link.b))
+                }
+                routed = true
+            }
+        }
+        separateRoadsRouted = layout.separateRoads && routed
         // Preserve all carved journeys, then remove additional walls until every cell
         // belongs to one tree. Unchosen neighboring cells retain a separating wall.
         var forest = Forest(count + layout.rooms.count)

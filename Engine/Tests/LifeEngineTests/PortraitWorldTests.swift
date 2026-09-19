@@ -9,6 +9,38 @@ final class PortraitWorldTests: XCTestCase {
         (0..<count).map { .init(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", $0 + 1))!, work: []) }
     }
 
+    func testRoomRoadsNeverShareFloorOutsideTheirCenter() {
+        for compact in [true,false] {
+            for count in compact ? [1,4,9,16,20] : [4,9,16,24,28] {
+                let maze = WorldMaze(layout: WorldLayout(paths: inputs(count),portrait: true,compactCenter: compact))
+                XCTAssertTrue(maze.separateRoadsRouted,"Count: \(count), compact: \(compact)")
+                let root = maze.roomFrames["you"]!
+                var claimed: [Int:String] = [:]
+                for (id, route) in maze.routes where id != "you" {
+                    for (a,b) in zip(route,route.dropFirst()) {
+                        let steps = Int((abs(a.x-b.x)+abs(a.y-b.y))/maze.cellSize)
+                        for i in 0...max(1,steps) {
+                            let t = CGFloat(i)/CGFloat(max(1,steps))
+                            let point = CGPoint(x: a.x+(b.x-a.x)*t,y: a.y+(b.y-a.y)*t)
+                            if root.contains(point) { continue }
+                            let cell = Int(point.y/maze.cellSize)*maze.columns+Int(point.x/maze.cellSize)
+                            let owner = maze.owners[cell]
+                            if let existing = claimed[owner] { XCTAssertEqual(existing,id,"Room roads share floor") }
+                            claimed[owner] = id
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testExhaustedDoorwaysKeepEveryRoomReachable() {
+        let maze = WorldMaze(layout: WorldLayout(paths: inputs(24),portrait: true,compactCenter: true))
+        XCTAssertTrue(maze.ownershipRouted)
+        XCTAssertFalse(maze.separateRoadsRouted)
+        XCTAssertEqual(maze.routes.count,25)
+    }
+
     func testBrainChamberIsCompactWhileTextChambersKeepTheirSize() {
         let destinations = inputs(4)
         let world = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true, compactCenter: true))
