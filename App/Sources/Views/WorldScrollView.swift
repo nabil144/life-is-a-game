@@ -203,6 +203,7 @@ final class WorldCorridorLayerView: UIView {
         let traveller: CAShapeLayer
         let road: WorldRoad
         let started: CFTimeInterval
+        let dots: [(layer: CAShapeLayer, distance: CGFloat)]
     }
     private var active: Journey?
     private var returns: [UUID: Task<Void, Never>] = [:]
@@ -256,6 +257,7 @@ final class WorldCorridorLayerView: UIView {
         light.addSublayer(group)
 
         // Individual dots never move or change dash phase. Each dims at arrival.
+        var dots: [(layer: CAShapeLayer, distance: CGFloat)] = []
         for index in 0...Int(road.length / 16) {
             let distance = CGFloat(index) * 16
             guard let point = road.position(at: distance) else { continue }
@@ -267,6 +269,7 @@ final class WorldCorridorLayerView: UIView {
             dot.fillColor = UIColor(Ink.brass).cgColor
             dot.opacity = motion ? 0.22 : 0.65
             group.addSublayer(dot)
+            dots.append((dot, distance))
             if motion {
                 let eat = CABasicAnimation(keyPath: "opacity")
                 eat.fromValue = 0.9; eat.toValue = 0.22
@@ -291,7 +294,7 @@ final class WorldCorridorLayerView: UIView {
             appear.fillMode = .backwards
             traveller.add(appear, forKey: "waiting")
         }
-        active = Journey(group: group, traveller: traveller, road: road, started: start)
+        active = Journey(group: group, traveller: traveller, road: road, started: start, dots: dots)
     }
 
     private func animate(_ traveller: CAShapeLayer, along road: WorldRoad, start: CFTimeInterval) {
@@ -333,6 +336,19 @@ final class WorldCorridorLayerView: UIView {
         let road = journey.road.returning(after: CGFloat(max(0, now-journey.started)) * 100)
         journey.group.sublayers?.forEach { $0.removeAllAnimations() }
         guard road.length > 0 else { journey.group.removeFromSuperlayer(); return }
+        for dot in journey.dots {
+            dot.layer.opacity = 0
+            // Hide the abandoned, unvisited part immediately. Clear the visited
+            // trail one dot at a time as the returner crosses it on the way home.
+            guard dot.distance <= road.length else { continue }
+            let clear = CABasicAnimation(keyPath: "opacity")
+            clear.fromValue = 0.22
+            clear.toValue = 0
+            clear.beginTime = now + Double((road.length - dot.distance) / 100)
+            clear.duration = 0.04
+            clear.fillMode = .backwards
+            dot.layer.add(clear, forKey: "returnClear")
+        }
         animate(journey.traveller, along: road, start: now)
         let id = UUID()
         returningRoads[id] = (road, now + Double(road.length / 100))
