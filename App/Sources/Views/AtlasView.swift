@@ -350,10 +350,7 @@ struct WorldMapContent: View {
                 Button { select(room.id) } label: {
                     Group {
                         if room.id == "you" && room.pathID == nil {
-                            Image("WorldBrain")
-                                .resizable()
-                                .interpolation(.none)
-                                .scaledToFit()
+                            WorldBrainPulse()
                                 .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                         } else {
                             VStack(spacing: 2) {
