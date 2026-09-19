@@ -28,12 +28,13 @@ struct PixelButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     var selected = false
     var compact = false
+    var fillsWidth = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(compact ? .caption : .subheadline, design: .monospaced).weight(.bold))
             .padding(.horizontal, compact ? 8 : 12)
-            .frame(minWidth: 28, minHeight: compact ? 30 : 44)
+            .frame(minWidth: 28, maxWidth: fillsWidth ? .infinity : nil, minHeight: compact ? 30 : 44)
             .foregroundStyle(configuration.role == .destructive ? Color.red : (selected ? Ink.ground : Ink.brass))
             .background(selected ? Ink.brass : Ink.card, in: PixelPanel())
             .overlay(PixelPanel().stroke(Ink.brass.opacity(0.65), lineWidth: 1))
@@ -133,7 +134,7 @@ struct PixelChoices<Value: Hashable>: View {
             Button { selection = options[index].1 } label: {
                 Text(options[index].0).fixedSize(horizontal: true, vertical: false)
             }
-            .buttonStyle(PixelButtonStyle(selected: selection == options[index].1, compact: true))
+            .buttonStyle(PixelButtonStyle(selected: selection == options[index].1, compact: true, fillsWidth: fillsRow))
             .accessibilityAddTraits(selection == options[index].1 ? .isSelected : [])
         }
     }
