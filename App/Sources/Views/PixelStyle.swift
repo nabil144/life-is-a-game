@@ -130,31 +130,52 @@ struct PixelChoices<Value: Hashable>: View {
     }
 }
 
-/// A centered, compact row with the label beside its selected value.
-/// Explicitly clears PixelList's default card for this control's row only.
+/// Centered controls by default; boxed fields use the native compact label/value row.
 struct PixelMenuPicker<Value: Hashable, Content: View>: View {
     let title: String
     @Binding var selection: Value
+    let boxed: Bool
     let content: Content
 
-    init(_ title: String, selection: Binding<Value>, @ViewBuilder content: () -> Content) {
+    init(_ title: String, selection: Binding<Value>, boxed: Bool = false, @ViewBuilder content: () -> Content) {
         self.title = title
         self._selection = selection
+        self.boxed = boxed
         self.content = content()
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Picker(title, selection: $selection) { content }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .frame(minHeight: 44)
+        Group {
+            if boxed {
+                Picker(title, selection: $selection) { content }
+                    .pickerStyle(.menu)
+                    .font(.subheadline)
+            } else {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Picker(title, selection: $selection) { content }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(minHeight: 44)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: boxed ? 6 : 10, leading: 12,
+                                 bottom: boxed ? 6 : 10, trailing: 12))
+        .listRowBackground(rowBackground)
+    }
+
+    @ViewBuilder private var rowBackground: some View {
+        if boxed {
+            PixelPanel().fill(Ink.card)
+                .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
+                .padding(.vertical, 3)
+        } else {
+            Color.clear
+        }
     }
 }

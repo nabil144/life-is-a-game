@@ -141,14 +141,14 @@ struct NewPathView: View {
                 Section {
                     DisclosureGroup("More", isExpanded: $more) {
                         TextField("Who are you on this path? e.g. Guitarist", text: $draft.identity)
-                        PixelMenuPicker("What kind of path is this?", selection: $draft.role) {
+                        PixelMenuPicker("Kind", selection: $draft.role, boxed: true) {
                             ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
                         if draft.role == .decision {
                             DatePicker("Decide by", selection: $deadline, in: Date()..., displayedComponents: .date)
                         }
-                        PixelMenuPicker("Glyph", selection: $draft.glyph) {
-                            Label("Follows the kind", systemImage: draft.role.glyph).tag("")
+                        PixelMenuPicker("Glyph", selection: $draft.glyph, boxed: true) {
+                            Label("Automatic", systemImage: draft.role.glyph).tag("")
                             ForEach(Role.glyphs, id: \.self) { Image(systemName: $0).tag($0) }
                         }
                         ForEach(draft.nodes.indices, id: \.self) { i in
