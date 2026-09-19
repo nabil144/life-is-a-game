@@ -351,7 +351,7 @@ struct WorldMapContent: View {
                     Group {
                         if room.id == "you" && room.pathID == nil {
                             WorldBrainPulse()
-                                .frame(width: room.frame.width - 16, height: room.frame.height - 12)
+                                .frame(width: room.frame.width, height: room.frame.height)
                         } else {
                             VStack(spacing: 2) {
                                 if room.milestoneID != nil {
