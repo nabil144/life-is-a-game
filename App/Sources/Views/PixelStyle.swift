@@ -75,7 +75,7 @@ struct PixelList<Content: View>: View {
     var body: some View {
         List {
             content
-                .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
+                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
                 .listRowSeparator(.hidden)
                 .listRowBackground(
                     PixelPanel().fill(Ink.card)
@@ -114,9 +114,18 @@ struct PixelChoices<Value: Hashable>: View {
             VStack(spacing: 2) { choices }
         }
         .frame(maxWidth: fillsRow ? .infinity : nil, alignment: .center)
-        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+        .listRowBackground(rowBackground)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
+    }
+
+    @ViewBuilder private var rowBackground: some View {
+        if fillsRow {
+            PixelPanel().fill(Ink.card)
+                .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
+                .padding(.vertical, 3)
+        } else { Color.clear }
     }
 
     private var choices: some View {
@@ -130,14 +139,14 @@ struct PixelChoices<Value: Hashable>: View {
     }
 }
 
-/// Centered controls by default; boxed fields use the native compact label/value row.
+/// Compact boxed form fields, with an unboxed option for standalone menus.
 struct PixelMenuPicker<Value: Hashable, Content: View>: View {
     let title: String
     @Binding var selection: Value
     let boxed: Bool
     let content: Content
 
-    init(_ title: String, selection: Binding<Value>, boxed: Bool = false, @ViewBuilder content: () -> Content) {
+    init(_ title: String, selection: Binding<Value>, boxed: Bool = true, @ViewBuilder content: () -> Content) {
         self.title = title
         self._selection = selection
         self.boxed = boxed

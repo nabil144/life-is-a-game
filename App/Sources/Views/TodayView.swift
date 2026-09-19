@@ -544,12 +544,12 @@ struct LogRow: View {
                 }
             } else {
                 if pixelStyle {
-                    Image(systemName: entry.milestoneID == nil ? "checkmark" : "flag.checkered")
+                    Image(systemName: entry.milestoneID == nil ? "checkmark" : "trophy.fill")
                         .font(.caption.weight(.bold)).foregroundStyle(Ink.brass)
                         .frame(width: 28, height: 28)
                         .overlay(PixelPanel().stroke(Ink.brass, lineWidth: 1))
                 } else {
-                Image(systemName: entry.milestoneID == nil ? "checkmark.circle" : "flag.checkered").font(.title2).frame(width: 36)
+                Image(systemName: entry.milestoneID == nil ? "checkmark.circle" : "trophy.fill").font(.title2).frame(width: 36)
                 }
             }
             VStack(alignment: .leading, spacing: 2) {

@@ -71,6 +71,19 @@ final class PortraitWorldTests: XCTestCase {
         }
     }
 
+    func testRoomsFollowPortraitOvalRingsWithoutMovingTheCenter() {
+        let layout = WorldLayout(paths: inputs(24),portrait: true,compactCenter: true)
+        for (index,room) in layout.rooms.dropFirst().enumerated() {
+            let rx: CGFloat = index < 8 ? 224 : 464
+            let ry: CGFloat = index < 8 ? 320 : 640
+            let x = (room.center.x-layout.center.x)/rx
+            let y = (room.center.y-layout.center.y)/ry
+            XCTAssertEqual(x*x+y*y,1,accuracy: 0.09,"Rooms should follow an oval ring")
+        }
+        XCTAssertEqual(layout.rooms[0].center,layout.center)
+        XCTAssertEqual(layout.center,CGPoint(x: layout.size.width/2,y: layout.size.height/2))
+    }
+
     func testFourDestinationsSurroundCenterDiagonally() {
         let layout = WorldLayout(paths: inputs(4), portrait: true)
         XCTAssertGreaterThan(layout.size.height, layout.size.width * 1.4)

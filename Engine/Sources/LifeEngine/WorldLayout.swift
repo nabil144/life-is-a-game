@@ -40,32 +40,38 @@ public struct WorldLayout: Sendable {
         self.init(legacyPaths: paths)
     }
 
-    /// One visible level: diagonal quadrants expand mostly vertically on a phone.
-    /// Keep the first four rooms near the center; larger worlds add staggered rows.
+    /// Stable oval rings keep the center fixed and suit a portrait screen.
+    /// Additional destinations fill open slots, then expand into another ring.
     private init(destinations: [Input], compactCenter: Bool) {
         separateRoads = true
         let roomSize = CGSize(width: 136, height: 72)
         rooms = [Room(id: "you", center: .zero, size: compactCenter ? CGSize(width: 72, height: 72) : roomSize)]
         for (index, input) in destinations.enumerated() {
-            let quadrant = index % 4
-            let rank = index / 4
-            // A 2:1 vertical bias without moving existing rooms when another is added.
-            var shell = 0, remaining = rank
-            while remaining >= 2 * (shell + 1) {
-                remaining -= 2 * (shell + 1)
-                shell += 1
+            var ring = 0, slot = index
+            while slot >= 8 * (ring + 1) {
+                slot -= 8 * (ring + 1)
+                ring += 1
             }
-            let column = remaining / 2
-            let row = 2 * (shell - column) + remaining % 2
-            let sx: CGFloat = quadrant == 0 || quadrant == 3 ? -1 : 1
-            let sy: CGFloat = quadrant < 2 ? -1 : 1
-            let stagger: CGFloat = rank == 0 ? 0 : CGFloat((rank % 3) - 1) * 16
-            let at = CGPoint(x: sx * (128 + CGFloat(column) * 256 + stagger),
-                             y: sy * (192 + CGFloat(row) * 208))
+            let capacity = 8 * (ring + 1)
+            // Fill opposite diagonal rooms first, then the four cardinal positions.
+            let firstRing = [5,1,7,3,6,0,2,4]
+            let position = firstRing[slot % 8] * (ring + 1) + slot / 8
+            let angle = Double(position) * 2 * Double.pi / Double(capacity)
+            let radiusX = Double(224 + ring * 240)
+            let radiusY = Double(320 + ring * 320)
+            let at = CGPoint(x: (cos(angle) * radiusX / 16).rounded() * 16,
+                             y: (sin(angle) * radiusY / 16).rounded() * 16)
             rooms.append(Room(id: "path-\(input.id)", pathID: input.id, center: at, size: roomSize))
-            corridors.append(Corridor(pathID: input.id, points: [
-                .zero, CGPoint(x: 0, y: at.y), at
-            ]))
+            var guide: [CGPoint] = [.zero]
+            let steps = max(1,Int(max(abs(at.x),abs(at.y))/16))
+            for step in 1...steps {
+                let t = CGFloat(step)/CGFloat(steps)
+                let next = CGPoint(x: (at.x*t/16).rounded()*16,y: (at.y*t/16).rounded()*16)
+                let corner = CGPoint(x: next.x,y: guide.last!.y)
+                if corner != guide.last! { guide.append(corner) }
+                if next != guide.last! { guide.append(next) }
+            }
+            corridors.append(Corridor(pathID: input.id, points: guide))
         }
         let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -512, dy: -512)
         let halfWidth = ceil(max(abs(bounds.minX), abs(bounds.maxX)) / 16) * 16 + 8

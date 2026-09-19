@@ -4,7 +4,7 @@ import LifeEngine
 enum PathsStyle: String, CaseIterable, Identifiable {
     case atlas, list
     var id: String { rawValue }
-    var label: String { self == .atlas ? "World" : "List" }
+    var label: String { self == .atlas ? "Maze" : "List" }
 }
 
 /// The World and its current path share one screen; returning restores the World viewport.
@@ -48,7 +48,7 @@ struct AtlasView: View {
                         Button { returnToWorld() } label: {
                             Label("You", systemImage: "arrow.left")
                         }
-                        .accessibilityLabel("Return to your world")
+                        .accessibilityLabel("Return to your maze")
                     }
                     Group {
                     Button("Overview") { selected = nil; camera = WorldCamera(overview: true) }
@@ -203,7 +203,7 @@ struct AtlasView: View {
             VStack(spacing: 4) {
                 if generating || map.scene != scene { Text("Growing your maze…") }
                 else if map.rooms.count <= 1 {
-                    Text(scene == .world ? "Add a path to grow your world." : "No milestones on this path yet.")
+                    Text(scene == .world ? "Add a path to grow your maze." : "No milestones on this path yet.")
                     if let pathID = scene.pathID {
                         Button("Add milestone") { editor = WorldMilestoneEditor(pathID: pathID, milestone: nil) }
                             .buttonStyle(PixelButtonStyle(compact: true))
@@ -310,7 +310,7 @@ struct WorldMapSnapshot {
                              frame: maze?.roomFrames[room.id] ?? previousFrames[room.id] ?? room.frame,
                              title: milestone?.text ?? path?.name ?? "You",
                              subtitle: milestone.map { $0.tickedOn.map { "Reached on \($0.description)" } ?? "Milestone · not reached yet" }
-                                ?? path.map { "\($0.milestones.filter { $0.tickedOn != nil }.count)/\($0.milestones.count) milestones reached" } ?? "Your world",
+                                ?? path.map { "\($0.milestones.filter { $0.tickedOn != nil }.count)/\($0.milestones.count) milestones reached" } ?? "Your maze",
                              glyph: path?.glyph ?? "brain", reached: milestone?.tickedOn != nil, work: path?.role == .work)
         }
         if let previous, reusable {
@@ -370,7 +370,7 @@ struct WorldMapContent: View {
                         } else {
                             VStack(spacing: 2) {
                                 if room.milestoneID != nil {
-                                    Image(systemName: room.reached ? "checkmark.square.fill" : "flag.fill")
+                                    Image(systemName: room.reached ? "trophy.fill" : "flag.fill")
                                         .font(.body.weight(.bold)).foregroundStyle(Ink.brass)
                                         .frame(width: 20, height: 20)
                                 } else {

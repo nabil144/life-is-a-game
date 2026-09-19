@@ -164,7 +164,7 @@ struct MilestoneList: View {
                     }
                 } label: {
                     HStack(spacing: 14) {
-                        Image(systemName: m.tickedOn == nil ? "square" : "checkmark.square.fill")
+                        Image(systemName: m.tickedOn == nil ? "flag" : "trophy.fill")
                             .foregroundStyle(m.tickedOn == nil ? Ink.muted : Ink.brass)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(m.text).foregroundStyle(.primary)

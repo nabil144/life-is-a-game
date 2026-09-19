@@ -11,7 +11,7 @@ struct CelebrationView: View {
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: path.glyph)
+            Image(systemName: "trophy.fill")
                 .font(.system(size: 56))
                 .frame(width: 96, height: 96)
                 .pixelCard()
