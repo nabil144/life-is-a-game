@@ -246,20 +246,14 @@ struct WorldRoom: Identifiable {
 }
 
 struct WorldLightRoute {
-    struct Stroke {
-        var path: CGPath
-        var start: CGFloat
-        var length: CGFloat
-    }
-    var strokes: [Stroke]
-    var distance: CGFloat
+    var road: WorldRoad
+    var path: CGPath
 
-    init(_ reveal: WorldReveal) {
-        strokes = reveal.strokes.map { stroke in
-            var path = SwiftUI.Path(); path.addLines(stroke.points)
-            return Stroke(path: path.cgPath, start: stroke.start, length: stroke.length)
-        }
-        distance = reveal.distance
+    init(_ road: WorldRoad) {
+        self.road = road
+        var path = SwiftUI.Path()
+        path.addLines(road.points)
+        self.path = path.cgPath
     }
 }
 
@@ -317,7 +311,12 @@ struct WorldMapSnapshot {
                 walls.move(to: segment.from)
                 walls.addLine(to: segment.to)
             }
-            routes = maze.reveals.mapValues(WorldLightRoute.init)
+            if let source = maze.roomFrames["you"] {
+                for (id, points) in maze.routes where id != "you" {
+                    guard let destination = maze.roomFrames[id] else { continue }
+                    routes[id] = WorldLightRoute(WorldRoad(points: points, source: source, destination: destination))
+                }
+            }
         }
     }
 }

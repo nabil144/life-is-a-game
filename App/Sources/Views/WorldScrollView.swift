@@ -196,6 +196,7 @@ final class WorldCorridorLayerView: UIView {
     private let floorMask = CAShapeLayer()
     private var generation: UUID?
     private var selection: String?
+    private var motionEnabled: Bool?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -218,40 +219,89 @@ final class WorldCorridorLayerView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
-        let changed = self.generation != generation || self.selection != selection
+        let motion = animated && !UIAccessibility.isReduceMotionEnabled
+        let changed = self.generation != generation || self.selection != selection || motionEnabled != motion
         if self.generation != generation {
             walls.path = path; floorMask.path = mask
         }
-        guard changed else {
-            if !animated { light.sublayers?.forEach { $0.removeAllAnimations() } }
-            return
-        }
+        guard changed else { return }
         self.generation = generation; self.selection = selection
+        motionEnabled = motion
         light.sublayers?.forEach { $0.removeAllAnimations(); $0.removeFromSuperlayer() }
-        guard let route, route.distance > 0 else { return }
-        let duration = min(6, max(2.5, Double(route.distance / 160)))
-        let start = CACurrentMediaTime()
-        for stroke in route.strokes {
+        guard let route, route.road.length > 0, route.road.points.count > 1 else { return }
+        let road = route.road
+        let duration = Double(road.length / 100)
+        let start = light.convertTime(CACurrentMediaTime(), from: nil)
+
+        func dots(opacity: CGFloat) -> CAShapeLayer {
             let shape = CAShapeLayer()
+            shape.name = "road"
             shape.frame = bounds
-            shape.path = stroke.path
+            shape.path = route.path
             shape.fillColor = nil
-            shape.strokeColor = UIColor(Ink.brass.opacity(0.55)).cgColor
-            shape.lineWidth = width
-            shape.lineCap = .butt
-            shape.lineJoin = .miter
-            shape.strokeEnd = 1
+            shape.strokeColor = UIColor(Ink.brass.opacity(Double(opacity))).cgColor
+            shape.lineWidth = 2
+            shape.lineCap = .round
+            shape.lineDashPattern = [2, 14]
             light.addSublayer(shape)
-            if animated && !UIAccessibility.isReduceMotionEnabled {
-                let reveal = CABasicAnimation(keyPath: "strokeEnd")
-                reveal.fromValue = 0; reveal.toValue = 1
-                reveal.beginTime = start + duration * Double(stroke.start / route.distance)
-                reveal.duration = max(0.01, duration * Double(stroke.length / route.distance))
-                reveal.timingFunction = CAMediaTimingFunction(name: .linear)
-                reveal.fillMode = .backwards
-                shape.add(reveal, forKey: "reveal")
-            }
+            return shape
         }
+        // The faint road remains legible after the brighter dots are eaten.
+        _ = dots(opacity: motion ? 0.22 : 0.65)
+        guard motion else { return }
+        let food = dots(opacity: 0.9)
+        food.strokeStart = 1
+        let eat = CABasicAnimation(keyPath: "strokeStart")
+        eat.fromValue = 0; eat.toValue = 1; eat.duration = duration
+        eat.beginTime = start
+        eat.timingFunction = CAMediaTimingFunction(name: .linear)
+        food.add(eat, forKey: "eat")
+
+        let traveller = CAShapeLayer()
+        traveller.bounds = CGRect(x: -5,y: -5,width: 10,height: 10)
+        traveller.fillColor = UIColor(Ink.brass).cgColor
+        traveller.path = mouth(open: 0.12)
+        traveller.position = road.points.last!
+        let angles = zip(road.points,road.points.dropFirst()).map { a,b in atan2(b.y-a.y,b.x-a.x) }
+        traveller.setAffineTransform(CGAffineTransform(rotationAngle: angles.last!))
+        light.addSublayer(traveller)
+
+        let times = road.distances.map { NSNumber(value: Double($0 / road.length)) }
+        let walk = CAKeyframeAnimation(keyPath: "position")
+        walk.values = road.points.map { NSValue(cgPoint: $0) }
+        walk.keyTimes = times
+        walk.calculationMode = .linear
+        walk.duration = duration
+        walk.beginTime = start
+        let turn = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        turn.values = (angles + [angles.last!]).map { NSNumber(value: Double($0)) }
+        turn.keyTimes = times
+        turn.calculationMode = .discrete
+        turn.duration = duration
+        turn.beginTime = start
+        let chomp = CABasicAnimation(keyPath: "path")
+        chomp.fromValue = mouth(open: 0.08)
+        chomp.toValue = mouth(open: .pi / 3)
+        chomp.duration = 0.14
+        chomp.beginTime = start
+        chomp.autoreverses = true
+        chomp.repeatDuration = duration
+        traveller.add(walk, forKey: "walk")
+        traveller.add(turn, forKey: "turn")
+        traveller.add(chomp, forKey: "chomp")
+    }
+
+    private func mouth(open: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        path.move(to: .zero)
+        path.addArc(center: .zero, radius: 5, startAngle: open, endAngle: 2 * .pi - open, clockwise: false)
+        path.closeSubpath()
+        return path
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil { light.sublayers?.forEach { $0.removeAllAnimations() } }
     }
 
     override func layoutSubviews() {
@@ -259,7 +309,8 @@ final class WorldCorridorLayerView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         walls.frame = bounds; light.frame = bounds; floorMask.frame = bounds
-        light.sublayers?.forEach { $0.frame = bounds }
+        // The traveller owns its small bounds; only road layers fill the canvas.
+        light.sublayers?.filter { $0.name == "road" }.forEach { $0.frame = bounds }
         CATransaction.commit()
     }
 }
