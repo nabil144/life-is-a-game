@@ -336,21 +336,22 @@ struct WorldMapContent: View {
                 .accessibilityHidden(true)
             ForEach(map.rooms) { room in
                 Button { select(room.id) } label: {
-                    VStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         if room.id == "you" && room.pathID == nil {
-                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 36, height: 36)
+                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 26, height: 26)
                         } else if room.workID != nil {
-                            PixelQuestMark(routine: room.routine).scaleEffect(1.5).frame(width: 34, height: 34)
+                            PixelQuestMark(routine: room.routine).frame(width: 26, height: 26)
                         } else {
-                            Image(systemName: room.glyph).font(.title2.weight(.bold)).foregroundStyle(Ink.brass)
+                            Image(systemName: room.glyph).font(.title3.weight(.bold)).foregroundStyle(Ink.brass)
+                                .frame(width: 26, height: 26)
                         }
                         Text(room.title)
-                            .font(.system(.callout, design: .monospaced).weight(.semibold))
-                            .lineLimit(4).multilineTextAlignment(.center)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(3).multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(4)
-                    .frame(width: room.frame.width - 28, height: room.frame.height - 20)
-                    .scaleEffect(selected == room.id ? 1.08 : 1)
+                    .frame(width: room.frame.width - 16, height: room.frame.height - 12)
+                    .scaleEffect(selected == room.id ? 1.06 : 1)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: selected == room.id)
                     .frame(width: room.frame.width - 8, height: room.frame.height - 8)
                     .foregroundStyle(Ink.words)

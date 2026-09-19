@@ -42,7 +42,7 @@ public struct WorldLayout: Sendable {
     /// One visible level: diagonal quadrants expand mostly vertically on a phone.
     /// Keep the first four rooms near the center; larger worlds add staggered rows.
     private init(destinations: [Input]) {
-        let roomSize = CGSize(width: 208, height: 144)
+        let roomSize = CGSize(width: 136, height: 72)
         rooms = [Room(id: "you", center: .zero, size: roomSize)]
         for (index, input) in destinations.enumerated() {
             let quadrant = index % 4
@@ -65,7 +65,7 @@ public struct WorldLayout: Sendable {
                 .zero, CGPoint(x: 0, y: at.y), at
             ]))
         }
-        let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -32, dy: -32)
+        let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -512, dy: -512)
         let halfWidth = ceil(max(abs(bounds.minX), abs(bounds.maxX)) / 16) * 16 + 8
         let naturalHeight = max(abs(bounds.minY), abs(bounds.maxY))
         let halfHeight = ceil(max(naturalHeight, halfWidth / 0.65) / 16) * 16 + 8

@@ -40,7 +40,7 @@ final class PortraitWorldTests: XCTestCase {
         }
     }
 
-    func testPortraitRoomsHaveWalkableRoutesAndLargerChambers() {
+    func testPortraitRoomsHaveWalkableRoutesAndOriginalChamberSize() {
         for count in [0,1,4,9,24] {
             let layout = WorldLayout(paths: inputs(count), portrait: true)
             let maze = WorldMaze(layout: layout)
@@ -70,8 +70,8 @@ final class PortraitWorldTests: XCTestCase {
                     }
                 }
                 let frame = maze.roomFrames[room.id]!
-                XCTAssertEqual(frame.width, 208)
-                XCTAssertEqual(frame.height, 144)
+                XCTAssertEqual(frame.width, 144)
+                XCTAssertEqual(frame.height, 80)
                 XCTAssertEqual(maze.routes[room.id]?.last, CGPoint(x: frame.midX,y: frame.midY))
             }
         }

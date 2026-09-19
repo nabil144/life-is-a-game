@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import LifeEngine
 
 /// Plain reference storage: scroll gestures never publish SwiftUI updates.
 @MainActor
@@ -38,6 +39,11 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     private let viewport: WorldViewport
     private var generation: UUID?
     private var updating = false
+    private var constraining = false
+
+    private var limits: WorldCameraLimits {
+        WorldCameraLimits(world: worldSize, viewport: scroll.bounds.size)
+    }
 
     init(content: WorldMapContent, viewport: WorldViewport) {
         self.viewport = viewport
@@ -55,7 +61,9 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         scroll.contentInsetAdjustmentBehavior = .never
         scroll.delaysContentTouches = false
         scroll.canCancelContentTouches = true
-        scroll.minimumZoomScale = 0.01
+        scroll.bounces = false
+        scroll.bouncesZoom = false
+        scroll.minimumZoomScale = 0.9
         scroll.maximumZoomScale = 2
         view.addSubview(scroll)
         addChild(host)
@@ -90,53 +98,61 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updating = true
-        defer { updating = false; rememberViewport() }
+        defer { updating = false; constrainOffset(); rememberViewport() }
         let resized = lastViewport != view.bounds.size
         let savedCenter = CGPoint(x: (scroll.contentOffset.x + scroll.bounds.width / 2) / scroll.zoomScale,
                                   y: (scroll.contentOffset.y + scroll.bounds.height / 2) / scroll.zoomScale)
         scroll.frame = view.bounds
         guard worldSize.width > 0, worldSize.height > 0, scroll.bounds.width > 0, scroll.bounds.height > 0 else { return }
-        let fit = min(scroll.bounds.width / worldSize.width, scroll.bounds.height / worldSize.height)
-        scroll.minimumZoomScale = min(1, fit)
+        scroll.maximumZoomScale = max(2, limits.minimumZoom)
+        scroll.minimumZoomScale = limits.minimumZoom
         if applied != request.id {
             let restore = applied == nil && viewport.generation == generation && viewport.cameraID == request.id
             applied = request.id
             if restore, let center = viewport.center {
-                scroll.setZoomScale(min(2, max(scroll.minimumZoomScale, viewport.zoom)), animated: false)
-                centerContent()
+                scroll.setZoomScale(min(scroll.maximumZoomScale, max(scroll.minimumZoomScale, viewport.zoom)), animated: false)
+                updateMazeInsets()
                 place(center)
             } else if let center = request.center {
-                let zoom: CGFloat = 1
+                let zoom = max(1, scroll.minimumZoomScale)
                 let rect = CGRect(x: center.x - scroll.bounds.width / (2 * zoom),
                                   y: center.y - scroll.bounds.height / (2 * zoom),
                                   width: scroll.bounds.width / zoom, height: scroll.bounds.height / zoom)
                 scroll.zoom(to: rect, animated: animateCamera && !UIAccessibility.isReduceMotionEnabled)
             } else {
-                // Open at a readable scale; Overview remains available for the whole maze.
-                let zoom = request.overview ? min(1, fit) : min(1, max(0.85, fit))
+                // Even the widest view stays inside the maze, with readable room labels.
+                let zoom = request.overview ? scroll.minimumZoomScale : max(1, scroll.minimumZoomScale)
                 scroll.setZoomScale(zoom, animated: false)
-                centerContent()
+                updateMazeInsets()
                 place(CGPoint(x: worldSize.width / 2, y: worldSize.height / 2))
             }
         } else if resized {
             place(savedCenter)
         }
         lastViewport = view.bounds.size
-        centerContent()
+        updateMazeInsets()
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { host.view }
-    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerContent(); rememberViewport() }
-    func scrollViewDidScroll(_ scrollView: UIScrollView) { rememberViewport() }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        updateMazeInsets(); constrainOffset(); rememberViewport()
+    }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) { constrainOffset(); rememberViewport() }
 
     private func place(_ center: CGPoint) {
-        centerContent()
-        let minX = -scroll.contentInset.left, minY = -scroll.contentInset.top
-        let maxX = max(minX, scroll.contentSize.width - scroll.bounds.width + scroll.contentInset.right)
-        let maxY = max(minY, scroll.contentSize.height - scroll.bounds.height + scroll.contentInset.bottom)
-        scroll.contentOffset = CGPoint(
-            x: min(maxX, max(minX, center.x * scroll.zoomScale - scroll.bounds.width / 2)),
-            y: min(maxY, max(minY, center.y * scroll.zoomScale - scroll.bounds.height / 2)))
+        updateMazeInsets()
+        scroll.contentOffset = limits.offset(
+            CGPoint(x: center.x * scroll.zoomScale - scroll.bounds.width / 2,
+                    y: center.y * scroll.zoomScale - scroll.bounds.height / 2), zoom: scroll.zoomScale)
+    }
+
+    private func constrainOffset() {
+        guard !updating, !constraining, worldSize.width > 0, scroll.bounds.width > 0 else { return }
+        let offset = limits.offset(scroll.contentOffset, zoom: scroll.zoomScale)
+        guard offset != scroll.contentOffset else { return }
+        constraining = true
+        scroll.contentOffset = offset
+        constraining = false
     }
 
     private func rememberViewport() {
@@ -148,10 +164,11 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
         viewport.cameraID = request.id
     }
 
-    private func centerContent() {
-        let horizontal = max(0, (scroll.bounds.width - worldSize.width * scroll.zoomScale) / 2)
-        let vertical = max(0, (scroll.bounds.height - worldSize.height * scroll.zoomScale) / 2)
-        scroll.contentInset = UIEdgeInsets(top: vertical, left: horizontal, bottom: vertical, right: horizontal)
+    private func updateMazeInsets() {
+        guard worldSize.width > 0 else { return }
+        let inset = -limits.margin * scroll.zoomScale
+        let insets = UIEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)
+        if scroll.contentInset != insets { scroll.contentInset = insets }
     }
 }
 
