@@ -274,8 +274,9 @@ struct TodayView: View {
         Section {
             if bucket.items.isEmpty {
                 Text(bucket.empty)
-                    .foregroundStyle(Ink.muted)
-                    .listRowBackground(Ink.card)
+                    .foregroundStyle(Color.gray.opacity(0.85))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             } else {
                 ForEach(bucket.items, id: \.nodeID) { o in
                     dueRow(o)
@@ -361,9 +362,10 @@ struct TodayView: View {
 
     var quiet: some View {
         VStack(spacing: 6) {
-            Image(systemName: "moon.stars").font(.largeTitle).foregroundStyle(Ink.muted)
-            Text(quietLine).multilineTextAlignment(.center).foregroundStyle(Ink.muted)
+            Image(systemName: "moon.stars").font(.largeTitle)
+            Text(quietLine).multilineTextAlignment(.center)
         }
+        .foregroundStyle(Color.gray.opacity(0.85))
         .frame(maxWidth: .infinity)
         .padding(.vertical, 36)
     }
