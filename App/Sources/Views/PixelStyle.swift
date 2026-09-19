@@ -130,7 +130,7 @@ struct PixelChoices<Value: Hashable>: View {
     }
 }
 
-/// A centered menu with its context retained above the selected value.
+/// A centered, compact row with the label beside its selected value.
 /// Explicitly clears PixelList's default card for this control's row only.
 struct PixelMenuPicker<Value: Hashable, Content: View>: View {
     let title: String
@@ -144,8 +144,11 @@ struct PixelMenuPicker<Value: Hashable, Content: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Picker(title, selection: $selection) { content }
                 .pickerStyle(.menu)
                 .labelsHidden()
