@@ -4,6 +4,7 @@ import LifeEngine
 struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(Notifier.self) private var notifier
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var captureFor: CaptureRequest?
     @AppStorage(Prefs.keyPromptSeenKey) private var keyPromptSeen = false
     @State private var keyPrompt = false
@@ -71,7 +72,17 @@ struct RootView: View {
 
     private func tabButton(_ title: String, glyph: String, tab: Int) -> some View {
         Button { selectedTab = tab } label: {
-            Label(title, systemImage: glyph).frame(maxWidth: .infinity)
+            HStack(spacing: 8) {
+                Image(systemName: glyph)
+                    .font(.system(size: 23, weight: .semibold))
+                    .scaleEffect(selectedTab == tab ? 1.1 : 1)
+                    .rotationEffect(.degrees(reduceMotion ? 0 : (selectedTab == tab ? (tab == 0 ? 45 : 12) : 0)))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: selectedTab == tab)
+                    .frame(width: 30, height: 30)
+                    .accessibilityHidden(true)
+                Text(title)
+            }
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(PixelButtonStyle(selected: selectedTab == tab, compact: true, fillsWidth: true))
         .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])

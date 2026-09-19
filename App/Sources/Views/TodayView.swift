@@ -235,6 +235,12 @@ struct TodayView: View {
             ForEach(buckets) { bucket in
                 bucketSection(bucket)
             }
+            Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
+                .font(.caption)
+                .foregroundStyle(Color.gray.opacity(0.85))
+                .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             let entries = store.recentLog()
             if !entries.isEmpty {
                 Section {
@@ -289,10 +295,6 @@ struct TodayView: View {
                     .textCase(.uppercase)
                     .tracking(2)
                     .foregroundStyle(Ink.brass)
-            }
-        } footer: {
-                            if bucket.id == buckets.last?.id {
-                Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
             }
         }
     }
