@@ -22,6 +22,8 @@ struct AtlasView: View {
     @State private var savedWorld: WorldLevelState?
     @State private var details: UUID?
     @State private var generating = false
+    @State private var builtMaze = false
+    @State private var mazeSeed = UInt64.random(in: .min ... .max)
 
     private var parent: LifeEngine.Path? { scene.pathID.flatMap { store.path($0) } }
 
@@ -89,12 +91,13 @@ struct AtlasView: View {
             }
             .task(id: WorldBuildKey(scene: scene, paths: store.activePaths)) {
                 let requestedScene = scene
+                let seed = mazeSeed
                 let paths = store.activePaths
                 if let pathID = scene.pathID, !paths.contains(where: { $0.id == pathID }) {
                     returnToWorld(); return
                 }
                 let inputs = scene.inputs(paths: paths)
-                if map.scene == scene && inputs == map.inputs {
+                if builtMaze && map.scene == scene && inputs == map.inputs {
                     map = WorldMapSnapshot(paths: paths, scene: scene, previous: map)
                     generating = false
                     return
@@ -102,7 +105,7 @@ struct AtlasView: View {
                 generating = true
                 let build = Task.detached(priority: .userInitiated) {
                     let layout = WorldLayout(paths: inputs, portrait: true, compactCenter: requestedScene == .world)
-                    return (layout, WorldMaze(layout: layout))
+                    return (layout, WorldMaze(layout: layout, seed: seed, alternatives: true))
                 }
                 let geometry = await withTaskCancellationHandler {
                     await build.value
@@ -110,6 +113,7 @@ struct AtlasView: View {
                 guard !Task.isCancelled, scene == requestedScene else { return }
                 let previousCenter = map.layout.center
                 map = WorldMapSnapshot(paths: paths, scene: scene, geometry: geometry)
+                builtMaze = true
                 generating = false
                 if let selected, let room = map.rooms.first(where: { $0.id == selected }) {
                     if previousCenter != map.layout.center { focus(room.center) }
@@ -257,14 +261,20 @@ struct WorldLightRoute {
     }
 }
 
+/// Reference storage survives native renderer recreation within one maze visit.
+final class WorldRouteHistory {
+    var last: [String: Int] = [:]
+}
+
 struct WorldMapSnapshot {
+    var history = WorldRouteHistory()
     var scene: WorldScene
     var inputs: [WorldLayout.Input]
     var layout: WorldLayout
     var rooms: [WorldRoom]
     var walls: SwiftUI.Path
     var floorWidth: CGFloat
-    var routes: [String: WorldLightRoute]
+    var routes: [String: [WorldLightRoute]]
     var floorMask: SwiftUI.Path
     var generation: UUID
 
@@ -298,6 +308,7 @@ struct WorldMapSnapshot {
                              glyph: path?.glyph ?? "brain", reached: milestone?.tickedOn != nil, work: path?.role == .work)
         }
         if let previous, reusable {
+            history = previous.history
             walls = previous.walls; floorWidth = previous.floorWidth; routes = previous.routes
             floorMask = previous.floorMask; generation = previous.generation
         } else {
@@ -314,7 +325,9 @@ struct WorldMapSnapshot {
             if let source = maze.roomFrames["you"] {
                 for (id, points) in maze.routes where id != "you" {
                     guard let destination = maze.roomFrames[id] else { continue }
-                    routes[id] = WorldLightRoute(WorldRoad(points: points, source: source, destination: destination))
+                    routes[id] = (maze.alternateRoutes[id] ?? [points]).map {
+                        WorldLightRoute(WorldRoad(points: $0, source: source, destination: destination))
+                    }
                 }
             }
         }
@@ -334,8 +347,8 @@ struct WorldMapContent: View {
                 .onTapGesture { select("") }
                 .accessibilityHidden(true)
             WorldCorridors(walls: map.walls.cgPath, floorMask: map.floorMask.cgPath,
-                           floorWidth: map.floorWidth, route: selected.flatMap { map.routes[$0] },
-                           generation: map.generation, selection: selected, animated: !reduceMotion)
+                           floorWidth: map.floorWidth, routes: selected.flatMap { map.routes[$0] } ?? [],
+                           generation: map.generation, selection: selected, animated: !reduceMotion, history: map.history)
                 .frame(width: map.layout.size.width, height: map.layout.size.height)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)

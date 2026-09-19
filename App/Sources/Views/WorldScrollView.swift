@@ -178,15 +178,16 @@ struct WorldCorridors: UIViewRepresentable {
     var walls: CGPath
     var floorMask: CGPath
     var floorWidth: CGFloat
-    var route: WorldLightRoute?
+    var routes: [WorldLightRoute]
     var generation: UUID
     var selection: String?
     var animated: Bool
+    var history: WorldRouteHistory
 
     func makeUIView(context: Context) -> WorldCorridorLayerView { WorldCorridorLayerView() }
     func updateUIView(_ view: WorldCorridorLayerView, context: Context) {
-        view.update(walls: walls, mask: floorMask, width: floorWidth, route: route,
-                    generation: generation, selection: selection, animated: animated)
+        view.update(walls: walls, mask: floorMask, width: floorWidth, routes: routes,
+                    generation: generation, selection: selection, animated: animated, history: history)
     }
 }
 
@@ -205,6 +206,7 @@ final class WorldCorridorLayerView: UIView {
     }
     private var active: Journey?
     private var returns: [UUID: Task<Void, Never>] = [:]
+    private var returningRoads: [UUID: (road: WorldRoad, until: CFTimeInterval)] = [:]
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -222,8 +224,8 @@ final class WorldCorridorLayerView: UIView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func update(walls path: CGPath, mask: CGPath, width: CGFloat, route: WorldLightRoute?,
-                generation: UUID, selection: String?, animated: Bool) {
+    func update(walls path: CGPath, mask: CGPath, width: CGFloat, routes: [WorldLightRoute],
+                generation: UUID, selection: String?, animated: Bool, history: WorldRouteHistory) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
@@ -238,8 +240,17 @@ final class WorldCorridorLayerView: UIView {
         }
         self.generation = generation; self.selection = selection
         motionEnabled = motion
-        guard let road = route?.road, road.length > 0, road.points.count > 1 else { return }
-        let start = light.convertTime(CACurrentMediaTime(), from: nil)
+        guard let selection, !routes.isEmpty else { return }
+        let now = light.convertTime(CACurrentMediaTime(), from: nil)
+        let previous = history.last[selection]
+        let candidates = routes.indices.filter { routes.count == 1 || $0 != previous }.shuffled()
+        let choice = candidates.min { a,b in
+            departure(for: routes[a].road, now: now) < departure(for: routes[b].road, now: now)
+        } ?? 0
+        history.last[selection] = choice
+        let road = routes[choice].road
+        guard road.length > 0, road.points.count > 1 else { return }
+        let start = motion ? departure(for: road, now: now) : now
         let group = CALayer()
         group.frame = bounds
         light.addSublayer(group)
@@ -271,6 +282,14 @@ final class WorldCorridorLayerView: UIView {
         traveller.path = mouth(open: 0.12)
         group.addSublayer(traveller)
         animate(traveller, along: road, start: start)
+        if start > now {
+            // Wait inside home, not on the doorway where the returner must arrive.
+            let appear = CABasicAnimation(keyPath: "opacity")
+            appear.fromValue = 0; appear.toValue = 1
+            appear.beginTime = start; appear.duration = 0.01
+            appear.fillMode = .backwards
+            traveller.add(appear, forKey: "waiting")
+        }
         active = Journey(group: group, traveller: traveller, road: road, started: start)
     }
 
@@ -286,13 +305,16 @@ final class WorldCorridorLayerView: UIView {
         walk.values = road.points.map { NSValue(cgPoint: $0) }
         walk.keyTimes = times; walk.calculationMode = .linear
         walk.duration = duration; walk.beginTime = start
+        walk.fillMode = .backwards
         let turn = CAKeyframeAnimation(keyPath: "transform.rotation.z")
         turn.values = (angles + [angles.last!]).map { NSNumber(value: Double($0)) }
         turn.keyTimes = times; turn.calculationMode = .discrete
         turn.duration = duration; turn.beginTime = start
+        turn.fillMode = .backwards
         let chomp = CABasicAnimation(keyPath: "path")
         chomp.fromValue = mouth(open: 0.08); chomp.toValue = mouth(open: .pi / 3)
         chomp.duration = 0.14; chomp.beginTime = start
+        chomp.fillMode = .backwards
         chomp.autoreverses = true; chomp.repeatDuration = duration
         traveller.add(walk, forKey: "walk")
         traveller.add(turn, forKey: "turn")
@@ -312,17 +334,26 @@ final class WorldCorridorLayerView: UIView {
         guard road.length > 0 else { journey.group.removeFromSuperlayer(); return }
         animate(journey.traveller, along: road, start: now)
         let id = UUID()
+        returningRoads[id] = (road, now + Double(road.length / 100))
         returns[id] = Task { @MainActor [weak self, weak group = journey.group] in
             do { try await Task.sleep(for: .seconds(Double(road.length / 100))) }
             catch { return }
             group?.removeFromSuperlayer()
             self?.returns[id] = nil
+            self?.returningRoads[id] = nil
+        }
+    }
+
+    private func departure(for road: WorldRoad, now: CFTimeInterval) -> CFTimeInterval {
+        returningRoads.values.reduce(now) { start, returning in
+            returning.until > now && road.sharesFloor(with: returning.road) ? max(start, returning.until + 0.12) : start
         }
     }
 
     private func clearJourneys() {
         returns.values.forEach { $0.cancel() }
         returns.removeAll()
+        returningRoads.removeAll()
         active = nil
         light.sublayers?.forEach { group in
             group.sublayers?.forEach { $0.removeAllAnimations() }

@@ -54,6 +54,23 @@ public struct WorldRoad: Sendable {
         return CGPoint(x: a.x+(b.x-a.x)*t,y: a.y+(b.y-a.y)*t)
     }
 
+    /// Conservative floor-cell reservation for simultaneous outgoing/returning traffic.
+    public func sharesFloor(with other: WorldRoad) -> Bool {
+        struct Cell: Hashable { var x: Int; var y: Int }
+        func occupied(_ road: WorldRoad) -> Set<Cell> {
+            var cells = Set<Cell>()
+            for (a,b) in zip(road.points,road.points.dropFirst()) {
+                let steps = max(1,Int(ceil((abs(a.x-b.x)+abs(a.y-b.y))/4)))
+                for i in 0...steps {
+                    let t = CGFloat(i)/CGFloat(steps)
+                    cells.insert(Cell(x: Int(floor((a.x+(b.x-a.x)*t)/16)), y: Int(floor((a.y+(b.y-a.y)*t)/16))))
+                }
+            }
+            return cells
+        }
+        return !occupied(self).isDisjoint(with: occupied(other))
+    }
+
     /// Reverse only the distance already travelled, preserving every corridor corner.
     public func returning(after distance: CGFloat) -> WorldRoad {
         guard let first = points.first else { return WorldRoad(points: []) }

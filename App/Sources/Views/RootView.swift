@@ -9,6 +9,7 @@ struct RootView: View {
     @State private var keyPrompt = false
     @State private var mirrorPrompt = false
     @State private var selectedTab = 0
+    @State private var worldVisit = UUID()
 
     var body: some View {
         Group {
@@ -17,13 +18,16 @@ struct RootView: View {
                     TodayView(capture: $captureFor)
                         .tabItem { Label("Today", systemImage: "sun.max") }
                         .tag(0)
-                    PathsView(capture: $captureFor)
+                    PathsView(capture: $captureFor, worldVisit: worldVisit)
                         .tabItem { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
                         .tag(1)
                 }
             } else {
                 OnboardingView()
             }
+        }
+        .onChange(of: selectedTab) { _, tab in
+            if tab == 1 { worldVisit = UUID() }
         }
         .task(id: store.outsideReminderSignature) { await notifier.syncOutsideReminder() }
         .onChange(of: notifier.openTodayRequest) { _, _ in selectedTab = 0 }

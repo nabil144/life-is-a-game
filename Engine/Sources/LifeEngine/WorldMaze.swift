@@ -3,7 +3,7 @@ import Foundation
 import CoreGraphics
 #endif
 
-/// A perfect maze of walkable cells and multi-cell rooms. Walls are the closed
+/// A maze of walkable cells and multi-cell rooms, with optional alternate roads. Walls are the closed
 /// boundaries; routes traverse open doorways, never the wall geometry.
 public struct WorldMaze: Sendable {
     public struct Segment: Equatable, Sendable {
@@ -17,6 +17,7 @@ public struct WorldMaze: Sendable {
     public var walls: [Segment] = []
     public var passages: [Door] = []
     public var routes: [String: [CGPoint]] = [:]
+    public var alternateRoutes: [String: [[CGPoint]]] = [:]
     public var reveals: [String: WorldReveal] = [:]
     public var roomFrames: [String: CGRect] = [:]
     public var cellSize: CGFloat = 16
@@ -65,21 +66,22 @@ public struct WorldMaze: Sendable {
         }
     }
 
-    public init(layout: WorldLayout) {
-        self.init(layout: layout, wandering: true)
+    public init(layout: WorldLayout, seed: UInt64 = 0x4D415A4557414C4C, alternatives: Bool = false) {
+        self.init(layout: layout, seed: seed, wandering: true)
         if !ownershipRouted && !Task.isCancelled {
-            self.init(layout: layout, wandering: false)
+            self.init(layout: layout, seed: seed, wandering: false)
         }
         // A fixed-size center has a finite number of door cells. Preserve a valid
         // connected maze if an exceptionally large level exhausts those doorways.
         if !ownershipRouted && layout.separateRoads && !Task.isCancelled {
             var shared = layout
             shared.separateRoads = false
-            self.init(layout: shared, wandering: false)
+            self.init(layout: shared, seed: seed, wandering: false)
         }
+        if alternatives && !Task.isCancelled { addAlternatives(layout: layout, seed: seed) }
     }
 
-    private init(layout: WorldLayout, wandering: Bool) {
+    private init(layout: WorldLayout, seed: UInt64, wandering: Bool) {
         columns = max(12, Int(ceil(layout.size.width / cellSize)))
         rows = max(8, Int(ceil(layout.size.height / cellSize)))
         let count = columns * rows
@@ -134,7 +136,7 @@ public struct WorldMaze: Sendable {
                 }
             }
         }
-        var random = Random()
+        var random = Random(seed: seed)
         var doors: [Edge: Door] = [:]
         var edges: [Edge] = []
         var neighbors = Array(repeating: [Int](), count: count + layout.rooms.count)
@@ -345,6 +347,43 @@ public struct WorldMaze: Sendable {
             passages.append(door); open.insert(Edge(door.a,door.b))
             carved[edge.a].append(edge.b); carved[edge.b].append(edge.a)
         }
+        buildWalls(open: open)
+        var ancestors = [root: root], stack = [root]
+        while let at = stack.popLast() {
+            for next in carved[at] where ancestors[next] == nil { ancestors[next] = at; stack.append(next) }
+        }
+        for room in layout.rooms {
+            guard let target = roomNodes[room.id], ancestors[target] != nil else { continue }
+            var nodes = [target], at = target
+            while at != root { at = ancestors[at]!; nodes.append(at) }
+            nodes.reverse()
+            var points = [center(of: roomCenters[root]!)]
+            for (a,b) in zip(nodes,nodes.dropFirst()) {
+                let door = doors[Edge(a,b)]!
+                let entry = owners[door.a] == a ? door.a : door.b
+                let exit = entry == door.a ? door.b : door.a
+                appendInsideRoom(center(of: entry), to: &points)
+                points.append(center(of: exit))
+                if let middle = roomCenters[b] { appendInsideRoom(center(of: middle), to: &points) }
+            }
+            routes[room.id] = simplify(points)
+        }
+        for room in layout.rooms {
+            if Task.isCancelled { return }
+            guard let route = routes[room.id] else { continue }
+            var journeys = [route]
+            if room.workID == nil, let pathID = room.pathID {
+                journeys += layout.rooms.filter { $0.pathID == pathID && $0.workID != nil }.compactMap { routes[$0.id] }
+            }
+            reveals[room.id] = WorldReveal(routes: journeys, step: cellSize)
+        }
+        // Exposed for invariants: every child must retain its ownership gateway.
+        // The tests exercise crowded layouts as well as empty/small worlds.
+        ownershipRouted = routed
+    }
+
+    private mutating func buildWalls(open: Set<Edge>) {
+        walls.removeAll(keepingCapacity: true)
         // Walls are cell boundaries, including capped dead ends and the outer border.
         // Chamber interiors have no walls; entrances use the same open-door data.
         for y in 0...rows {
@@ -385,38 +424,52 @@ public struct WorldMaze: Sendable {
                 }
             }
         }
-        var ancestors = [root: root], stack = [root]
-        while let at = stack.popLast() {
-            for next in carved[at] where ancestors[next] == nil { ancestors[next] = at; stack.append(next) }
-        }
-        for room in layout.rooms {
-            guard let target = roomNodes[room.id], ancestors[target] != nil else { continue }
-            var nodes = [target], at = target
-            while at != root { at = ancestors[at]!; nodes.append(at) }
-            nodes.reverse()
-            var points = [center(of: roomCenters[root]!)]
-            for (a,b) in zip(nodes,nodes.dropFirst()) {
-                let door = doors[Edge(a,b)]!
-                let entry = owners[door.a] == a ? door.a : door.b
-                let exit = entry == door.a ? door.b : door.a
-                appendInsideRoom(center(of: entry), to: &points)
-                points.append(center(of: exit))
-                if let middle = roomCenters[b] { appendInsideRoom(center(of: middle), to: &points) }
+    }
+
+    private mutating func addAlternatives(layout: WorldLayout, seed: UInt64) {
+        alternateRoutes = routes.mapValues { [$0] }
+        var open = Set(passages.map { Edge($0.a,$0.b) })
+        func cells(_ points: [CGPoint]) -> [Int] {
+            var result: [Int] = []
+            for (a,b) in zip(points,points.dropFirst()) {
+                let steps = Int((abs(a.x-b.x)+abs(a.y-b.y))/cellSize)
+                guard steps > 0 else { continue }
+                for i in 0...steps {
+                    let t = CGFloat(i)/CGFloat(steps)
+                    let x = Int((a.x+(b.x-a.x)*t)/cellSize)
+                    let y = Int((a.y+(b.y-a.y)*t)/cellSize)
+                    let cell = y*columns+x
+                    if result.last != cell { result.append(cell) }
+                }
             }
-            routes[room.id] = simplify(points)
+            return result
         }
-        for room in layout.rooms {
+        for attempt in 1...4 {
             if Task.isCancelled { return }
-            guard let route = routes[room.id] else { continue }
-            var journeys = [route]
-            if room.workID == nil, let pathID = room.pathID {
-                journeys += layout.rooms.filter { $0.pathID == pathID && $0.workID != nil }.compactMap { routes[$0.id] }
+            let variant = WorldMaze(layout: layout, seed: seed &+ UInt64(attempt) &* 0x9E3779B97F4A7C15)
+            for room in layout.rooms where room.id != "you" {
+                guard let candidate = variant.routes[room.id], let original = routes[room.id],
+                      (alternateRoutes[room.id]?.count ?? 0) < 3 else { continue }
+                let candidateCells = cells(candidate)
+                let candidateSet = Set(candidateCells)
+                let originalLength = WorldRoad(points: original).length
+                guard WorldRoad(points: candidate).length <= originalLength * 1.6 + 128 else { continue }
+                let distinct = (alternateRoutes[room.id] ?? []).allSatisfy { previous in
+                    let old = Set(cells(previous))
+                    let union = old.union(candidateSet).count
+                    return union > 0 && Double(old.symmetricDifference(candidateSet).count) / Double(union) >= 0.2
+                }
+                guard distinct else { continue }
+                alternateRoutes[room.id,default: []].append(candidate)
+                for (a,b) in zip(candidateCells,candidateCells.dropFirst()) where owners[a] != owners[b] {
+                    let edge = Edge(a,b)
+                    if open.insert(edge).inserted { passages.append(Door(a: a,b: b)) }
+                }
             }
-            reveals[room.id] = WorldReveal(routes: journeys, step: cellSize)
+            if layout.rooms.filter({ $0.id != "you" }).allSatisfy({ (alternateRoutes[$0.id]?.count ?? 0) >= 3 }) { break }
         }
-        // Exposed for invariants: every child must retain its ownership gateway.
-        // The tests exercise crowded layouts as well as empty/small worlds.
-        ownershipRouted = routed
+        // Only alternate journeys open extra walls, leaving the surrounding filler intact.
+        buildWalls(open: open)
     }
 
     private func appendInsideRoom(_ point: CGPoint, to points: inout [CGPoint]) {

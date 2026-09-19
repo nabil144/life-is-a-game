@@ -4,6 +4,7 @@ import LifeEngine
 struct PathsView: View {
     @Environment(Store.self) private var store
     @Binding var capture: CaptureRequest?
+    var worldVisit: UUID
     @AppStorage(Prefs.pathsStyleKey) private var style: PathsStyle = .atlas
     @State private var newPath = false
     @State private var settings = false
@@ -14,7 +15,7 @@ struct PathsView: View {
                 if style == .list {
                     list
                 } else {
-                    AtlasView(capture: $capture)
+                    AtlasView(capture: $capture).id(worldVisit)
                 }
             }
             .navigationTitle("Paths")
