@@ -16,11 +16,25 @@ struct RootView: View {
             if store.world.onboarded {
                 TabView(selection: $selectedTab) {
                     TodayView(capture: $captureFor)
+                        .toolbar(.hidden, for: .tabBar)
                         .tabItem { Label("Today", systemImage: "sun.max") }
                         .tag(0)
                     PathsView(capture: $captureFor, worldVisit: worldVisit)
+                        .toolbar(.hidden, for: .tabBar)
                         .tabItem { Label("Paths", systemImage: "point.3.connected.trianglepath.dotted") }
                         .tag(1)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    HStack(spacing: 8) {
+                        tabButton("Today", glyph: "sun.max", tab: 0)
+                        tabButton("Paths", glyph: "point.3.connected.trianglepath.dotted", tab: 1)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Ink.ground)
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Ink.line).frame(height: 1)
+                    }
                 }
             } else {
                 OnboardingView()
@@ -53,6 +67,14 @@ struct RootView: View {
                 }
             }
         }
+    }
+
+    private func tabButton(_ title: String, glyph: String, tab: Int) -> some View {
+        Button { selectedTab = tab } label: {
+            Label(title, systemImage: glyph).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PixelButtonStyle(selected: selectedTab == tab, compact: true, fillsWidth: true))
+        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
     }
 
     private func offerMirrorIfNeeded() {

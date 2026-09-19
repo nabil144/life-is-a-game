@@ -37,7 +37,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { PixelToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .task { authorized = await notifier.authorized() }
             .onChange(of: morningHour) { _, _ in replan() }
             .onChange(of: eveningHour) { _, _ in replan() }
@@ -138,11 +138,7 @@ private struct HourPicker: View {
     @Binding var selection: Int
 
     var body: some View {
-        PixelMenuPicker(title, selection: $selection) {
-            ForEach(Array(hours), id: \.self) { h in
-                Text("\(h):00").tag(h)
-            }
-        }
+        PixelMenuPicker(title, selection: $selection, options: hours.map { .init(title: "\($0):00", value: $0) })
     }
 }
 

@@ -92,6 +92,9 @@ struct PixelList<Content: View>: View {
         .scrollIndicators(.hidden)
         .background(Ink.ground)
         .environment(\.defaultMinListRowHeight, 44)
+        .toggleStyle(PixelToggleStyle())
+        .buttonStyle(PixelButtonStyle(compact: true))
+        .textFieldStyle(.plain)
     }
 }
 
@@ -140,52 +143,220 @@ struct PixelChoices<Value: Hashable>: View {
     }
 }
 
-/// Compact boxed form fields, with an unboxed option for standalone menus.
-struct PixelMenuPicker<Value: Hashable, Content: View>: View {
+/// A pixel field that opens a themed choice list instead of a system menu.
+struct PixelOption<Value: Hashable> {
+    let title: String
+    let value: Value
+    var glyph: String? = nil
+}
+
+struct PixelMenuPicker<Value: Hashable>: View {
     let title: String
     @Binding var selection: Value
-    let boxed: Bool
-    let content: Content
+    let options: [PixelOption<Value>]
+    @State private var expanded = false
 
-    init(_ title: String, selection: Binding<Value>, boxed: Bool = true, @ViewBuilder content: () -> Content) {
+    init(_ title: String, selection: Binding<Value>, options: [PixelOption<Value>]) {
         self.title = title
         self._selection = selection
-        self.boxed = boxed
-        self.content = content()
+        self.options = options
+    }
+
+    private var selected: PixelOption<Value>? { options.first { $0.value == selection } }
+
+    var body: some View {
+        Button { expanded = true } label: {
+            HStack(spacing: 8) {
+                Text(title).foregroundStyle(Ink.muted)
+                Spacer(minLength: 8)
+                if let glyph = selected?.glyph { Image(systemName: glyph) }
+                Text(selected?.title ?? "Choose").multilineTextAlignment(.trailing)
+                Image(systemName: "chevron.down").font(.caption.bold())
+            }
+            .font(.subheadline)
+            .foregroundStyle(Ink.brass)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(selected?.title ?? "Choose")
+        .sheet(isPresented: $expanded) {
+            VStack(spacing: 8) {
+                HStack {
+                    Text(title).font(.headline)
+                    Spacer()
+                    Button("Close") { expanded = false }
+                        .buttonStyle(PixelButtonStyle(compact: true))
+                }.padding(.horizontal, 12)
+                ScrollView {
+                    LazyVStack(spacing: 6) {
+                        ForEach(options.indices, id: \.self) { index in
+                            let option = options[index]
+                            Button {
+                                selection = option.value
+                                expanded = false
+                            } label: {
+                                HStack {
+                                    if let glyph = option.glyph { Image(systemName: glyph) }
+                                    Text(option.title).multilineTextAlignment(.leading)
+                                    Spacer(minLength: 0)
+                                    if option.value == selection { Image(systemName: "checkmark") }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(PixelButtonStyle(selected: option.value == selection, fillsWidth: true))
+                            .accessibilityAddTraits(option.value == selection ? .isSelected : [])
+                        }
+                    }.padding(.horizontal, 12)
+                }.scrollIndicators(.hidden)
+            }
+            .padding(.top, 12)
+            .foregroundStyle(Ink.words)
+            .background(Ink.ground)
+            .presentationBackground(Ink.ground)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.hidden)
+        }
+    }
+}
+
+struct PixelToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            HStack(spacing: 12) {
+                configuration.label.foregroundStyle(Ink.words)
+                Spacer(minLength: 8)
+                Text(configuration.isOn ? "ON" : "OFF")
+                    .font(.caption.monospaced().bold())
+                    .foregroundStyle(configuration.isOn ? Ink.ground : Ink.muted)
+                    .frame(width: 48, height: 28)
+                    .background(configuration.isOn ? Ink.brass : Ink.ground, in: PixelPanel())
+                    .overlay(PixelPanel().stroke(Ink.brass.opacity(0.65), lineWidth: 1))
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(configuration.isOn ? "On" : "Off")
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
+    }
+}
+
+/// Prevent iOS from placing a glass capsule behind our own button outline.
+struct PixelToolbarItem<Content: View>: ToolbarContent {
+    let placement: ToolbarItemPlacement
+    @ViewBuilder var content: Content
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: placement) {
+            content.buttonStyle(PixelButtonStyle(compact: true))
+        }
+        .sharedBackgroundVisibility(.hidden)
+    }
+}
+
+struct PixelActionMenu<Actions: View, Label: View>: View {
+    @ViewBuilder var content: Actions
+    @ViewBuilder var label: Label
+    @State private var expanded = false
+
+    var body: some View {
+        Button { expanded = true } label: { label }
+            .sheet(isPresented: $expanded) {
+                VStack(spacing: 8) {
+                    HStack {
+                        label.font(.headline)
+                        Spacer()
+                        Button("Close") { expanded = false }
+                            .buttonStyle(PixelButtonStyle(compact: true))
+                    }
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            content.buttonStyle(PixelMenuActionStyle(close: { expanded = false }))
+                        }
+                    }.scrollIndicators(.hidden)
+                }
+                .padding(12)
+                .foregroundStyle(Ink.words)
+                .background(Ink.ground)
+                .presentationBackground(Ink.ground)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.hidden)
+            }
+    }
+}
+
+private struct PixelMenuActionStyle: PrimitiveButtonStyle {
+    var close: () -> Void
+    func makeBody(configuration: Configuration) -> some View {
+        Button(role: configuration.role) {
+            close()
+            configuration.trigger()
+        } label: {
+            configuration.label.frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(PixelButtonStyle(fillsWidth: true))
+    }
+}
+
+/// Keep the form row pixel-styled; use the accessible date wheel only while editing.
+struct PixelDatePicker: View {
+    let title: String
+    @Binding var selection: Date
+    let range: ClosedRange<Date>
+    let components: DatePickerComponents
+    @State private var expanded = false
+
+    init(_ title: String, selection: Binding<Date>, in range: ClosedRange<Date> = Date.distantPast...Date.distantFuture,
+         displayedComponents: DatePickerComponents) {
+        self.title = title
+        self._selection = selection
+        self.range = range
+        self.components = displayedComponents
+    }
+    init(_ title: String, selection: Binding<Date>, in range: PartialRangeFrom<Date>, displayedComponents: DatePickerComponents) {
+        self.init(title, selection: selection, in: range.lowerBound...Date.distantFuture, displayedComponents: displayedComponents)
+    }
+    init(_ title: String, selection: Binding<Date>, in range: PartialRangeThrough<Date>, displayedComponents: DatePickerComponents) {
+        self.init(title, selection: selection, in: Date.distantPast...range.upperBound, displayedComponents: displayedComponents)
     }
 
     var body: some View {
-        Group {
-            if boxed {
-                Picker(title, selection: $selection) { content }
-                    .pickerStyle(.menu)
-                    .font(.subheadline)
-            } else {
-                HStack(spacing: 8) {
-                    Text(title)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Picker(title, selection: $selection) { content }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                        .frame(minHeight: 44)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
+        Button { expanded = true } label: {
+            HStack(spacing: 8) {
+                Text(title).foregroundStyle(Ink.muted)
+                Spacer(minLength: 8)
+                Text(selection.formatted(date: components.contains(.date) ? .abbreviated : .omitted,
+                                         time: components.contains(.hourAndMinute) ? .shortened : .omitted))
+                    .multilineTextAlignment(.trailing)
+                Image(systemName: "calendar").font(.caption)
             }
+            .font(.subheadline)
+            .foregroundStyle(Ink.brass)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
-        .listRowInsets(EdgeInsets(top: boxed ? 6 : 10, leading: 12,
-                                 bottom: boxed ? 6 : 10, trailing: 12))
-        .listRowBackground(rowBackground)
-    }
-
-    @ViewBuilder private var rowBackground: some View {
-        if boxed {
-            PixelPanel().fill(Ink.card)
-                .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))
-                .padding(.vertical, 3)
-        } else {
-            Color.clear
+        .buttonStyle(.plain)
+        .sheet(isPresented: $expanded) {
+            VStack(spacing: 8) {
+                HStack {
+                    Text(title).font(.headline)
+                    Spacer()
+                    Button("Done") { expanded = false }
+                        .buttonStyle(PixelButtonStyle(compact: true))
+                }
+                DatePicker(title, selection: $selection, in: range, displayedComponents: components)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .foregroundStyle(Ink.words)
+            .background(Ink.ground)
+            .presentationBackground(Ink.ground)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.hidden)
         }
     }
 }

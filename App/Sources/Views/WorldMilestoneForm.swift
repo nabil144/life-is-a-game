@@ -35,8 +35,8 @@ struct WorldMilestoneForm: View {
             .navigationTitle(milestone == nil ? "New milestone" : "Milestone")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save(reached: false) }.disabled(trimmed.isEmpty)
                 }
             }

@@ -23,7 +23,7 @@ struct MilestoneFactView: View {
         NavigationStack {
             PixelList {
                 Section {
-                    DatePicker("It became true on", selection: $day, in: ...Date(), displayedComponents: .date)
+                    PixelDatePicker("It became true on", selection: $day, in: ...Date(), displayedComponents: .date)
                 } footer: {
                     Text("A tap on the path should not take this back. Change the day if the app was not here yet.")
                 }
@@ -34,10 +34,10 @@ struct MilestoneFactView: View {
             .navigationTitle("The fact")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Keep it") { save() }
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
             .confirmationDialog("Take the tick back?", isPresented: $confirmTakeBack, titleVisibility: .visible) {
                 Button("Take the tick back", role: .destructive) {

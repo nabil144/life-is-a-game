@@ -124,8 +124,8 @@ struct TalkPathView: View {
             .navigationTitle("New path")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Begin") { begin() }.disabled(!draft.isBeginnable)
                 }
             }
@@ -222,9 +222,7 @@ private struct SketchCard: View {
             }
             TextField("Who are you on this path?", text: $draft.identity)
                 .font(.subheadline).foregroundStyle(.secondary)
-            PixelMenuPicker("Kind", selection: $draft.role) {
-                ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
-            }
+            PixelMenuPicker("Kind", selection: $draft.role, options: Role.allCases.map { .init(title: $0.label, value: $0) })
             if !draft.milestones.isEmpty {
                 Text("Milestones").font(.caption).foregroundStyle(.secondary)
                 ForEach(draft.milestones.indices, id: \.self) { i in

@@ -93,13 +93,13 @@ struct DoneSheet: View {
             }
             .navigationTitle("Done")
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Log it") {
                         store.respond(.done, nodeID: node.id, note: note.isEmpty ? nil : note, photo: photo)
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
             .onChange(of: pick) { _, item in
                 Task { photo = try? await item?.loadTransferable(type: Data.self) }

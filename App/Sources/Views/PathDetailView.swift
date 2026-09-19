@@ -66,10 +66,10 @@ struct PathDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                PixelToolbarItem(placement: .primaryAction) {
                     Button { capture = CaptureRequest(pathID: pathID) } label: { Image(systemName: "plus") }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                PixelToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") { editingPath = true }
                 }
             }

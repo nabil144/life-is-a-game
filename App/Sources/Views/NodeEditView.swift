@@ -37,7 +37,7 @@ struct CueEditor: View {
             Toggle("Pick a date instead", isOn: $pickDate)
                 .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
             if pickDate {
-                DatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
+                PixelDatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
                     .onChange(of: date) { _, d in cue.on = Day(d) }
             }
         }
@@ -95,10 +95,7 @@ struct NodeEditView: View {
                     let others = path.nodes.filter { $0.isOpen && $0.kind == .quest && $0.id != node.id }
                     if !others.isEmpty {
                         Section("Only after (optional)") {
-                            PixelMenuPicker("Blocker", selection: $node.after) {
-                                Text("Nothing").tag(UUID?.none)
-                                ForEach(others) { n in Text(n.title).tag(Optional(n.id)) }
-                            }
+                            PixelMenuPicker("Blocker", selection: $node.after, options: [.init(title: "Nothing", value: UUID?.none)] + others.map { .init(title: $0.title, value: Optional($0.id)) })
                         }
                     }
                 }
@@ -115,11 +112,11 @@ struct NodeEditView: View {
             .navigationTitle(node.kind == .quest ? "Quest" : "Routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
                         .disabled(node.title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
             .confirmationDialog("Remove \(node.title)?", isPresented: $confirmLetGo, titleVisibility: .visible) {
                 Button("Let it go", role: .destructive) {

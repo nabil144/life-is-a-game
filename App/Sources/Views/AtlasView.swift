@@ -62,7 +62,7 @@ struct AtlasView: View {
                         }
                         .accessibilityLabel("Add milestone")
                     }
-                    Menu {
+                    PixelActionMenu {
                         ForEach(map.rooms.filter { $0.id != "you" }) { room in
                             Button(room.title) { select(room.id, focusDestination: true) }
                         }

@@ -189,7 +189,7 @@ struct TodayView: View {
             PixelList {
                 Section {
                     Text("\(store.outsideQuestsToday().count) outside quests ready today")
-                    DatePicker("Remind me", selection: $reminderTime, displayedComponents: [.date, .hourAndMinute])
+                    PixelDatePicker("Remind me", selection: $reminderTime, displayedComponents: [.date, .hourAndMinute])
                     Button("Set reminder") {
                         Task {
                             let allowed = await notifier.requestPermission()
@@ -215,7 +215,7 @@ struct TodayView: View {
                 }
             }
             .navigationTitle("While you’re out")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { showOuting = false } } }
+            .toolbar { PixelToolbarItem(placement: .cancellationAction) { Button("Close") { showOuting = false } } }
         }
     }
 

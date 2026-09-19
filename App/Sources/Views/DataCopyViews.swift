@@ -73,7 +73,7 @@ struct KeepCopySheet: View {
             .padding()
             .navigationTitle("Keep a copy")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                PixelToolbarItem(placement: .cancellationAction) {
                     Button("Later") {
                         UserDefaults.standard.set(true, forKey: Mirror.promptSeenKey)
                         dismiss()

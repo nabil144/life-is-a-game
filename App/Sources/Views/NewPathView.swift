@@ -124,7 +124,7 @@ struct NewPathView: View {
                     NavigationLink("What is a milestone?") { HelpView() }
                 }
                 Section {
-                    Menu {
+                    PixelActionMenu {
                         ForEach(templates, id: \.id) { t in
                             Button(t.title, systemImage: t.path.glyph) {
                                 draft = t.path
@@ -141,16 +141,11 @@ struct NewPathView: View {
                 Section {
                     DisclosureGroup("More", isExpanded: $more) {
                         TextField("Who are you on this path? e.g. Guitarist", text: $draft.identity)
-                        PixelMenuPicker("Kind", selection: $draft.role, boxed: true) {
-                            ForEach(Role.allCases, id: \.self) { Text($0.label).tag($0) }
-                        }
+                        PixelMenuPicker("Kind", selection: $draft.role, options: Role.allCases.map { .init(title: $0.label, value: $0) })
                         if draft.role == .decision {
-                            DatePicker("Decide by", selection: $deadline, in: Date()..., displayedComponents: .date)
+                            PixelDatePicker("Decide by", selection: $deadline, in: Date()..., displayedComponents: .date)
                         }
-                        PixelMenuPicker("Glyph", selection: $draft.glyph, boxed: true) {
-                            Label("Automatic", systemImage: draft.role.glyph).tag("")
-                            ForEach(Role.glyphs, id: \.self) { Image(systemName: $0).tag($0) }
-                        }
+                        PixelMenuPicker("Glyph", selection: $draft.glyph, options: [.init(title: "Automatic", value: "", glyph: draft.role.glyph)] + Role.glyphs.filter { $0 != "" }.map { .init(title: $0.replacingOccurrences(of: ".", with: " "), value: $0, glyph: $0) })
                         ForEach(draft.nodes.indices, id: \.self) { i in
                             HStack {
                                 Image(systemName: draft.nodes[i].kind == .quest ? "diamond" : "arrow.trianglehead.2.clockwise").foregroundStyle(.secondary)
@@ -168,11 +163,11 @@ struct NewPathView: View {
             .navigationTitle("New path")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Begin") { save() }.disabled(!draft.isBeginnable)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) {
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .topBarTrailing) {
                     NavigationLink { HelpView() } label: { Image(systemName: "questionmark.circle") }
                 }
             }

@@ -24,16 +24,16 @@ struct PathsView: View {
                 PathDetailView(pathID: id, capture: $capture)
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
+                PixelToolbarItem(placement: .principal) {
                     PixelChoices(title: "View", selection: $style,
                                  options: PathsStyle.allCases.map { ($0.label, $0) }, fillsRow: false)
                 }
-                ToolbarItem(placement: .primaryAction) {
+                PixelToolbarItem(placement: .primaryAction) {
                     Button { newPath = true } label: { Image(systemName: "plus") }
                         .buttonStyle(PixelButtonStyle(compact: true))
                         .accessibilityLabel("New path")
                 }
-                ToolbarItem(placement: .topBarLeading) {
+                PixelToolbarItem(placement: .topBarLeading) {
                     Button { settings = true } label: { Image(systemName: "gearshape") }
                         .buttonStyle(PixelButtonStyle(compact: true))
                         .accessibilityLabel("Settings")

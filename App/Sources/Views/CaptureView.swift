@@ -22,11 +22,7 @@ struct CaptureView: View {
                         .font(.title3)
                 }
                 Section("On which path") {
-                    PixelMenuPicker("Path", selection: $pathID) {
-                        ForEach(store.activePaths) { p in
-                            Label(p.name, systemImage: p.glyph).tag(Optional(p.id))
-                        }
-                    }
+                    PixelMenuPicker("Path", selection: $pathID, options: store.activePaths.map { .init(title: $0.name, value: Optional($0.id), glyph: $0.glyph) })
                 }
                 Section {
                     PixelChoices(title: "Kind", selection: $kind, options: [
@@ -50,10 +46,7 @@ struct CaptureView: View {
                     let open = path.nodes.filter { $0.isOpen && $0.kind == .quest }
                     if !open.isEmpty {
                         Section("Only after (optional)") {
-                            PixelMenuPicker("Blocker", selection: $after) {
-                                Text("Nothing").tag(UUID?.none)
-                                ForEach(open) { n in Text(n.title).tag(Optional(n.id)) }
-                            }
+                            PixelMenuPicker("Blocker", selection: $after, options: [.init(title: "Nothing", value: UUID?.none)] + open.map { .init(title: $0.title, value: Optional($0.id)) })
                         }
                     }
                 }
@@ -61,11 +54,11 @@ struct CaptureView: View {
             .navigationTitle("Capture")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                PixelToolbarItem(placement: .confirmationAction) {
                     Button("Add to path") { save() }
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || pathID == nil)
                 }
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
             .onAppear {
                 title = request.prefill

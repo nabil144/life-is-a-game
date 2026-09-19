@@ -58,11 +58,11 @@ struct KeySetupView: View {
         .navigationTitle("Model")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
+            PixelToolbarItem(placement: .confirmationAction) {
                 Button("Save") { save() }.disabled(effectiveKey.isEmpty)
             }
             if prompt {
-                ToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } }
+                PixelToolbarItem(placement: .cancellationAction) { Button("Later") { dismiss() } }
             }
         }
         .onAppear { stored = KeyStore.read(provider.rawValue) != nil }
