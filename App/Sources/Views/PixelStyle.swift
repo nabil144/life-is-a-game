@@ -93,7 +93,6 @@ struct PixelList<Content: View>: View {
         .background(Ink.ground)
         .environment(\.defaultMinListRowHeight, 44)
         .toggleStyle(PixelToggleStyle())
-        .buttonStyle(PixelButtonStyle(compact: true))
         .textFieldStyle(.plain)
     }
 }
