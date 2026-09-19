@@ -45,7 +45,7 @@ struct AtlasView: View {
                         .accessibilityLabel("Return to your world")
                     }
                     Group {
-                    Button("Overview") { selected = nil; camera = WorldCamera() }
+                    Button("Overview") { selected = nil; camera = WorldCamera(overview: true) }
                     if scene == .world {
                         Button("You") { selected = nil; focus(map.layout.center) }
                     }
@@ -95,7 +95,7 @@ struct AtlasView: View {
                 }
                 generating = true
                 let build = Task.detached(priority: .userInitiated) {
-                    let layout = WorldLayout(paths: inputs)
+                    let layout = WorldLayout(paths: inputs, portrait: true)
                     return (layout, WorldMaze(layout: layout))
                 }
                 let geometry = await withTaskCancellationHandler {
@@ -216,6 +216,7 @@ private struct WorldEditor: Identifiable {
 struct WorldCamera {
     var id = UUID()
     var center: CGPoint? = nil
+    var overview = false
 }
 
 struct WorldRoom: Identifiable {
@@ -264,7 +265,7 @@ struct WorldMapSnapshot {
         self.scene = scene
         inputs = scene.inputs(paths: paths)
         let reusable = previous?.scene == scene && previous?.inputs == inputs
-        layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs))
+        layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs, portrait: true))
         let maze = reusable ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
         if let maze {
             layout.size = maze.size
@@ -337,19 +338,19 @@ struct WorldMapContent: View {
                 Button { select(room.id) } label: {
                     VStack(spacing: 4) {
                         if room.id == "you" && room.pathID == nil {
-                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 28, height: 28)
+                            Image("WorldBrain").resizable().interpolation(.none).scaledToFit().frame(width: 36, height: 36)
                         } else if room.workID != nil {
-                            PixelQuestMark(routine: room.routine)
+                            PixelQuestMark(routine: room.routine).scaleEffect(1.5).frame(width: 34, height: 34)
                         } else {
-                            Image(systemName: room.glyph).font(.body.weight(.bold)).foregroundStyle(Ink.brass)
+                            Image(systemName: room.glyph).font(.title2.weight(.bold)).foregroundStyle(Ink.brass)
                         }
                         Text(room.title)
-                            .font(.system(.caption, design: .monospaced).weight(.semibold))
-                            .lineLimit(2).multilineTextAlignment(.center)
+                            .font(.system(.callout, design: .monospaced).weight(.semibold))
+                            .lineLimit(4).multilineTextAlignment(.center)
                     }
                     .padding(4)
-                    .frame(width: room.frame.width - 28, height: room.frame.height - 24)
-                    .scaleEffect(selected == room.id ? 1.2 : 1)
+                    .frame(width: room.frame.width - 28, height: room.frame.height - 20)
+                    .scaleEffect(selected == room.id ? 1.08 : 1)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: selected == room.id)
                     .frame(width: room.frame.width - 8, height: room.frame.height - 8)
                     .foregroundStyle(Ink.words)

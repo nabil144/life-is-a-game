@@ -79,14 +79,18 @@ public struct WorldMaze: Sendable {
         var roomNodes: [String: Int] = [:]
         var roomCenters: [Int: Int] = [:]
         for (index, room) in layout.rooms.enumerated() {
-            let x = min(columns-5, max(4, Int(room.center.x / cellSize)))
-            let y = min(rows-3, max(2, Int(room.center.y / cellSize)))
+            let halfColumns = Int(ceil(room.size.width / cellSize)) / 2
+            let halfRows = Int(ceil(room.size.height / cellSize)) / 2
+            let x = min(columns-halfColumns-1, max(halfColumns, Int(room.center.x / cellSize)))
+            let y = min(rows-halfRows-1, max(halfRows, Int(room.center.y / cellSize)))
             let node = count + index
             roomNodes[room.id] = node
             roomCenters[node] = y * columns + x
-            roomFrames[room.id] = CGRect(x: CGFloat(x-4)*cellSize, y: CGFloat(y-2)*cellSize,
-                                         width: 9*cellSize, height: 5*cellSize)
-            for row in (y-2)...(y+2) { for col in (x-4)...(x+4) { owners[row*columns+col] = node } }
+            roomFrames[room.id] = CGRect(x: CGFloat(x-halfColumns)*cellSize, y: CGFloat(y-halfRows)*cellSize,
+                                         width: CGFloat(2*halfColumns+1)*cellSize, height: CGFloat(2*halfRows+1)*cellSize)
+            for row in (y-halfRows)...(y+halfRows) {
+                for col in (x-halfColumns)...(x+halfColumns) { owners[row*columns+col] = node }
+            }
         }
         // Keep detailed cells around rooms, but use larger chambers in the distant
         // wilderness of very large worlds. This bounds vector complexity at overview.

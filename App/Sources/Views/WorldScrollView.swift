@@ -112,9 +112,11 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate {
                                   width: scroll.bounds.width / zoom, height: scroll.bounds.height / zoom)
                 scroll.zoom(to: rect, animated: animateCamera && !UIAccessibility.isReduceMotionEnabled)
             } else {
-                scroll.setZoomScale(min(1, fit), animated: false)
+                // Open at a readable scale; Overview remains available for the whole maze.
+                let zoom = request.overview ? min(1, fit) : min(1, max(0.85, fit))
+                scroll.setZoomScale(zoom, animated: false)
                 centerContent()
-                scroll.contentOffset = CGPoint(x: -scroll.contentInset.left, y: -scroll.contentInset.top)
+                place(CGPoint(x: worldSize.width / 2, y: worldSize.height / 2))
             }
         } else if resized {
             place(savedCenter)

@@ -16,8 +16,9 @@ public struct WorldLayout: Sendable {
         public var pathID: UUID?
         public var workID: UUID?
         public var center: CGPoint
+        public var size = CGSize(width: 136, height: 72)
         public var frame: CGRect {
-            CGRect(x: center.x - 68, y: center.y - 36, width: 136, height: 72)
+            CGRect(x: center.x - size.width / 2, y: center.y - size.height / 2, width: size.width, height: size.height)
         }
     }
     public struct Corridor: Sendable {
@@ -30,7 +31,55 @@ public struct WorldLayout: Sendable {
     public var size: CGSize = .zero
     public var center: CGPoint = .zero
 
-    public init(paths: [Input]) {
+    public init(paths: [Input], portrait: Bool = false) {
+        if portrait && paths.allSatisfy({ $0.work.isEmpty }) {
+            self.init(destinations: paths)
+            return
+        }
+        self.init(legacyPaths: paths)
+    }
+
+    /// One visible level: diagonal quadrants expand mostly vertically on a phone.
+    /// Keep the first four rooms near the center; larger worlds add staggered rows.
+    private init(destinations: [Input]) {
+        let roomSize = CGSize(width: 208, height: 144)
+        rooms = [Room(id: "you", center: .zero, size: roomSize)]
+        for (index, input) in destinations.enumerated() {
+            let quadrant = index % 4
+            let rank = index / 4
+            // A 2:1 vertical bias without moving existing rooms when another is added.
+            var shell = 0, remaining = rank
+            while remaining >= 2 * (shell + 1) {
+                remaining -= 2 * (shell + 1)
+                shell += 1
+            }
+            let column = remaining / 2
+            let row = 2 * (shell - column) + remaining % 2
+            let sx: CGFloat = quadrant == 0 || quadrant == 3 ? -1 : 1
+            let sy: CGFloat = quadrant < 2 ? -1 : 1
+            let stagger: CGFloat = rank == 0 ? 0 : CGFloat((rank % 3) - 1) * 16
+            let at = CGPoint(x: sx * (128 + CGFloat(column) * 256 + stagger),
+                             y: sy * (192 + CGFloat(row) * 208))
+            rooms.append(Room(id: "path-\(input.id)", pathID: input.id, center: at, size: roomSize))
+            corridors.append(Corridor(pathID: input.id, points: [
+                .zero, CGPoint(x: 0, y: at.y), at
+            ]))
+        }
+        let bounds = rooms.reduce(CGRect.null) { $0.union($1.frame) }.insetBy(dx: -32, dy: -32)
+        let halfWidth = ceil(max(abs(bounds.minX), abs(bounds.maxX)) / 16) * 16 + 8
+        let naturalHeight = max(abs(bounds.minY), abs(bounds.maxY))
+        let halfHeight = ceil(max(naturalHeight, halfWidth / 0.65) / 16) * 16 + 8
+        center = CGPoint(x: halfWidth, y: halfHeight)
+        size = CGSize(width: halfWidth * 2, height: halfHeight * 2)
+        for i in rooms.indices {
+            rooms[i].center.x += center.x; rooms[i].center.y += center.y
+        }
+        for i in corridors.indices {
+            corridors[i].points = corridors[i].points.map { CGPoint(x: $0.x + center.x, y: $0.y + center.y) }
+        }
+    }
+
+    private init(legacyPaths paths: [Input]) {
         struct Lane {
             var input: Input
             var side: Int
