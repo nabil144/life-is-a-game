@@ -13,13 +13,18 @@ struct WorldBrainPulse: View {
             .scaledToFit()
     }
 
+    private var patternMask: some View {
+        // Discard the baked-in dark square and dark gaps between the gold pixels.
+        // Reuse the same mask for the image and pulse so neither paints a backdrop.
+        brain.saturation(0).contrast(3).luminanceToAlpha()
+    }
+
     var body: some View {
         brain
+            .mask { patternMask }
             .overlay {
                 BrainPulseSurface(animated: !reduceMotion && scenePhase == .active)
-                    // Luminance confines the highlight to the bright maze pattern,
-                    // instead of illuminating the image's dark square background.
-                    .mask { brain.luminanceToAlpha() }
+                    .mask { patternMask }
                     .blendMode(.screen)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
