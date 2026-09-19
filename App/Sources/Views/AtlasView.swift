@@ -350,21 +350,19 @@ struct WorldMapContent: View {
                                 .scaledToFit()
                                 .frame(width: room.frame.width - 16, height: room.frame.height - 12)
                         } else {
-                            HStack(spacing: 4) {
+                            VStack(spacing: 2) {
                                 if room.milestoneID != nil {
                                     Image(systemName: room.reached ? "checkmark.square.fill" : "flag.fill")
                                         .font(.body.weight(.bold)).foregroundStyle(Ink.brass)
-                                        .frame(width: 20, height: 26)
+                                        .frame(width: 20, height: 20)
                                 } else {
                                     Image(systemName: room.glyph).font(.body.weight(.bold)).foregroundStyle(Ink.brass)
-                                        .frame(width: 20, height: 26)
+                                        .frame(width: 20, height: 20)
                                 }
                                 Text(room.title)
                                     .font(.subheadline.weight(.semibold))
-                                    .lineLimit(3).multilineTextAlignment(.center)
+                                    .lineLimit(2).multilineTextAlignment(.center)
                                     .frame(maxWidth: .infinity, alignment: .center)
-                                // Balance the icon so the title centers on the room itself.
-                                Color.clear.frame(width: 20, height: 26).accessibilityHidden(true)
                             }
                         }
                     }
