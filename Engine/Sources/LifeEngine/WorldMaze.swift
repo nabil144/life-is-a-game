@@ -428,8 +428,31 @@ public struct WorldMaze: Sendable {
 
     private mutating func addAlternatives(layout: WorldLayout, seed: UInt64) {
         alternateRoutes = routes.mapValues { [$0] }
+        let count = columns * rows
         var open = Set(passages.map { Edge($0.a,$0.b) })
-        func cells(_ points: [CGPoint]) -> [Int] {
+        var doors: [Edge:Door] = [:]
+        var graph = Array(repeating: [Int](),count: count + layout.rooms.count)
+        for door in passages {
+            let a = owners[door.a], b = owners[door.b]
+            doors[Edge(a,b)] = door
+            graph[a].append(b); graph[b].append(a)
+        }
+        // Keep the original tree. A pair of branches can become a long alternate
+        // journey by opening just one wall between them, rather than overlaying mazes.
+        var candidates: [Door] = []
+        for y in 1..<rows-1 {
+            for x in 1..<columns-1 {
+                let a = y*columns+x
+                for b in [a+1,a+columns] where owners[a] != owners[b] {
+                    if owners[a] < count && owners[b] < count && doors[Edge(owners[a],owners[b])] == nil {
+                        candidates.append(Door(a: a,b: b))
+                    }
+                }
+            }
+        }
+        var random = Random(seed: seed &+ 0x9E3779B97F4A7C15)
+        random.shuffle(&candidates)
+        func nodes(for points: [CGPoint]) -> [Int] {
             var result: [Int] = []
             for (a,b) in zip(points,points.dropFirst()) {
                 let steps = Int((abs(a.x-b.x)+abs(a.y-b.y))/cellSize)
@@ -438,37 +461,113 @@ public struct WorldMaze: Sendable {
                     let t = CGFloat(i)/CGFloat(steps)
                     let x = Int((a.x+(b.x-a.x)*t)/cellSize)
                     let y = Int((a.y+(b.y-a.y)*t)/cellSize)
-                    let cell = y*columns+x
-                    if result.last != cell { result.append(cell) }
+                    let node = owners[y*columns+x]
+                    if result.last != node { result.append(node) }
                 }
             }
             return result
         }
-        for attempt in 1...4 {
+        for room in layout.rooms where room.id != "you" {
             if Task.isCancelled { return }
-            let variant = WorldMaze(layout: layout, seed: seed &+ UInt64(attempt) &* 0x9E3779B97F4A7C15)
-            for room in layout.rooms where room.id != "you" {
-                guard let candidate = variant.routes[room.id], let original = routes[room.id],
-                      (alternateRoutes[room.id]?.count ?? 0) < 3 else { continue }
-                let candidateCells = cells(candidate)
-                let candidateSet = Set(candidateCells)
-                let originalLength = WorldRoad(points: original).length
-                guard WorldRoad(points: candidate).length <= originalLength * 1.6 + 128 else { continue }
-                let distinct = (alternateRoutes[room.id] ?? []).allSatisfy { previous in
-                    let old = Set(cells(previous))
-                    let union = old.union(candidateSet).count
-                    return union > 0 && Double(old.symmetricDifference(candidateSet).count) / Double(union) >= 0.2
-                }
-                guard distinct else { continue }
-                alternateRoutes[room.id,default: []].append(candidate)
-                for (a,b) in zip(candidateCells,candidateCells.dropFirst()) where owners[a] != owners[b] {
-                    let edge = Edge(a,b)
-                    if open.insert(edge).inserted { passages.append(Door(a: a,b: b)) }
+            guard let original = routes[room.id], let first = original.first, let last = original.last else { continue }
+            let spine = nodes(for: original)
+            var attachment = Array(repeating: -1,count: graph.count)
+            var parent = Array(repeating: -1,count: graph.count)
+            var depth = Array(repeating: 0,count: graph.count)
+            var queue = spine, head = 0
+            for (index,node) in spine.enumerated() { attachment[node] = index; parent[node] = node }
+            while head < queue.count {
+                let at = queue[head]; head += 1
+                for next in graph[at] where attachment[next] == -1 && next < count {
+                    attachment[next] = attachment[at]; parent[next] = at
+                    depth[next] = depth[at] + 1; queue.append(next)
                 }
             }
-            if layout.rooms.filter({ $0.id != "you" }).allSatisfy({ (alternateRoutes[$0.id]?.count ?? 0) >= 3 }) { break }
+            let originalLength = WorldRoad(points: original).length
+            var chosen = [Set(spine)]
+            func appendChoice(connection originalConnection: [Int], openings: [Door]) -> Bool {
+                var connection = originalConnection
+                if attachment[connection.first!] > attachment[connection.last!] { connection.reverse() }
+                let a = connection.first!, b = connection.last!
+                let low = attachment[a], high = attachment[b]
+                if low == high && spine[low] >= count { return false }
+                var left = [a], right = [b]
+                while parent[left.last!] != left.last! { left.append(parent[left.last!]) }
+                while parent[right.last!] != right.last! { right.append(parent[right.last!]) }
+                let middle = Array(connection.dropFirst().dropLast())
+                let journey = Array(spine.prefix(low)) + Array(left.reversed()) + middle + right + Array(spine.dropFirst(high+1))
+                let occupied = Set(journey)
+                guard chosen.allSatisfy({ old in
+                    Double(old.symmetricDifference(occupied).count) / Double(old.union(occupied).count) >= 0.2
+                }) else { return false }
+                let extra = Dictionary(uniqueKeysWithValues: openings.map { (Edge(owners[$0.a],owners[$0.b]),$0) })
+                var points = [first]
+                for (from,to) in zip(journey,journey.dropFirst()) {
+                    let edge = Edge(from,to)
+                    guard let crossing = extra[edge] ?? doors[edge] else { return false }
+                    let entry = owners[crossing.a] == from ? crossing.a : crossing.b
+                    let exit = entry == crossing.a ? crossing.b : crossing.a
+                    appendInsideRoom(center(of: entry),to: &points)
+                    points.append(center(of: exit))
+                }
+                appendInsideRoom(last,to: &points)
+                points = simplify(points)
+                let length = WorldRoad(points: points).length
+                guard length >= originalLength + max(128,originalLength*0.3),
+                      length <= originalLength*3 + 512 else { return false }
+                chosen.append(occupied)
+                alternateRoutes[room.id,default: []].append(points)
+                for door in openings {
+                    if open.insert(Edge(door.a,door.b)).inserted { passages.append(door) }
+                }
+                return true
+            }
+            for allowLoop in [false,true] {
+                if allowLoop && chosen.count > 1 { break }
+                for door in candidates {
+                    if Task.isCancelled { return }
+                    let a = owners[door.a], b = owners[door.b]
+                    guard attachment[a] >= 0, attachment[b] >= 0 else { continue }
+                    let gap = abs(attachment[a]-attachment[b])
+                    guard (allowLoop || gap > 0), depth[a]+depth[b]+1 > gap+4 else { continue }
+                    _ = appendChoice(connection: [a,b],openings: [door])
+                    if chosen.count == 3 { break }
+                }
+            }
+            // A crowded road can be isolated from large filler branches by rooms.
+            // Two doorways let it visit one of those existing branches without
+            // entering any foreign room or clearing a strip of walls.
+            if chosen.count == 1 {
+                var entrances: [(known: Int, unknown: Int, door: Door)] = []
+                var exits: [Int:[(known: Int, door: Door)]] = [:]
+                for door in candidates {
+                    var a = owners[door.a], b = owners[door.b]
+                    if attachment[a] == -1 { swap(&a,&b) }
+                    if attachment[a] >= 0 && attachment[b] == -1 {
+                        entrances.append((a,b,door)); exits[b,default: []].append((a,door))
+                    }
+                }
+                for entrance in entrances {
+                    if Task.isCancelled { return }
+                    var previous = [entrance.unknown: entrance.unknown]
+                    var pending = [entrance.unknown], nextIndex = 0
+                    while nextIndex < pending.count && chosen.count < 3 {
+                        let at = pending[nextIndex]; nextIndex += 1
+                        for exit in exits[at] ?? [] where Edge(owners[exit.door.a],owners[exit.door.b]) != Edge(owners[entrance.door.a],owners[entrance.door.b]) {
+                            var through = [at]
+                            while through.last! != entrance.unknown { through.append(previous[through.last!]!) }
+                            let connection = [entrance.known] + Array(through.reversed()) + [exit.known]
+                            _ = appendChoice(connection: connection,openings: [entrance.door,exit.door])
+                            if chosen.count == 3 { break }
+                        }
+                        for next in graph[at] where next < count && attachment[next] == -1 && previous[next] == nil {
+                            previous[next] = at; pending.append(next)
+                        }
+                    }
+                    if chosen.count >= 2 { break }
+                }
+            }
         }
-        // Only alternate journeys open extra walls, leaving the surrounding filler intact.
         buildWalls(open: open)
     }
 

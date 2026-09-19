@@ -18,8 +18,8 @@ final class WorldAlternativesTests: XCTestCase {
         XCTAssertEqual(a.alternateRoutes,WorldMaze(layout: layout,seed: 123,alternatives: true).alternateRoutes)
     }
     func testAlternativesUseRealOpenFloorAndAvoidOtherRooms() {
-        for count in [1,4,9] {
-            for seed: UInt64 in [7,91] {
+        for count in [1,4,9,16] {
+            for seed: UInt64 in [7,42,91] {
                 let maze = WorldMaze(layout: layout(count),seed: seed,alternatives: true)
                 let doors = Set(maze.passages.map { "\(min($0.a,$0.b)):\(max($0.a,$0.b))" })
                 for (id,choices) in maze.alternateRoutes where id != "you" {
@@ -50,6 +50,29 @@ final class WorldAlternativesTests: XCTestCase {
             }
         }
     }
+    func testLongAlternativesPreserveTheOriginalWallDensity() {
+        for count in [1,4,9,16] {
+            let shape = layout(count)
+            let base = WorldMaze(layout: shape,seed: 42)
+            let maze = WorldMaze(layout: shape,seed: 42,alternatives: true)
+            let extraDoors = maze.passages.count - base.passages.count
+            XCTAssertGreaterThan(extraDoors,0)
+            XCTAssertLessThanOrEqual(extraDoors,count*4,"Alternatives must not carve large portions of the maze")
+            func wallLength(_ maze: WorldMaze) -> CGFloat {
+                maze.walls.reduce(0) { $0 + abs($1.to.x-$1.from.x) + abs($1.to.y-$1.from.y) }
+            }
+            XCTAssertEqual(wallLength(base)-wallLength(maze),CGFloat(extraDoors)*maze.cellSize,accuracy: 0.01)
+            XCTAssertGreaterThan(wallLength(maze)/wallLength(base),0.99)
+            for (id, choices) in maze.alternateRoutes where id != "you" {
+                let direct = WorldRoad(points: choices[0]).length
+                XCTAssertGreaterThanOrEqual(choices.count,2,"count \(count), room \(id)")
+                for points in choices.dropFirst() {
+                    XCTAssertGreaterThanOrEqual(WorldRoad(points: points).length,direct + max(128,direct*0.3))
+                }
+            }
+        }
+    }
+
     func testTrafficDetectsCrossingsAndSharedCorridors() {
         let road = WorldRoad(points: [.init(x: 8,y: 8),.init(x: 104,y: 8)])
         XCTAssertTrue(road.sharesFloor(with: WorldRoad(points: [.init(x: 56,y: -40),.init(x: 56,y: 56)])))
