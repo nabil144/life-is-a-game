@@ -9,6 +9,21 @@ final class PortraitWorldTests: XCTestCase {
         (0..<count).map { .init(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", $0 + 1))!, work: []) }
     }
 
+    func testBrainChamberIsCompactWhileTextChambersKeepTheirSize() {
+        let destinations = inputs(4)
+        let world = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true, compactCenter: true))
+        let inner = WorldMaze(layout: WorldLayout(paths: destinations, portrait: true))
+        XCTAssertEqual(world.roomFrames["you"]?.size, CGSize(width: 80, height: 80))
+        XCTAssertEqual(inner.roomFrames["you"]?.size, CGSize(width: 144, height: 80))
+        XCTAssertEqual(world.roomFrames["you"]?.midX, world.size.width / 2)
+        XCTAssertEqual(world.roomFrames["you"]?.midY, world.size.height / 2)
+        XCTAssertTrue(world.ownershipRouted)
+        XCTAssertEqual(world.routes.count, 5)
+        for destination in destinations {
+            XCTAssertEqual(world.roomFrames["path-\(destination.id)"]?.size, CGSize(width: 144, height: 80))
+        }
+    }
+
     func testFourDestinationsSurroundCenterDiagonally() {
         let layout = WorldLayout(paths: inputs(4), portrait: true)
         XCTAssertGreaterThan(layout.size.height, layout.size.width * 1.4)

@@ -101,7 +101,7 @@ struct AtlasView: View {
                 }
                 generating = true
                 let build = Task.detached(priority: .userInitiated) {
-                    let layout = WorldLayout(paths: inputs, portrait: true)
+                    let layout = WorldLayout(paths: inputs, portrait: true, compactCenter: requestedScene == .world)
                     return (layout, WorldMaze(layout: layout))
                 }
                 let geometry = await withTaskCancellationHandler {
@@ -278,7 +278,7 @@ struct WorldMapSnapshot {
         self.scene = scene
         inputs = scene.inputs(paths: paths)
         let reusable = previous?.scene == scene && previous?.inputs == inputs
-        layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs, portrait: true))
+        layout = geometry?.0 ?? (reusable ? previous!.layout : WorldLayout(paths: inputs, portrait: true, compactCenter: scene == .world))
         let maze = reusable ? nil : (geometry?.1 ?? WorldMaze(layout: layout))
         if let maze {
             layout.size = maze.size

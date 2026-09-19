@@ -31,9 +31,9 @@ public struct WorldLayout: Sendable {
     public var size: CGSize = .zero
     public var center: CGPoint = .zero
 
-    public init(paths: [Input], portrait: Bool = false) {
+    public init(paths: [Input], portrait: Bool = false, compactCenter: Bool = false) {
         if portrait && paths.allSatisfy({ $0.work.isEmpty }) {
-            self.init(destinations: paths)
+            self.init(destinations: paths, compactCenter: compactCenter)
             return
         }
         self.init(legacyPaths: paths)
@@ -41,9 +41,9 @@ public struct WorldLayout: Sendable {
 
     /// One visible level: diagonal quadrants expand mostly vertically on a phone.
     /// Keep the first four rooms near the center; larger worlds add staggered rows.
-    private init(destinations: [Input]) {
+    private init(destinations: [Input], compactCenter: Bool) {
         let roomSize = CGSize(width: 136, height: 72)
-        rooms = [Room(id: "you", center: .zero, size: roomSize)]
+        rooms = [Room(id: "you", center: .zero, size: compactCenter ? CGSize(width: 72, height: 72) : roomSize)]
         for (index, input) in destinations.enumerated() {
             let quadrant = index % 4
             let rank = index / 4
