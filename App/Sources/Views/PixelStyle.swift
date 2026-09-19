@@ -251,6 +251,8 @@ struct PixelToolbarItem<Content: View>: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(placement: placement) {
             content.buttonStyle(PixelButtonStyle(compact: true))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .sharedBackgroundVisibility(.hidden)
     }
