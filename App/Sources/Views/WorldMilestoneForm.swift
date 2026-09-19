@@ -56,3 +56,22 @@ struct WorldMilestoneForm: View {
         dismiss()
     }
 }
+
+/// One presentation session survives maze rebuilds and list row recycling.
+struct MilestoneEditorRequest: Identifiable {
+    let id = UUID()
+    let pathID: UUID
+    let milestone: Milestone?
+}
+
+struct MilestoneEditorSheet: View {
+    let request: MilestoneEditorRequest
+
+    var body: some View {
+        if let milestone = request.milestone, milestone.tickedOn != nil {
+            MilestoneFactView(pathID: request.pathID, milestone: milestone)
+        } else {
+            WorldMilestoneForm(pathID: request.pathID, milestone: request.milestone)
+        }
+    }
+}

@@ -18,7 +18,7 @@ struct AtlasView: View {
     @State private var selected: String?
     @State private var camera = WorldCamera()
     @State private var viewport = WorldViewport()
-    @State private var editor: WorldMilestoneEditor?
+    @Binding var editor: MilestoneEditorRequest?
     @State private var savedWorld: WorldLevelState?
     @State private var details: UUID?
     @State private var generating = false
@@ -57,7 +57,7 @@ struct AtlasView: View {
                     }
                     Spacer()
                     if let pathID = scene.pathID {
-                        Button { editor = WorldMilestoneEditor(pathID: pathID, milestone: nil) } label: {
+                        Button { editor = MilestoneEditorRequest(pathID: pathID, milestone: nil) } label: {
                             Image(systemName: "plus")
                         }
                         .accessibilityLabel("Add milestone")
@@ -127,13 +127,6 @@ struct AtlasView: View {
                     self.selected = nil; camera = WorldCamera()
                 }
             }
-            .sheet(item: $editor) { item in
-                if let milestone = item.milestone, milestone.tickedOn != nil {
-                    MilestoneFactView(pathID: item.pathID, milestone: milestone)
-                } else {
-                    WorldMilestoneForm(pathID: item.pathID, milestone: item.milestone)
-                }
-            }
     }
 
     private func enter(_ pathID: UUID) {
@@ -173,10 +166,11 @@ struct AtlasView: View {
     }
 
     private func activate(_ room: WorldRoom) {
+        guard editor == nil else { return }
         guard let pathID = room.pathID else { return }
         if let milestoneID = room.milestoneID,
            let milestone = store.path(pathID)?.milestones.first(where: { $0.id == milestoneID }) {
-            editor = WorldMilestoneEditor(pathID: pathID, milestone: milestone)
+            editor = MilestoneEditorRequest(pathID: pathID, milestone: milestone)
         } else if scene == .world { enter(pathID) }
         else { details = pathID }
     }
@@ -205,7 +199,7 @@ struct AtlasView: View {
                 else if map.rooms.count <= 1 {
                     Text(scene == .world ? "Add a path to grow your maze." : "No milestones on this path yet.")
                     if let pathID = scene.pathID {
-                        Button("Add milestone") { editor = WorldMilestoneEditor(pathID: pathID, milestone: nil) }
+                        Button("Add milestone") { editor = MilestoneEditorRequest(pathID: pathID, milestone: nil) }
                             .buttonStyle(PixelButtonStyle(compact: true))
                     } else { RestoreFileButton() }
                 } else {
@@ -228,12 +222,6 @@ private struct WorldLevelState {
     var selected: String?
     var camera: WorldCamera
     var viewport: WorldViewport
-}
-
-private struct WorldMilestoneEditor: Identifiable {
-    var pathID: UUID
-    var milestone: Milestone?
-    let id = UUID()
 }
 
 struct WorldCamera {

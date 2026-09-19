@@ -9,8 +9,15 @@ struct PathDetailView: View {
     @State private var newMilestone = ""
     @State private var editing: Node?
     @State private var editingPath = false
+    @State private var milestoneEditor: MilestoneEditorRequest?
 
     var body: some View {
+        ZStack { detail }
+            .sheet(item: $milestoneEditor) { MilestoneEditorSheet(request: $0) }
+    }
+
+    @ViewBuilder
+    private var detail: some View {
         if let path = store.path(pathID) {
             PixelList {
                 Section {
@@ -31,7 +38,9 @@ struct PathDetailView: View {
                 }
 
                 Section("Milestones") {
-                    MilestoneList(pathID: pathID, onTick: { celebrate = $0 })
+                    MilestoneList(pathID: pathID, onTick: { celebrate = $0 }, onOpenFact: {
+                        milestoneEditor = MilestoneEditorRequest(pathID: pathID, milestone: $0)
+                    })
                     HStack {
                         TextField("Add a milestone as a sentence", text: $newMilestone)
                         Button("Add") {
@@ -150,7 +159,7 @@ struct MilestoneList: View {
     @Environment(Store.self) private var store
     let pathID: UUID
     var onTick: ((Milestone) -> Void)? = nil
-    @State private var fact: Milestone?
+    var onOpenFact: (Milestone) -> Void
 
     var body: some View {
         if let path = store.path(pathID) {
@@ -160,7 +169,7 @@ struct MilestoneList: View {
                         store.tickMilestone(m.id, in: pathID)
                         onTick?(m)
                     } else {
-                        fact = m
+                        onOpenFact(m)
                     }
                 } label: {
                     HStack(spacing: 14) {
@@ -174,9 +183,6 @@ struct MilestoneList: View {
                     }
                 }
                 .sensoryFeedback(.success, trigger: m.tickedOn)
-            }
-            .sheet(item: $fact) { m in
-                MilestoneFactView(pathID: pathID, milestone: m)
             }
         }
     }

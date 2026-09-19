@@ -8,6 +8,7 @@ struct PathsView: View {
     @AppStorage(Prefs.pathsStyleKey) private var style: PathsStyle = .atlas
     @State private var newPath = false
     @State private var settings = false
+    @State private var milestoneEditor: MilestoneEditorRequest?
 
     var body: some View {
         NavigationStack {
@@ -15,7 +16,7 @@ struct PathsView: View {
                 if style == .list {
                     list
                 } else {
-                    AtlasView(capture: $capture).id(worldVisit)
+                    AtlasView(capture: $capture, editor: $milestoneEditor).id(worldVisit)
                 }
             }
             .navigationTitle("Paths")
@@ -42,6 +43,8 @@ struct PathsView: View {
             .sheet(isPresented: $newPath) { NewPathSheet() }
             .sheet(isPresented: $settings) { SettingsView() }
         }
+        // Present from the stable screen, outside the maze visit/scene identity.
+        .sheet(item: $milestoneEditor) { MilestoneEditorSheet(request: $0) }
     }
 
     private var list: some View {
