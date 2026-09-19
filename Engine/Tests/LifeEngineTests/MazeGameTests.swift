@@ -12,7 +12,7 @@ final class MazeGameTests: XCTestCase {
         game.advance(seconds: 0.1)
         game.advance(seconds: Double(game.board.cellSize)/72 - 0.2)
     }
-    func testPlayableCellsFollowRealPassagesAndExcludeRoomsAndOuterBorder() throws {
+    func testPlayableCellsFollowRealPassagesAndExcludeOtherRoomsAndOuterBorder() throws {
         let (maze, board) = try fixture()
         XCTAssertGreaterThan(board.neighbors.count, 10)
         let open = Set(maze.passages.map { "\(min($0.a,$0.b)):\(max($0.a,$0.b))" })
@@ -20,11 +20,30 @@ final class MazeGameTests: XCTestCase {
             let point = board.center(cell)
             XCTAssertGreaterThanOrEqual(point.x, 64)
             XCTAssertGreaterThanOrEqual(point.y, 64)
-            for room in maze.roomFrames.values { XCTAssertFalse(room.contains(point)) }
+            for (id, room) in maze.roomFrames where id != "you" { XCTAssertFalse(room.contains(point)) }
             for next in neighbors {
                 XCTAssertTrue(open.contains("\(min(cell,next)):\(max(cell,next))") || maze.owners[cell] == maze.owners[next])
                 XCTAssertTrue(board.neighbors[next]?.contains(cell) == true)
             }
+        }
+    }
+    func testBrainInteriorAndEveryDoorwayAreReachable() throws {
+        let (maze, board) = try fixture()
+        let home = try XCTUnwrap(maze.roomFrames["you"])
+        let center = Int(home.midY / maze.cellSize) * maze.columns + Int(home.midX / maze.cellSize)
+        let owner = maze.owners[center]
+        var seen: Set<Int> = [center], queue = [center], index = 0
+        while index < queue.count {
+            let cell = queue[index]; index += 1
+            for next in board.neighbors[cell] ?? [] where seen.insert(next).inserted { queue.append(next) }
+        }
+        XCTAssertEqual(seen, Set(board.neighbors.keys))
+        for cell in maze.owners.indices where maze.owners[cell] == owner {
+            XCTAssertNotNil(board.neighbors[cell], "Brain interior must be walkable")
+        }
+        for door in maze.passages where maze.owners[door.a] == owner || maze.owners[door.b] == owner {
+            XCTAssertTrue(board.neighbors[door.a]?.contains(door.b) == true)
+            XCTAssertTrue(board.neighbors[door.b]?.contains(door.a) == true)
         }
     }
     func testMovementCollectsOnceAndCanReverseAtJunctions() throws {

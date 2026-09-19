@@ -3,7 +3,7 @@ import Foundation
 import CoreGraphics
 #endif
 
-/// Read-only gameplay projection of the real maze. Rooms are never playable cells.
+/// Read-only gameplay projection of the real maze. The brain room is passable; other rooms remain obstacles.
 public struct MazeGameBoard: Sendable {
     public enum Direction: CaseIterable, Sendable {
         case up, right, down, left
@@ -28,14 +28,14 @@ public struct MazeGameBoard: Sendable {
         let homeOwner = maze.owners[homeCell]
         func playable(_ cell: Int) -> Bool {
             let p = maze.center(of: cell)
-            return maze.owners[cell] < count && p.x >= 64 && p.y >= 64 && p.x < maze.size.width-64 && p.y < maze.size.height-64
+            return (maze.owners[cell] < count || maze.owners[cell] == homeOwner) && p.x >= 64 && p.y >= 64 && p.x < maze.size.width-64 && p.y < maze.size.height-64
         }
         var graph: [Int: [Int]] = [:]
         for door in maze.passages where playable(door.a) && playable(door.b) {
             graph[door.a, default: []].append(door.b)
             graph[door.b, default: []].append(door.a)
         }
-        // Large worlds can merge filler cells. Their internal boundaries have no walls.
+        // The brain interior and merged filler cells have no internal walls.
         for cell in 0..<count where playable(cell) {
             for next in [cell+1, cell+maze.columns] where next < count && playable(next) {
                 guard (next != cell+1 || next / maze.columns == cell / maze.columns), maze.owners[cell] == maze.owners[next] else { continue }
