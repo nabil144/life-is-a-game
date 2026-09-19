@@ -25,16 +25,20 @@ struct AtlasView: View {
     @State private var builtMaze = false
     @State private var mazeSeed = UInt64.random(in: .min ... .max)
 
+    private var mapReady: Bool { builtMaze && map.scene == scene }
+
     private var parent: LifeEngine.Path? { scene.pathID.flatMap { store.path($0) } }
 
     var body: some View {
         Group {
-            if map.scene == scene {
+            if mapReady {
                 WorldScrollView(content: WorldMapContent(map: map, selected: selected, select: { select($0) }),
                                 size: map.layout.size, camera: camera, animated: !reduceMotion, viewport: viewport)
                     .id(scene)
             } else {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView("Preparing your maze…")
+                    .tint(Ink.brass)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
             .background(Ink.ground)
@@ -69,15 +73,17 @@ struct AtlasView: View {
                             Image(systemName: "flag.fill").accessibilityLabel("Milestones")
                         }
                     }
-                    .disabled(map.rooms.count <= 1 || map.scene != scene)
+                    .disabled(map.rooms.count <= 1 || !mapReady)
                     }
-                    .disabled(generating || map.scene != scene)
+                    .disabled(generating || !mapReady)
                 }
                 .buttonStyle(PixelButtonStyle(compact: true))
                 .padding(.horizontal, 12)
                 .background(Ink.ground)
             }
-            .overlay(alignment: .bottom) { selectionPanel }
+            .overlay(alignment: .bottom) {
+                if mapReady { selectionPanel }
+            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let parent {
                     Text(parent.name).font(.caption.monospaced().bold())
@@ -157,7 +163,7 @@ struct AtlasView: View {
     private func focus(_ point: CGPoint) { camera = WorldCamera(center: point) }
 
     private func select(_ id: String, focusDestination: Bool = false) {
-        guard map.scene == scene else { return }
+        guard mapReady else { return }
         if id.isEmpty { selected = nil; return }
         if id == "you" && scene == .world { selected = nil; focus(map.layout.center); return }
         guard let room = map.rooms.first(where: { $0.id == id }) else { return }
