@@ -368,8 +368,8 @@ struct WorldMapContent: View {
                                 }
                                 Text(room.title)
                                     .font(.subheadline.weight(.semibold))
-                                    .lineLimit(3).multilineTextAlignment(.leading)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .lineLimit(3).multilineTextAlignment(.center)
+                                    .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
                     }
