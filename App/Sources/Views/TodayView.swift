@@ -97,6 +97,7 @@ struct TodayView: View {
                         .accessibilityAddTraits(.isHeader)
                 }
                 HStack {
+                    reminderControl
                     Spacer()
                     Button { capture = CaptureRequest() } label: {
                         Image(systemName: "plus")
@@ -113,7 +114,6 @@ struct TodayView: View {
                 }
             }
             .frame(height: dateSlot)
-            pathFilter
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 4) {
                     outingControls
@@ -121,11 +121,11 @@ struct TodayView: View {
                     Spacer(minLength: 0)
                     sortControls
                     Spacer(minLength: 0)
-                    reminderControl
-                        .frame(minWidth: 64, alignment: .trailing)
+                    pathFilter
+                        .frame(minWidth: 44, maxWidth: 88, alignment: .trailing)
                 }
                 VStack(spacing: 2) {
-                    HStack { outingControls; Spacer(); reminderControl }
+                    HStack { outingControls; Spacer(); pathFilter.frame(maxWidth: 120) }
                     sortControls
                 }
             }
@@ -142,12 +142,17 @@ struct TodayView: View {
     private var pathFilter: some View {
         HStack(spacing: 0) {
             Button { showPathFilter = true } label: {
-                HStack(spacing: 6) {
-                    if let path = filteredPath { Image(systemName: path.glyph) }
-                    Text(filteredPath?.name ?? "All paths").lineLimit(1).truncationMode(.tail)
-                    Image(systemName: "chevron.down").font(.caption2.bold())
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 4) {
+                        Text(filteredPath?.name ?? "All paths").lineLimit(1)
+                        Image(systemName: "chevron.down").font(.caption2.bold())
+                    }.fixedSize(horizontal: true, vertical: false)
+                    HStack(spacing: 4) {
+                        Image(systemName: filteredPath?.glyph ?? "line.3.horizontal.decrease")
+                        Image(systemName: "chevron.down").font(.caption2.bold())
+                    }
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(filteredPathID == nil ? Ink.muted : Ink.brass)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
@@ -169,17 +174,7 @@ struct TodayView: View {
                 .presentationCompactAdaptation(.popover)
                 .presentationBackground(Ink.ground)
             }
-            if filteredPathID != nil {
-                Button { filteredPathID = nil } label: {
-                    Image(systemName: "xmark").font(.caption.bold())
-                        .frame(width: 44, height: 44).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain).foregroundStyle(Ink.muted)
-                .accessibilityLabel("Show all paths")
-            }
         }
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity)
     }
 
     private func filterOption(_ name: String, glyph: String, id: UUID?) -> some View {
