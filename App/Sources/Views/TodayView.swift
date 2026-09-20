@@ -32,6 +32,7 @@ struct TodayView: View {
     @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .quests
     @State private var filteredPathID: UUID?
     @State private var showPathFilter = false
+    @ScaledMetric(relativeTo: .caption) private var sortLabelWidth: CGFloat = 56
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
@@ -230,7 +231,10 @@ struct TodayView: View {
             HStack(spacing: 3) {
                 ForEach(TodaySort.allCases) { s in
                     Button { sort = s } label: {
-                        Text(s.label).fixedSize(horizontal: true, vertical: false)
+                        Text(s.label)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .frame(width: sortLabelWidth)
+                            .padding(.horizontal, 4)
                     }
                     .buttonStyle(PixelButtonStyle(selected: sort == s, compact: true))
                     .accessibilityAddTraits(sort == s ? .isSelected : [])
