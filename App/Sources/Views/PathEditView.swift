@@ -12,6 +12,7 @@ struct PathEditView: View {
     @State private var glyph: String
     @State private var deadline: Date
     @State private var milestones: [Milestone]
+    @State private var newMilestone = ""
 
     init(path: Path) {
         pathID = path.id
@@ -47,12 +48,23 @@ struct PathEditView: View {
                     }
                     .onDelete { milestones.remove(atOffsets: $0) }
                     .onMove { milestones.move(fromOffsets: $0, toOffset: $1) }
-                    Button("Add another milestone") { milestones.append(Milestone(text: "")) }
+                    HStack {
+                        TextField("Add a milestone as a sentence", text: $newMilestone)
+                        Button("Add") {
+                            milestones.append(Milestone(text: newMilestone.trimmingCharacters(in: .whitespacesAndNewlines)))
+                            newMilestone = ""
+                        }
+                        .disabled(newMilestone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
                 } header: {
                     Text("Milestones")
-                } footer: {
-                    Text("Tap a milestone on the path to tick it. Here you change the words, the order, or drop one.")
                 }
+                Text("Tap a milestone on the path to tick it. Here you change the words, the order, or drop one.")
+                    .font(.caption)
+                    .foregroundStyle(Color.gray.opacity(0.85))
+                    .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
             .navigationTitle("This path")
             .navigationBarTitleDisplayMode(.inline)
