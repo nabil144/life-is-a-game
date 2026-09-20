@@ -30,6 +30,8 @@ struct TodayView: View {
     @Environment(Notifier.self) private var notifier
     @Binding var capture: CaptureRequest?
     @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .quests
+    @State private var filteredPathID: UUID?
+    @State private var showPathFilter = false
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
@@ -37,7 +39,10 @@ struct TodayView: View {
     @State private var reminderTime = Date().addingTimeInterval(15 * 60)
     @State private var reminderDenied = false
 
-    private var due: [Objective] { store.dueToday() }
+    private var filteredPath: LifeEngine.Path? { store.activePaths.first { $0.id == filteredPathID } }
+    private var due: [Objective] {
+        store.dueToday().filter { filteredPathID == nil || $0.pathID == filteredPathID }
+    }
     private var showKind: Bool { sort == .when }
     private var dateSlot: CGFloat { 68 }
 
@@ -56,6 +61,10 @@ struct TodayView: View {
             .toolbar(openPath == nil ? .hidden : .automatic, for: .navigationBar)
             .navigationDestination(item: $openPath) { dest in
                 PathDetailView(pathID: dest.id, capture: $capture)
+            }
+            .onChange(of: filteredPathID) { _, _ in pendingID = nil }
+            .onChange(of: store.activePaths.map(\.id)) { _, ids in
+                if let filteredPathID, !ids.contains(filteredPathID) { self.filteredPathID = nil }
             }
             .sheet(isPresented: $showOuting) { outingSettings }
             .task {
@@ -104,6 +113,7 @@ struct TodayView: View {
                 }
             }
             .frame(height: dateSlot)
+            pathFilter
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 4) {
                     outingControls
@@ -127,6 +137,62 @@ struct TodayView: View {
         .padding(.top, 4)
         .padding(.bottom, 6)
         .background(Ink.ground)
+    }
+
+    private var pathFilter: some View {
+        HStack(spacing: 0) {
+            Button { showPathFilter = true } label: {
+                HStack(spacing: 6) {
+                    if let path = filteredPath { Image(systemName: path.glyph) }
+                    Text(filteredPath?.name ?? "All paths").lineLimit(1).truncationMode(.tail)
+                    Image(systemName: "chevron.down").font(.caption2.bold())
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(filteredPathID == nil ? Ink.muted : Ink.brass)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Filter by path")
+            .accessibilityValue(filteredPath?.name ?? "All paths")
+            .popover(isPresented: $showPathFilter, arrowEdge: .top) {
+                ScrollView {
+                    VStack(spacing: 4) {
+                        filterOption("All paths", glyph: "square.grid.2x2", id: nil)
+                        ForEach(store.activePaths) { path in
+                            filterOption(path.name, glyph: path.glyph, id: path.id)
+                        }
+                    }.padding(8)
+                }
+                .scrollIndicators(.hidden)
+                .frame(width: 280, height: min(CGFloat(store.activePaths.count + 1) * 48 + 16, 336))
+                .presentationCompactAdaptation(.popover)
+                .presentationBackground(Ink.ground)
+            }
+            if filteredPathID != nil {
+                Button { filteredPathID = nil } label: {
+                    Image(systemName: "xmark").font(.caption.bold())
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).foregroundStyle(Ink.muted)
+                .accessibilityLabel("Show all paths")
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func filterOption(_ name: String, glyph: String, id: UUID?) -> some View {
+        Button {
+            filteredPathID = id
+            showPathFilter = false
+        } label: {
+            Label(name, systemImage: glyph)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(PixelButtonStyle(selected: filteredPathID == id, compact: true, fillsWidth: true))
+        .accessibilityAddTraits(filteredPathID == id ? .isSelected : [])
     }
 
     private var outingControls: some View {
@@ -232,7 +298,7 @@ struct TodayView: View {
             }
             Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
                 .pixelHelper()
-            let entries = store.recentLog()
+            let entries = filteredPathID.map { Array(store.log(for: $0).prefix(5)) } ?? store.recentLog()
             if !entries.isEmpty {
                 Section {
                     ForEach(entries) { entry in
@@ -304,7 +370,7 @@ struct TodayView: View {
     }
 
     private var buckets: [DueBucket] {
-        let outside = store.goingOutToday ? store.outsideQuestsToday() : []
+        let outside = store.goingOutToday ? store.outsideQuestsToday().filter { filteredPathID == nil || $0.pathID == filteredPathID } : []
         let outsideIDs = Set(outside.map(\.nodeID))
         let rest = due.filter { !outsideIDs.contains($0.nodeID) }
         let featured = store.goingOutToday ? [DueBucket(id: "outside", title: "While you’re out", items: outside,
@@ -364,6 +430,7 @@ struct TodayView: View {
     }
 
     var quietLine: String {
+        if let path = filteredPath { return "Nothing is due today for \(path.name). Choose All paths to see the rest." }
         if !authorized { return "Objectives cannot find you yet. Allow notifications in Settings." }
         if store.activePaths.allSatisfy(\.isEvolved) { return "Every path has evolved. Add a milestone or start a new path." }
         return "Nothing is due today. Your paths are resting."
