@@ -325,7 +325,7 @@ final class WorldCorridorLayerView: UIView {
         defer { CATransaction.commit() }
         let motion = animated && !UIAccessibility.isReduceMotionEnabled
         let reset = self.generation != generation || motionEnabled != motion
-        guard reset || self.selection != selection else { return }
+        guard reset || self.selection != selection || history.pendingReturn != nil else { return }
         if reset {
             walls.path = path; floorMask.path = mask
             clearJourneys()
@@ -334,17 +334,29 @@ final class WorldCorridorLayerView: UIView {
         }
         self.generation = generation; self.selection = selection
         motionEnabled = motion
-        guard let selection, !routes.isEmpty else { return }
+        let returning = history.pendingReturn
+        history.pendingReturn = nil
         let now = light.convertTime(CACurrentMediaTime(), from: nil)
-        let previous = history.last[selection]
-        let candidates = routes.indices.filter { routes.count == 1 || $0 != previous }.shuffled()
-        let choice = candidates.min { a,b in
-            departure(for: routes[a].road, now: now) < departure(for: routes[b].road, now: now)
-        } ?? 0
-        history.last[selection] = choice
-        let road = routes[choice].road
+        let road: WorldRoad
+        let start: CFTimeInterval
+        if let returning {
+            // Returning from a nested maze starts at its room's door on the same
+            // road used to enter it, rather than launching another outward trip.
+            guard motion else { return }
+            road = returning
+            start = now - Double(road.length / 100)
+        } else {
+            guard let selection, !routes.isEmpty else { return }
+            let previous = history.last[selection]
+            let candidates = routes.indices.filter { routes.count == 1 || $0 != previous }.shuffled()
+            let choice = candidates.min { a,b in
+                departure(for: routes[a].road, now: now) < departure(for: routes[b].road, now: now)
+            } ?? 0
+            history.last[selection] = choice
+            road = routes[choice].road
+            start = motion ? departure(for: road, now: now) : now
+        }
         guard road.length > 0, road.points.count > 1 else { return }
-        let start = motion ? departure(for: road, now: now) : now
         let group = CALayer()
         group.frame = bounds
         light.addSublayer(group)
@@ -388,6 +400,7 @@ final class WorldCorridorLayerView: UIView {
             traveller.add(appear, forKey: "waiting")
         }
         active = Journey(group: group, traveller: traveller, road: road, started: start, dots: dots)
+        if returning != nil { sendHome() }
     }
 
     private func animate(_ traveller: CAShapeLayer, along road: WorldRoad, start: CFTimeInterval) {

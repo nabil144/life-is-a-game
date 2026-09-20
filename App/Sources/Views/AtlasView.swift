@@ -164,7 +164,11 @@ struct AtlasView: View {
         guard scene != .world else { return }
         if let savedWorld {
             map = savedWorld.map
-            selected = savedWorld.selected
+            if let roomID = savedWorld.selected, let roads = map.routes[roomID], !roads.isEmpty {
+                let index = min(map.history.last[roomID] ?? 0, roads.count - 1)
+                map.history.pendingReturn = roads[index].road
+            }
+            selected = nil
             camera = savedWorld.camera
             viewport = savedWorld.viewport
         } else {
@@ -282,6 +286,7 @@ struct WorldLightRoute {
 /// Reference storage survives native renderer recreation within one maze visit.
 final class WorldRouteHistory {
     var last: [String: Int] = [:]
+    var pendingReturn: WorldRoad?
 }
 
 struct WorldMapSnapshot {
