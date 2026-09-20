@@ -4,7 +4,10 @@ import UIKit
 /// Native swipe actions accept an image, so draw the pixel badge once at screen scale.
 @MainActor
 enum PixelSwipeArtwork {
-    static let done: UIImage = {
+    static let done = badge(pixels: ["0000011", "0000110", "1001100", "1111000", "0110000"])
+    static let cancel = badge(pixels: ["1100011", "0110110", "0011100", "0110110", "1100011"])
+
+    private static func badge(pixels: [String]) -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 36, height: 36)).image { renderer in
             let context = renderer.cgContext
             let panel = PixelPanel().path(in: CGRect(x: 1, y: 1, width: 34, height: 34)).cgPath
@@ -16,14 +19,13 @@ enum PixelSwipeArtwork {
             context.addPath(panel)
             context.strokePath()
             context.setFillColor(UIColor(Ink.brass).cgColor)
-            let pixels = ["0000011", "0000110", "1001100", "1111000", "0110000"]
             for (y, row) in pixels.enumerated() {
                 for (x, pixel) in row.enumerated() where pixel == "1" {
                     context.fill(CGRect(x: 8 + x * 3, y: 11 + y * 3, width: 3, height: 3))
                 }
             }
         }.withRenderingMode(.alwaysOriginal)
-    }()
+    }
 }
 
 /// Two square steps at each corner, drawn natively so the edges stay crisp.

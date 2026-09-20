@@ -478,6 +478,17 @@ private struct TodayRow: View {
                 .accessibilityLabel("Mark as done")
                 .tint(Ink.ground)
             }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button {
+                    store.respond(.letGo, nodeID: node.id)
+                    onCancel()
+                } label: {
+                    Image(uiImage: PixelSwipeArtwork.cancel)
+                        .renderingMode(.original)
+                }
+                .accessibilityLabel("Cancel item")
+                .tint(Ink.ground)
+            }
             .listRowSeparator(.hidden)
             .listRowBackground(
                 PixelPanel()

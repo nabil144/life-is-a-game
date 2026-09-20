@@ -251,7 +251,7 @@ private struct WorldLevelState {
 struct WorldCamera {
     var id = UUID()
     var center: CGPoint? = nil
-    var overview = false
+    var overview = true
 }
 
 struct WorldRoom: Identifiable {
