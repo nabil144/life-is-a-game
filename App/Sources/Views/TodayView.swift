@@ -449,6 +449,7 @@ private struct TodayRow: View {
                 }
 
                 if confirming {
+                    if let launch = node.appLaunch { AppLaunchButton(launch: launch) }
                     Text(node.kind == .practice
                          ? "It leaves Today. It will come back when its cue allows."
                          : "It leaves Today. A quest does not come back.")

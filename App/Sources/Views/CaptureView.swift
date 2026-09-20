@@ -13,6 +13,7 @@ struct CaptureView: View {
     @State private var cue = Cue.anytime
     @State private var after: UUID?
     @State private var outsideHome = false
+    @State private var appLaunch: AppLaunch?
 
     var body: some View {
         NavigationStack {
@@ -32,6 +33,7 @@ struct CaptureView: View {
                     Text(kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+                AppLaunchEditor(launch: $appLaunch)
                 if kind == .quest {
                     Section {
                         Toggle("Outside home", isOn: $outsideHome)
@@ -56,7 +58,7 @@ struct CaptureView: View {
             .toolbar {
                 PixelToolbarItem(placement: .confirmationAction) {
                     Button("Add to path") { save() }
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || pathID == nil)
+                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || pathID == nil || (appLaunch != nil && appLaunch?.url == nil))
                 }
                 PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
@@ -70,6 +72,7 @@ struct CaptureView: View {
     func save() {
         guard let pid = pathID else { return }
         var node = Node(kind: kind, title: title.trimmingCharacters(in: .whitespacesAndNewlines), cue: cue, after: after, createdOn: store.today)
+        node.appLaunch = appLaunch
         node.outsideHome = kind == .quest && outsideHome
         store.addNode(node, to: pid)
         dismiss()

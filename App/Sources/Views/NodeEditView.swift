@@ -78,6 +78,7 @@ struct NodeEditView: View {
                     Text(node.kind == .quest ? "Something you do once." : "Something you return to.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+                AppLaunchEditor(launch: $node.appLaunch)
                 if node.kind == .quest {
                     Section {
                         Toggle("Outside home", isOn: Binding(
@@ -114,7 +115,7 @@ struct NodeEditView: View {
             .toolbar {
                 PixelToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
-                        .disabled(node.title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(node.title.trimmingCharacters(in: .whitespaces).isEmpty || (node.appLaunch != nil && node.appLaunch?.url == nil))
                 }
                 PixelToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }

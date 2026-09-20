@@ -104,6 +104,7 @@ public struct Node: Codable, Identifiable, Hashable, Sendable {
     public var staleCheckOn: Day?
     /// Optional for compatibility with existing saved worlds.
     public var outsideHome: Bool?
+    public var appLaunch: AppLaunch?
 
     public var isOutsideQuest: Bool { kind == .quest && outsideHome == true }
 
