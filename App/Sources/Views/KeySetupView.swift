@@ -17,7 +17,7 @@ struct KeySetupView: View {
         PixelList {
             Section {
                 Text("Bring your own key. The app talks to the model you pay for, nothing in between. The key stays in this phone's keychain.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                    .pixelHelper()
             }
             Section("Provider") {
                 PixelChoices(title: "Provider", selection: $provider,
@@ -39,11 +39,10 @@ struct KeySetupView: View {
                 Button(testing ? "Asking the model" : "Test") { test() }
                     .disabled(testing || effectiveKey.isEmpty)
                 if let verdict {
-                    Text(verdict).font(.footnote).foregroundStyle(.secondary)
+                    Text(verdict).pixelHelper()
                 }
-            } footer: {
-                Text("One tiny request. A fraction of a cent.")
             }
+            Text("One tiny request. A fraction of a cent.").pixelHelper()
             if stored {
                 Section {
                     Button("Remove key", role: .destructive) {

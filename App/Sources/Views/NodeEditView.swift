@@ -29,23 +29,26 @@ struct CueEditor: View {
                 ("Weekly", PracticeRhythm.weekly)
             ])
         } else {
-            PixelChoices(title: "Days", selection: $cue.days, options: [
-                ("Anytime", DaysCue.any),
-                ("Weekend", DaysCue.weekend),
-                ("Weekday", DaysCue.weekday)
-            ])
             Toggle("Pick a date instead", isOn: $pickDate)
                 .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
             if pickDate {
                 PixelDatePicker("On", selection: $date, in: Date()..., displayedComponents: .date)
                     .onChange(of: date) { _, d in cue.on = Day(d) }
+            } else {
+                PixelChoices(title: "Days", selection: $cue.days, options: [
+                    ("Anytime", DaysCue.any),
+                    ("Weekend", DaysCue.weekend),
+                    ("Weekday", DaysCue.weekday)
+                ])
             }
         }
-        PixelChoices(title: "Time", selection: $cue.window, options: [
+        if forPractice || !pickDate {
+            PixelChoices(title: "Time", selection: $cue.window, options: [
                 ("Any", Window.any),
                 ("Morning", Window.morning),
                 ("Evening", Window.evening)
             ])
+        }
     }
 
     private var rhythm: Binding<PracticeRhythm> {
@@ -76,7 +79,7 @@ struct NodeEditView: View {
                 ("Routine", NodeKind.practice)
             ])
                     Text(node.kind == .quest ? "Something you do once." : "Something you return to.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .pixelHelper()
                 }
                 AppLaunchEditor(launch: $node.appLaunch)
                 if node.kind == .quest {
@@ -85,9 +88,8 @@ struct NodeEditView: View {
                             get: { node.outsideHome == true },
                             set: { node.outsideHome = $0 }
                         ))
-                    } footer: {
-                        Text("Highlight this quest when you turn on Going out today.")
                     }
+                    Text("Highlight this quest when you turn on Going out today.").pixelHelper()
                 }
                 Section(node.kind == .practice ? "How often?" : "When could you do this?") {
                     CueEditor(cue: $node.cue, forPractice: node.kind == .practice)

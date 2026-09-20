@@ -126,6 +126,15 @@ struct PixelList<Content: View>: View {
 }
 
 extension View {
+    /// Helper copy shares the page background instead of native section-footer chrome.
+    func pixelHelper() -> some View {
+        font(.caption)
+            .foregroundStyle(Color.gray.opacity(0.85))
+            .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+    }
+
     func pixelCard() -> some View {
         background(Ink.card, in: PixelPanel())
             .overlay(PixelPanel().stroke(Ink.line, lineWidth: 1))

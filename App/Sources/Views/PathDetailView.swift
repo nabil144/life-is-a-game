@@ -134,11 +134,7 @@ struct PathDetailView: View {
             }
             if kind == .quest {
                 Text("Tap one to change it or mark a completed quest as not done. Swipe left to let it go. Plus adds another.")
-                    .font(.caption)
-                    .foregroundStyle(Color.gray.opacity(0.85))
-                    .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
+                    .pixelHelper()
             }
         }
     }

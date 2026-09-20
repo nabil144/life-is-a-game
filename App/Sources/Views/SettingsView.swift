@@ -28,9 +28,7 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Text("One objective a day. Progress that cannot be lost.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Text("One objective a day. Progress that cannot be lost.").pixelHelper()
                     Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
                         .font(.footnote.monospaced())
                         .foregroundStyle(.secondary)
@@ -71,6 +69,7 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var talkSection: some View {
         Section {
             let ready = Talk.state.reason == nil
@@ -84,16 +83,15 @@ struct SettingsView: View {
             }
         } header: {
             Text("New paths")
-        } footer: {
-            Text("Your own key, your own model. The model asks, you answer, it writes down your words. Either way, the New path screen offers the other.")
         }
+        Text("Your own key, your own model. The model asks, you answer, it writes down your words. Either way, the New path screen offers the other.").pixelHelper()
     }
 
     private var upcomingSection: some View {
         let up = store.upcoming()
         return Section("Coming up") {
             if up.isEmpty {
-                Text("Nothing planned yet.").foregroundStyle(.secondary)
+                Text("Nothing planned yet.").pixelHelper()
             }
             ForEach(up, id: \.self) { o in
                 UpcomingRow(objective: o)
@@ -101,11 +99,11 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var dataSection: some View {
         Section {
             if store.keepsACopy {
-                Label("A copy lives in Files. New installs can pick that folder and come back.", systemImage: "checkmark.icloud")
-                    .foregroundStyle(.secondary)
+                Label("A copy lives in Files. New installs can pick that folder and come back.", systemImage: "checkmark.icloud").pixelHelper()
                 Button("Forget the folder", role: .destructive) { store.forgetCopy() }
             } else {
                 KeepCopyButton()
@@ -119,9 +117,8 @@ struct SettingsView: View {
             RestoreFileButton()
         } header: {
             Text("Your data")
-        } footer: {
-            Text("Cmd+R keeps what is on the phone. Deleting the app, or installing it under a new name, does not. The Files copy is the one that survives.")
         }
+        Text("Cmd+R keeps what is on the phone. Deleting the app, or installing it under a new name, does not. The Files copy is the one that survives.").pixelHelper()
     }
 
     private func exportWorld() {

@@ -31,15 +31,14 @@ struct CaptureView: View {
                 ("Routine", NodeKind.practice)
             ])
                     Text(kind == .quest ? "Something you do once." : "Something you return to.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .pixelHelper()
                 }
                 AppLaunchEditor(launch: $appLaunch)
                 if kind == .quest {
                     Section {
                         Toggle("Outside home", isOn: $outsideHome)
-                    } footer: {
-                        Text("Highlight this quest when you turn on Going out today.")
                     }
+                    Text("Highlight this quest when you turn on Going out today.").pixelHelper()
                 }
                 Section(kind == .practice ? "How often?" : "When could you do this?") {
                     CueEditor(cue: $cue, forPractice: kind == .practice)

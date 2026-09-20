@@ -97,9 +97,8 @@ struct NewPathView: View {
                         Button(action: talkInstead) {
                             Label("Talk it through instead", systemImage: "bubble.left.and.text.bubble.right")
                         }
-                    } footer: {
-                        Text("Your own key, your own model. It asks, you answer, it writes down your words.")
                     }
+                    Text("Your own key, your own model. It asks, you answer, it writes down your words.").pixelHelper()
                 case .off(let reason):
                     Section {
                         NavigationLink {
@@ -120,9 +119,8 @@ struct NewPathView: View {
                     Button("Add another milestone") { draft.milestones.append("") }
                 } header: {
                     Text("Name it, then one milestone")
-                } footer: {
-                    NavigationLink("What is a milestone?") { HelpView() }
                 }
+                NavigationLink("What is a milestone?") { HelpView() }.pixelHelper()
                 Section {
                     PixelActionMenu {
                         ForEach(templates, id: \.id) { t in
@@ -135,9 +133,8 @@ struct NewPathView: View {
                     } label: {
                         Label("Start from an example", systemImage: "doc.text")
                     }
-                } footer: {
-                    Text("Examples are yours to edit or delete.")
                 }
+                Text("Examples are yours to edit or delete.").pixelHelper()
                 Section {
                     DisclosureGroup("More", isExpanded: $more) {
                         TextField("Who are you on this path? e.g. Guitarist", text: $draft.identity)
@@ -156,9 +153,8 @@ struct NewPathView: View {
                         Button("Add a quest") { draft.nodes.append(.init(kind: .quest, title: "")) }
                         Button("Add a routine") { draft.nodes.append(.init(kind: .practice, title: "", cue: Cue(window: .evening))) }
                     }
-                } footer: {
-                    Text("All of this is optional. Quests can be added from the path any time.")
                 }
+                Text("All of this is optional. Quests can be added from the path any time.").pixelHelper()
             }
             .navigationTitle("New path")
             .navigationBarTitleDisplayMode(.inline)

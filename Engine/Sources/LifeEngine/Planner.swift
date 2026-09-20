@@ -45,16 +45,20 @@ public struct Planner: Sendable {
         var found: [Objective] = []
         for path in paths {
             guard path.status == .active, !path.isEvolved else { continue }
-            guard let baseWindow = roleWindow(path.role, on: day) else { continue }
+            let baseWindow = roleWindow(path.role, on: day)
             let finalDays = isInFinalDays(path, on: day)
-            if path.role == .decision, !finalDays, !decisionCadenceAllows(path, on: day, history: []) { continue }
+            let cadenceAllows = path.role != .decision || finalDays || decisionCadenceAllows(path, on: day, history: [])
 
             for node in path.nodes {
                 guard node.isOpen else { continue }
                 if !practiceReady(node, on: day) { continue }
                 if let after = node.after, let blocker = path.node(after), !blocker.isDone { continue }
                 guard cueMatchesDay(node.cue, day: day) else { continue }
-                let window = node.cue.window == .any ? baseWindow : node.cue.window
+                // An exact date overrides hidden day/time choices and the path's
+                // usual cadence. Keep those preferences intact for date mode off.
+                guard node.cue.on != nil || (baseWindow != nil && cadenceAllows) else { continue }
+                let window: Window = node.cue.on != nil ? .any
+                    : (node.cue.window == .any ? (baseWindow ?? .any) : node.cue.window)
                 found.append(Objective(day: day, window: window, pathID: path.id, nodeID: node.id, kind: .objective))
             }
         }
@@ -104,16 +108,20 @@ public struct Planner: Sendable {
 
         for (pi, path) in paths.enumerated() {
             guard path.status == .active, !path.isEvolved else { continue }
-            guard let baseWindow = roleWindow(path.role, on: day) else { continue }
+            let baseWindow = roleWindow(path.role, on: day)
             let finalDays = isInFinalDays(path, on: day)
-            if path.role == .decision, !finalDays, !decisionCadenceAllows(path, on: day, history: history) { continue }
+            let cadenceAllows = path.role != .decision || finalDays || decisionCadenceAllows(path, on: day, history: history)
 
             for (ni, node) in path.nodes.enumerated() {
                 guard node.isOpen else { continue }
                 if !practiceReady(node, on: day) { continue }
                 if let after = node.after, let blocker = path.node(after), !blocker.isDone { continue }
                 guard cueMatchesDay(node.cue, day: day) else { continue }
-                let window = node.cue.window == .any ? baseWindow : node.cue.window
+                // An exact date overrides hidden day/time choices and the path's
+                // usual cadence. Keep those preferences intact for date mode off.
+                guard node.cue.on != nil || (baseWindow != nil && cadenceAllows) else { continue }
+                let window: Window = node.cue.on != nil ? .any
+                    : (node.cue.window == .any ? (baseWindow ?? .any) : node.cue.window)
 
                 let surfacings = history.filter { $0.nodeID == node.id }
                 let last = surfacings.map(\.day).max()

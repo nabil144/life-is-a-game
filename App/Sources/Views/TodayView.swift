@@ -203,9 +203,8 @@ struct TodayView: View {
                             showOuting = false
                         }
                     }
-                } footer: {
-                    Text("Choose a future time today. One notification lists your remaining outside quests. Tapping it opens Today. Going out resets tomorrow.")
                 }
+                Text("Choose a future time today. One notification lists your remaining outside quests. Tapping it opens Today. Going out resets tomorrow.").pixelHelper()
                 if reminderDenied {
                     Text("Notifications are off. Enable them in iPhone Settings, then set the reminder again.")
                 }
@@ -232,11 +231,7 @@ struct TodayView: View {
                 bucketSection(bucket)
             }
             Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
-                .font(.caption)
-                .foregroundStyle(Color.gray.opacity(0.85))
-                .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .pixelHelper()
             let entries = store.recentLog()
             if !entries.isEmpty {
                 Section {

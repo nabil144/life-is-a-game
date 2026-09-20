@@ -24,9 +24,8 @@ struct MilestoneFactView: View {
             PixelList {
                 Section {
                     PixelDatePicker("It became true on", selection: $day, in: ...Date(), displayedComponents: .date)
-                } footer: {
-                    Text("A tap on the path should not take this back. Change the day if the app was not here yet.")
                 }
+                Text("A tap on the path should not take this back. Change the day if the app was not here yet.").pixelHelper()
                 Section {
                     Button("It was not true yet", role: .destructive) { confirmTakeBack = true }
                 }

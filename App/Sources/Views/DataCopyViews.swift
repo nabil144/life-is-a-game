@@ -62,9 +62,9 @@ struct KeepCopySheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("The phone forgets this app when it is deleted or installed under a new name. A folder in Files does not.")
-                    .foregroundStyle(.secondary)
+                    .pixelHelper()
                 Text("Pick one. iCloud Drive is safest. Every change writes there. After a new install, pick the same folder and the paths come back.")
-                    .foregroundStyle(.secondary)
+                    .pixelHelper()
                 KeepCopyButton(title: "Pick a folder") { dismiss() }
                     .buttonStyle(PixelButtonStyle(selected: true))
                     .controlSize(.large)

@@ -27,9 +27,8 @@ struct WorldMilestoneForm: View {
                     Section {
                         Button("This is true now") { save(reached: true) }
                             .disabled(trimmed.isEmpty)
-                    } footer: {
-                        Text("Record this milestone as reached today.")
                     }
+                    Text("Record this milestone as reached today.").pixelHelper()
                 }
             }
             .navigationTitle(milestone == nil ? "New milestone" : "Milestone")

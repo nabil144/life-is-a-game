@@ -20,7 +20,7 @@ public enum PracticeRhythm: String, CaseIterable, Sendable {
     case everyday, weekdays, weekends, few, weekly
 }
 
-/// When a node may surface. `on` pins it to one date and overrides `days`.
+/// When a node may surface. `on` pins it to one date and overrides `days` and `window`.
 /// `every` is how many days a practice waits after lastDone. Quests ignore it.
 public struct Cue: Hashable, Sendable {
     public var days: DaysCue

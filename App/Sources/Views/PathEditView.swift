@@ -60,11 +60,7 @@ struct PathEditView: View {
                     Text("Milestones")
                 }
                 Text("Tap a milestone on the path to tick it. Here you change the words, the order, or drop one.")
-                    .font(.caption)
-                    .foregroundStyle(Color.gray.opacity(0.85))
-                    .listRowInsets(EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
+                    .pixelHelper()
             }
             .navigationTitle("This path")
             .navigationBarTitleDisplayMode(.inline)

@@ -32,8 +32,7 @@ struct AppLaunchEditor: View {
             Text(launch.kind == .shortcut
                  ? "In Apple Shortcuts, create a shortcut with the Open App action, choose your app, and enter that shortcut’s name here. Test it before saving."
                  : "Paste a launch link supported by the app. Test it before saving; some apps open through Apple Shortcuts instead.")
-                .font(.caption).foregroundStyle(Color.gray.opacity(0.85))
-                .listRowBackground(Color.clear)
+                .pixelHelper()
             if launch.kind == .shortcut {
                 Link("Open Shortcuts", destination: URL(string: "shortcuts://")!)
                     .font(.caption).listRowBackground(Color.clear)
