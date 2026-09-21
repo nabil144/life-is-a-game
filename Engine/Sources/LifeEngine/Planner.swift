@@ -56,7 +56,7 @@ public struct Planner: Sendable {
                 guard cueMatchesDay(node.cue, day: day) else { continue }
                 // An exact date overrides hidden day/time choices and the path's
                 // usual cadence. Keep those preferences intact for date mode off.
-                guard node.cue.on != nil || (baseWindow != nil && cadenceAllows) else { continue }
+                guard node.cue.on != nil || node.cue.monthDay != nil || (baseWindow != nil && cadenceAllows) else { continue }
                 let window: Window = node.cue.on != nil ? .any
                     : (node.cue.window == .any ? (baseWindow ?? .any) : node.cue.window)
                 found.append(Objective(day: day, window: window, pathID: path.id, nodeID: node.id, kind: .objective))
@@ -119,7 +119,7 @@ public struct Planner: Sendable {
                 guard cueMatchesDay(node.cue, day: day) else { continue }
                 // An exact date overrides hidden day/time choices and the path's
                 // usual cadence. Keep those preferences intact for date mode off.
-                guard node.cue.on != nil || (baseWindow != nil && cadenceAllows) else { continue }
+                guard node.cue.on != nil || node.cue.monthDay != nil || (baseWindow != nil && cadenceAllows) else { continue }
                 let window: Window = node.cue.on != nil ? .any
                     : (node.cue.window == .any ? (baseWindow ?? .any) : node.cue.window)
 
@@ -153,11 +153,16 @@ public struct Planner: Sendable {
     func practiceReady(_ node: Node, on day: Day) -> Bool {
         guard node.kind == .practice else { return true }
         guard let last = node.lastDone else { return true }
+        if node.cue.monthDay != nil && node.cue.on == nil { return day > last }
         return day.days(since: last) >= max(node.cue.every, 1)
     }
 
     func cueMatchesDay(_ cue: Cue, day: Day) -> Bool {
         if let on = cue.on { return on == day }
+        if let monthDay = cue.monthDay {
+            let daysInMonth = Day.calendar.range(of: .day, in: .month, for: day.utcDate)!.count
+            return day.day == min(daysInMonth, max(1, monthDay))
+        }
         switch cue.days {
         case .any: return true
         case .weekday: return !isWeekend(day)

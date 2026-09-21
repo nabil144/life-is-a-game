@@ -85,6 +85,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 101 preselects Capture kind from Today’s Quests or Routine selection. When supplies no override and keeps the Quest default. Selected path prefill remains. Swift syntax and diff checks passed; iPhone interaction remains unverified.
 
+- 2026-09-21. Build 102 adds Monthly routines with a 1–31 day picker in Capture and Edit. Shorter months use their last day; the selected date overrides role day restrictions. Cue JSON remains backward compatible. All 77 engine tests passed, including five monthly regression tests. App Swift syntax passed; iPhone picker layout remains unverified.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

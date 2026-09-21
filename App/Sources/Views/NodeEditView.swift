@@ -2,7 +2,7 @@ import SwiftUI
 import LifeEngine
 
 /// Days, time of day, or one exact date. Shared by Capture and the node editor.
-/// Practices reuse the same cue: frequency is `days` plus `every`, not a second field.
+/// Monthly routines store a calendar day rather than an elapsed-day interval.
 struct CueEditor: View {
     @Binding var cue: Cue
     var forPractice: Bool
@@ -26,8 +26,17 @@ struct CueEditor: View {
             ])
             PixelChoices(title: "How often", selection: rhythm, options: [
                 ("Every 3 days", PracticeRhythm.few),
-                ("Weekly", PracticeRhythm.weekly)
+                ("Weekly", PracticeRhythm.weekly),
+                ("Monthly", PracticeRhythm.monthly)
             ])
+            if cue.practiceRhythm == .monthly {
+                PixelMenuPicker("Day of month", selection: Binding(
+                    get: { cue.monthDay ?? 1 },
+                    set: { cue.monthDay = $0 }
+                ), options: (1...31).map { .init(title: "Day \($0)", value: $0) })
+                Text("Repeats on this day each month. Shorter months use their last day.")
+                    .pixelHelper()
+            }
         } else {
             Toggle("Pick a date instead", isOn: $pickDate)
                 .onChange(of: pickDate) { _, on in cue.on = on ? Day(date) : nil }
@@ -113,6 +122,9 @@ struct NodeEditView: View {
                 }
             }
             .navigationTitle(node.kind == .quest ? "Quest" : "Routine")
+            .onChange(of: node.kind) { _, kind in
+                if kind == .quest { node.cue.monthDay = nil }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 PixelToolbarItem(placement: .confirmationAction) {

@@ -27,7 +27,7 @@ The owner, first. Then anyone with interests that are not their job. The app doe
 - Role. `hobby`, `craft`, `decision`, `lab`, `work`. Sets default cue windows, surfacing cadence, and voice.
 - Node. `quest` (one-shot) or `practice` (repeatable, never done). Optional single `after` blocker. Has a cue.
 - Milestone. A sentence describing a state of the world. Ticked by hand. Order gives the Path its stages.
-- Cue. When a node may surface. Quests: weekday, weekend, morning, evening, anytime, a date. Practices use the same cue: everyday, weekdays, weekends, every 3 days, or weekly, plus a time of day. Not a second field.
+- Cue. When a node may surface. Quests: weekday, weekend, morning, evening, anytime, a date. Practices use the same cue: everyday, weekdays, weekends, every 3 days, weekly, or monthly on a chosen day, plus a time of day. Monthly dates use the last day in shorter months and override the role's usual day restrictions.
 - LogEntry. What happened, when, optional photo. The proof and the memory.
 
 ## Surfacing rules

@@ -53,6 +53,9 @@ struct CaptureView: View {
                 }
             }
             .navigationTitle("Capture")
+            .onChange(of: kind) { _, kind in
+                if kind == .quest { cue.monthDay = nil }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 PixelToolbarItem(placement: .confirmationAction) {

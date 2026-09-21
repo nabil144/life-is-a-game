@@ -61,6 +61,7 @@ func cueText(_ cue: Cue, kind: NodeKind = .quest) -> String {
         case .weekends: s = "weekends"
         case .few: s = "every \(cue.every) days"
         case .weekly: s = "weekly"
+        case .monthly: s = "monthly on day \(cue.monthDay ?? 1)"
         }
     } else {
         s = cue.days == .any ? "anytime" : cue.days.rawValue
