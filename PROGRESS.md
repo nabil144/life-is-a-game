@@ -75,6 +75,7 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. Pin World orbs to branch tips so names do not lift them. Build 0.17 (23). Next: pull, select a path.
 
 - 2026-09-21. Local build 96 changes add the Today path-filter overflow triangle and keep long selected names on one line with an ellipsis and a stable filter width. Swift syntax parsed on Linux; iOS layout still needs checking on the Mac or phone.
+- 2026-09-21. Build 97 lets a routine log row open an Undo completion confirmation in Today or path detail. Undo removes that entry, restores the remaining latest completion date, and persists it. Today keeps Recently visible when nothing is due. Three Store regression tests passed on Linux against the actual Store with unused Apple bookmark and draft-creation APIs stubbed. Swift syntax checks passed; iOS interaction remains unverified. Push is pending explicit remote/branch approval after automatic review blocked it.
 
 ## How to keep this file true
 

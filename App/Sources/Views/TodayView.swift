@@ -52,12 +52,7 @@ struct TodayView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 pin
-                if due.isEmpty {
-                    quiet
-                    Spacer()
-                } else {
-                    dueList
-                }
+                dueList
             }
             .background(Ink.ground)
             .toolbar(openPath == nil ? .hidden : .automatic, for: .navigationBar)
@@ -313,11 +308,20 @@ struct TodayView: View {
 
     private var dueList: some View {
         List {
-            ForEach(buckets) { bucket in
-                bucketSection(bucket)
+            if due.isEmpty {
+                quiet
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
-            Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
-                .pixelHelper()
+            if !due.isEmpty {
+                ForEach(buckets) { bucket in
+                    bucketSection(bucket)
+                }
+            }
+            if !due.isEmpty {
+                Text("Swipe right when it is done, or tap to confirm. A routine will come back the next day its cue allows.")
+                    .pixelHelper()
+            }
             let entries = filteredPathID.map { Array(store.log(for: $0).prefix(5)) } ?? store.recentLog()
             if !entries.isEmpty {
                 Section {
@@ -627,9 +631,28 @@ struct PathRow: View {
 
 struct LogRow: View {
     @Environment(Store.self) private var store
+    @State private var confirmUndo = false
     let entry: LogEntry
     var pixelStyle = false
     var body: some View {
+        Group {
+            if store.canUndoRoutineCompletion(entry) {
+                Button { confirmUndo = true } label: { content }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Undo this routine completion")
+            } else {
+                content
+            }
+        }
+        .confirmationDialog("Undo this routine completion?", isPresented: $confirmUndo, titleVisibility: .visible) {
+            Button("Undo completion", role: .destructive) { store.undoRoutineCompletion(entry.id) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Remove the check for \(entry.text) on \(entry.day.description). Earlier completions stay in your log.")
+        }
+    }
+
+    private var content: some View {
         HStack(spacing: pixelStyle ? 8 : 14) {
             if let f = entry.photoFile, let img = UIImage(contentsOfFile: store.photoURL(f).path) {
                 if pixelStyle {
@@ -656,6 +679,7 @@ struct LogRow: View {
             }
             Spacer()
         }
+        .contentShape(Rectangle())
         .padding(.vertical, pixelStyle ? 0 : 6)
     }
 }

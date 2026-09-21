@@ -243,6 +243,28 @@ final class Store {
         Array(world.log.sorted { $0.day > $1.day }.prefix(limit))
     }
 
+    func canUndoRoutineCompletion(_ entry: LogEntry) -> Bool {
+        guard entry.milestoneID == nil, let nodeID = entry.nodeID,
+              let (path, node) = node(nodeID) else { return false }
+        return path.id == entry.pathID && node.kind == .practice
+            && world.log.contains { $0.id == entry.id }
+    }
+
+    func undoRoutineCompletion(_ entryID: UUID) {
+        guard let entry = world.log.first(where: { $0.id == entryID }),
+              canUndoRoutineCompletion(entry), let nodeID = entry.nodeID else { return }
+        mutate { w in
+            guard let p = w.paths.firstIndex(where: { $0.id == entry.pathID }),
+                  let n = w.paths[p].nodes.firstIndex(where: { $0.id == nodeID }) else { return }
+            w.log.removeAll { $0.id == entryID }
+            if w.paths[p].nodes[n].lastDone == entry.day {
+                w.paths[p].nodes[n].lastDone = w.log
+                    .filter { $0.pathID == entry.pathID && $0.nodeID == nodeID && $0.milestoneID == nil }
+                    .map(\.day).max()
+            }
+        }
+    }
+
     // MARK: Mutations
 
     private func mutate(_ change: (inout World) -> Void) {

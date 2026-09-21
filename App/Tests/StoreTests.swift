@@ -96,6 +96,75 @@ final class StoreTests: XCTestCase {
         XCTAssertTrue(other.world.onboarded)
     }
 
+    func testUndoOnlyRoutineCompletionMakesItDueAndPersists() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = Store(directory: directory)
+        let node = Node(kind: .practice, title: "Chords", createdOn: store.today)
+        let path = Path(name: "Guitar", identity: "Player", glyph: "star", role: .hobby, nodes: [node])
+        store.add(path)
+        store.respond(.done, nodeID: node.id)
+        let entry = try XCTUnwrap(store.world.log.first)
+        XCTAssertTrue(store.canUndoRoutineCompletion(entry))
+        XCTAssertFalse(store.isDueToday(node.id))
+
+        store.undoRoutineCompletion(entry.id)
+        store.undoRoutineCompletion(entry.id)
+
+        XCTAssertTrue(store.world.log.isEmpty)
+        XCTAssertNil(store.node(node.id)?.1.lastDone)
+        XCTAssertTrue(store.isDueToday(node.id))
+        let reloaded = Store(directory: directory)
+        XCTAssertTrue(reloaded.world.log.isEmpty)
+        XCTAssertNil(reloaded.node(node.id)?.1.lastDone)
+    }
+
+    func testUndoRoutineLogPreservesOtherChecksAndRestoresPreviousDate() throws {
+        let store = makeStore()
+        let earlier = store.today.adding(days: -3)
+        var node = Node(kind: .practice, title: "Chords", cue: Cue(every: 3), createdOn: earlier)
+        node.lastDone = store.today
+        let path = Path(name: "Guitar", identity: "Player", glyph: "star", role: .hobby, nodes: [node])
+        let previous = LogEntry(day: earlier, pathID: path.id, nodeID: node.id, text: node.title)
+        let latest = LogEntry(day: store.today, pathID: path.id, nodeID: node.id, text: node.title)
+        let duplicate = LogEntry(day: store.today, pathID: path.id, nodeID: node.id, text: node.title)
+        var world = World()
+        world.paths = [path]
+        world.log = [previous, latest, duplicate]
+        try store.importData(JSONFiles.encoder().encode(world))
+
+        store.undoRoutineCompletion(duplicate.id)
+        XCTAssertEqual(store.node(node.id)?.1.lastDone, store.today)
+        XCTAssertFalse(store.isDueToday(node.id))
+        store.undoRoutineCompletion(latest.id)
+        XCTAssertEqual(store.node(node.id)?.1.lastDone, earlier)
+        XCTAssertEqual(store.world.log.map(\.id), [previous.id])
+        XCTAssertTrue(store.isDueToday(node.id))
+    }
+
+    func testUndoOlderRoutineCheckKeepsLatestAndIgnoresQuestEntries() throws {
+        let store = makeStore()
+        let earlier = store.today.adding(days: -1)
+        var routine = Node(kind: .practice, title: "Chords", createdOn: earlier)
+        routine.lastDone = store.today
+        let quest = Node(kind: .quest, title: "Strings", createdOn: earlier)
+        let path = Path(name: "Guitar", identity: "Player", glyph: "star", role: .hobby, nodes: [routine, quest])
+        let old = LogEntry(day: earlier, pathID: path.id, nodeID: routine.id, text: routine.title)
+        let latest = LogEntry(day: store.today, pathID: path.id, nodeID: routine.id, text: routine.title)
+        var world = World()
+        world.paths = [path]
+        world.log = [old, latest]
+        try store.importData(JSONFiles.encoder().encode(world))
+        store.respond(.done, nodeID: quest.id)
+        let questEntry = try XCTUnwrap(store.world.log.last)
+
+        store.undoRoutineCompletion(old.id)
+        XCTAssertEqual(store.node(routine.id)?.1.lastDone, store.today)
+        XCTAssertFalse(store.canUndoRoutineCompletion(questEntry))
+        store.undoRoutineCompletion(questEntry.id)
+        XCTAssertTrue(store.node(quest.id)?.1.isDone == true)
+        XCTAssertEqual(store.world.log.map(\.id), [latest.id, questEntry.id])
+    }
+
     func testImportBundleAppendsDrafts() throws {
         let store = makeStore()
         let bundle = PathBundle(paths: [
