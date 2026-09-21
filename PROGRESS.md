@@ -87,6 +87,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 102 adds Monthly routines with a 1–31 day picker in Capture and Edit. Shorter months use their last day; the selected date overrides role day restrictions. Cue JSON remains backward compatible. All 77 engine tests passed, including five monthly regression tests. App Swift syntax passed; iPhone picker layout remains unverified.
 
+- 2026-09-21. Build 103 expands Today sort buttons across the row with 44-point height and Quest/Routine icons. List items show those icons only in When mode. Selected-button icons use the dark foreground for contrast. Swift syntax and diff checks passed; iPhone layout remains unverified.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

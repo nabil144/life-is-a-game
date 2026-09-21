@@ -40,7 +40,6 @@ struct TodayView: View {
     @State private var filteredPathID: UUID?
     @State private var showPathFilter = false
     @State private var morePathsBelow = false
-    @ScaledMetric(relativeTo: .caption) private var sortLabelWidth: CGFloat = 56
     @State private var authorized = true
     @State private var pendingID: UUID?
     @State private var openPath: OpenPath?
@@ -246,15 +245,21 @@ struct TodayView: View {
     @ViewBuilder
     private var sortControls: some View {
         if !due.isEmpty {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 ForEach(TodaySort.allCases) { s in
                     Button { sort = s } label: {
-                        Text(s.label)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: sortLabelWidth)
-                            .padding(.horizontal, 4)
+                        HStack(spacing: 4) {
+                            if s != .when {
+                                PixelQuestMark(routine: s == .practices, color: sort == s ? Ink.ground : Ink.brass)
+                                    .fixedSize()
+                            }
+                            Text(s.label)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(PixelButtonStyle(selected: sort == s, compact: true))
+                    .buttonStyle(PixelButtonStyle(selected: sort == s, fillsWidth: true))
                     .accessibilityAddTraits(sort == s ? .isSelected : [])
                 }
             }
@@ -489,7 +494,9 @@ private struct TodayRow: View {
         if let (path, node) = store.node(objective.nodeID) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .center, spacing: 8) {
-                    PixelQuestMark(routine: node.kind == .practice)
+                    if showKind {
+                        PixelQuestMark(routine: node.kind == .practice)
+                    }
                     Button(action: onAsk) {
                         VStack(alignment: .leading, spacing: 2) {
                             if showKind {
