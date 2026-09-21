@@ -79,6 +79,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 98 keeps Today sort controls below the Out/path-filter row. The selected path uses the remaining row width and wraps to show its full name. Swift syntax and diff checks passed; iPhone layout still needs visual verification.
 
+- 2026-09-21. Build 99 makes Today’s Recently section secondary with muted, smaller text, unboxed checkmarks, and clear row backgrounds. Routine rows retain a 44-point minimum height and show a quiet undo icon. Swift syntax and diff checks passed; iPhone appearance remains unverified.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

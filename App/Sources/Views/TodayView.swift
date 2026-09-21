@@ -321,23 +321,17 @@ struct TodayView: View {
             if !entries.isEmpty {
                 Section {
                     ForEach(entries) { entry in
-                        LogRow(entry: entry, pixelStyle: true)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
+                        LogRow(entry: entry, pixelStyle: true, subdued: true)
+                            .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
                             .listRowSeparator(.hidden)
-                            .listRowBackground(
-                                PixelPanel().fill(Ink.card)
-                                    .overlay(PixelPanel().stroke(Ink.line, lineWidth: 2))
-                                    .clipShape(PixelPanel())
-                                    .padding(.horizontal, 1)
-                                    .padding(.vertical, 3)
-                            )
+                            .listRowBackground(Color.clear)
                     }
                 } header: {
                     Text("Recently")
-                        .font(.system(.caption, design: .monospaced).weight(.bold))
-                        .textCase(.uppercase)
-                        .tracking(2)
-                        .foregroundStyle(Ink.brass)
+                        .font(.system(.caption, design: .monospaced).weight(.medium))
+                        .textCase(nil)
+                        .foregroundStyle(Ink.muted)
+                        .padding(.top, 12)
                 }
             }
         }
@@ -629,6 +623,7 @@ struct LogRow: View {
     @State private var confirmUndo = false
     let entry: LogEntry
     var pixelStyle = false
+    var subdued = false
     var body: some View {
         Group {
             if store.canUndoRoutineCompletion(entry) {
@@ -657,7 +652,12 @@ struct LogRow: View {
                     Image(uiImage: img).resizable().scaledToFill().frame(width: 36, height: 36).clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             } else {
-                if pixelStyle {
+                if subdued {
+                    Image(systemName: entry.milestoneID == nil ? "checkmark" : "trophy.fill")
+                        .font(.caption)
+                        .foregroundStyle(Ink.muted)
+                        .frame(width: 28, height: 28)
+                } else if pixelStyle {
                     Image(systemName: entry.milestoneID == nil ? "checkmark" : "trophy.fill")
                         .font(.caption.weight(.bold)).foregroundStyle(Ink.brass)
                         .frame(width: 28, height: 28)
@@ -667,13 +667,22 @@ struct LogRow: View {
                 }
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.text).font(.body)
+                Text(entry.text)
+                    .font(subdued ? .subheadline : .body)
+                    .foregroundStyle(subdued ? Ink.muted : Ink.words)
                 Text(entry.day.description)
                     .font(pixelStyle ? .system(.caption, design: .monospaced) : .caption)
                     .foregroundStyle(pixelStyle ? Ink.muted : .secondary)
             }
             Spacer()
+            if subdued && store.canUndoRoutineCompletion(entry) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.caption)
+                    .foregroundStyle(Ink.muted)
+                    .accessibilityHidden(true)
+            }
         }
+        .frame(minHeight: subdued ? 44 : nil)
         .contentShape(Rectangle())
         .padding(.vertical, pixelStyle ? 0 : 6)
     }
