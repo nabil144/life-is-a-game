@@ -74,6 +74,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-13. Drop World milestone rings. Build 0.17 (22). Next: pull, pinch: only paths and twigs.
 - 2026-09-13. Pin World orbs to branch tips so names do not lift them. Build 0.17 (23). Next: pull, select a path.
 
+- 2026-09-21. Local build 96 changes add the Today path-filter overflow triangle and keep long selected names on one line with an ellipsis and a stable filter width. Swift syntax parsed on Linux; iOS layout still needs checking on the Mac or phone.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

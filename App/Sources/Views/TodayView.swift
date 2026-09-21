@@ -32,6 +32,7 @@ struct TodayView: View {
     @AppStorage(Prefs.todaySortKey) private var sort: TodaySort = .quests
     @State private var filteredPathID: UUID?
     @State private var showPathFilter = false
+    @State private var morePathsBelow = false
     @ScaledMetric(relativeTo: .caption) private var sortLabelWidth: CGFloat = 56
     @State private var authorized = true
     @State private var pendingID: UUID?
@@ -123,10 +124,10 @@ struct TodayView: View {
                     sortControls
                     Spacer(minLength: 0)
                     pathFilter
-                        .frame(minWidth: 44, maxWidth: 88, alignment: .trailing)
+                        .frame(width: 88, alignment: .trailing)
                 }
                 VStack(spacing: 2) {
-                    HStack { outingControls; Spacer(); pathFilter.frame(maxWidth: 120) }
+                    HStack { outingControls; Spacer(); pathFilter.frame(width: 120) }
                     sortControls
                 }
             }
@@ -143,15 +144,14 @@ struct TodayView: View {
     private var pathFilter: some View {
         HStack(spacing: 0) {
             Button { showPathFilter = true } label: {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 4) {
-                        Text(filteredPath?.name ?? "All paths").lineLimit(1)
-                        Image(systemName: "chevron.down").font(.caption2.bold())
-                    }.fixedSize(horizontal: true, vertical: false)
-                    HStack(spacing: 4) {
-                        Image(systemName: filteredPath?.glyph ?? "line.3.horizontal.decrease")
-                        Image(systemName: "chevron.down").font(.caption2.bold())
-                    }
+                HStack(spacing: 4) {
+                    Text(filteredPath?.name ?? "All paths")
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.bold())
+                        .fixedSize()
                 }
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(filteredPathID == nil ? Ink.muted : Ink.brass)
@@ -171,6 +171,27 @@ struct TodayView: View {
                     }.padding(8)
                 }
                 .scrollIndicators(.hidden)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentSize.height > geometry.visibleRect.maxY + 2
+                } action: { _, hasMore in
+                    morePathsBelow = hasMore
+                }
+                .overlay(alignment: .bottom) {
+                    if morePathsBelow {
+                        Image(systemName: "arrowtriangle.down.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Ink.muted)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 20)
+                            .background {
+                                LinearGradient(colors: [Ink.ground.opacity(0), Ink.ground],
+                                               startPoint: .top, endPoint: .center)
+                            }
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .onDisappear { morePathsBelow = false }
                 .frame(width: 280, height: min(CGFloat(store.activePaths.count + 1) * 48 + 16, 336))
                 .presentationCompactAdaptation(.popover)
                 .presentationBackground(Ink.ground)
