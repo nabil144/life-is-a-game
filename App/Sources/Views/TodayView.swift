@@ -250,16 +250,30 @@ struct TodayView: View {
                     Button { sort = s } label: {
                         HStack(spacing: 4) {
                             if s != .when {
-                                PixelQuestMark(routine: s == .practices, color: sort == s ? Ink.ground : Ink.brass)
+                                PixelQuestMark(routine: s == .practices,
+                                               color: sort == s ? Ink.brass : Ink.muted,
+                                               pixelSize: 2)
                                     .fixedSize()
                             }
                             Text(s.label)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                         }
-                        .frame(maxWidth: .infinity)
+                        .font(.system(.caption, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(sort == s ? Ink.brass : Ink.muted)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .background(sort == s ? Ink.card : Color.clear, in: PixelPanel())
+                        .overlay(alignment: .bottom) {
+                            if sort == s {
+                                Rectangle().fill(Ink.brass)
+                                    .frame(height: 2)
+                                    .padding(.horizontal, 8)
+                            }
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(PixelButtonStyle(selected: sort == s, fillsWidth: true))
+                    .buttonStyle(.plain)
                     .accessibilityAddTraits(sort == s ? .isSelected : [])
                 }
             }

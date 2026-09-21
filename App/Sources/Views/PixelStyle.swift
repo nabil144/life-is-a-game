@@ -77,6 +77,7 @@ struct PixelButtonStyle: ButtonStyle {
 struct PixelQuestMark: View {
     var routine = false
     var color: Color = Ink.brass
+    var pixelSize: CGFloat = 3
     private var rows: [String] {
         routine ? ["0011100", "0100010", "1000001", "1001001", "1000101", "0100010", "0011100"]
                 : ["0001000", "0011100", "0110110", "1100011", "0110110", "0011100", "0001000"]
@@ -88,7 +89,7 @@ struct PixelQuestMark: View {
                 HStack(spacing: 0) {
                     ForEach(0..<7, id: \.self) { x in
                         Rectangle().fill(Array(rows[y])[x] == "1" ? color : .clear)
-                            .frame(width: 3, height: 3)
+                            .frame(width: pixelSize, height: pixelSize)
                     }
                 }
             }

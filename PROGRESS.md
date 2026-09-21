@@ -89,6 +89,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 103 expands Today sort buttons across the row with 44-point height and Quest/Routine icons. List items show those icons only in When mode. Selected-button icons use the dark foreground for contrast. Swift syntax and diff checks passed; iPhone layout remains unverified.
 
+- 2026-09-21. Build 104 softens Today sort controls into full-width tabs with caption labels and 14-point icons. Only the selected tab has a subtle card background and brass underline; unselected tabs are muted and unboxed. Visible tabs are 30 points high with 44-point tap areas. Swift syntax and diff checks passed; iPhone appearance remains unverified.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.
