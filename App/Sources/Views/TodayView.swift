@@ -111,20 +111,14 @@ struct TodayView: View {
                 }
             }
             .frame(height: dateSlot)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 4) {
+            VStack(spacing: 2) {
+                HStack(spacing: 8) {
                     outingControls
-                        .frame(minWidth: 64, alignment: .leading)
-                    Spacer(minLength: 0)
-                    sortControls
-                    Spacer(minLength: 0)
+                        .fixedSize(horizontal: true, vertical: false)
                     pathFilter
-                        .frame(width: 88, alignment: .trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                VStack(spacing: 2) {
-                    HStack { outingControls; Spacer(); pathFilter.frame(width: 120) }
-                    sortControls
-                }
+                sortControls
             }
             if let error = notifier.outsideReminderError {
                 Text(error).font(.caption).foregroundStyle(Ink.muted)
@@ -141,8 +135,9 @@ struct TodayView: View {
             Button { showPathFilter = true } label: {
                 HStack(spacing: 4) {
                     Text(filteredPath?.name ?? "All paths")
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     Image(systemName: "chevron.down")
                         .font(.caption2.bold())

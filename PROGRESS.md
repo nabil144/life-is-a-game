@@ -77,6 +77,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 - 2026-09-21. Local build 96 changes add the Today path-filter overflow triangle and keep long selected names on one line with an ellipsis and a stable filter width. Swift syntax parsed on Linux; iOS layout still needs checking on the Mac or phone.
 - 2026-09-21. Build 97 lets a routine log row open an Undo completion confirmation in Today or path detail. Undo removes that entry, restores the remaining latest completion date, and persists it. Today keeps Recently visible when nothing is due. Three Store regression tests passed on Linux against the actual Store with unused Apple bookmark and draft-creation APIs stubbed. Swift syntax checks passed; iOS interaction remains unverified. Push is pending explicit remote/branch approval after automatic review blocked it.
 
+- 2026-09-21. Build 98 keeps Today sort controls below the Out/path-filter row. The selected path uses the remaining row width and wraps to show its full name. Swift syntax and diff checks passed; iPhone layout still needs visual verification.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.
