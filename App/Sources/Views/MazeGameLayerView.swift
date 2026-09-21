@@ -10,6 +10,7 @@ final class MazeGameLayerView: UIView {
     private var dotLayers: [Int: CAShapeLayer] = [:]
     private var link: CADisplayLink?
     private var lastTime: CFTimeInterval?
+    private var inputSpeed: Double = 0
     var onPosition: ((CGPoint) -> Void)?
     var onScore: ((Int) -> Void)?
     var paused = false { didSet { updatePause() } }
@@ -48,16 +49,20 @@ final class MazeGameLayerView: UIView {
     }
 
     @objc private func updatePause() {
+        if paused || UIApplication.shared.applicationState != .active { inputSpeed = 0 }
         link?.isPaused = paused || UIApplication.shared.applicationState != .active
         lastTime = nil
     }
-    func steer(_ direction: MazeGameBoard.Direction) { game.steer(direction) }
+    func control(_ input: MazeJoystick) {
+        if let direction = input.direction { game.steer(direction) }
+        inputSpeed = input.speed
+    }
 
     fileprivate func tick(_ display: CADisplayLink) {
         guard !paused, UIApplication.shared.applicationState == .active else { lastTime = nil; return }
         let dt = lastTime.map { display.timestamp - $0 } ?? 0
         lastTime = display.timestamp
-        let eaten = game.advance(seconds: dt)
+        let eaten = game.advance(seconds: min(dt, 0.1) * inputSpeed)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         for key in Set(eaten.map { chunk(for: $0) }) { redraw(key) }
         pac.position = game.position

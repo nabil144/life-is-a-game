@@ -91,6 +91,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 104 softens Today sort controls into full-width tabs with caption labels and 14-point icons. Only the selected tab has a subtle card background and brass underline; unselected tabs are muted and unboxed. Visible tabs are 30 points high with 44-point tap areas. Swift syntax and diff checks passed; iPhone appearance remains unverified.
 
+- 2026-09-21. Build 105 replaces maze-game swipes with a floating touch-and-hold joystick. Drag direction steers along corridors, distance controls speed, and release/center/cancellation stops movement. Input clears on app interruption and leaving the game. All 81 engine tests passed, including joystick direction, dead zone, speed, and stop/resume tests. App Swift syntax passed; touch handling and feel still require an iPhone check.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

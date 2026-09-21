@@ -91,6 +91,15 @@ struct AtlasView: View {
             }
             .overlay(alignment: .bottom) {
                 if mapReady && !playing { selectionPanel }
+                if playing {
+                    Text("Hold and drag to steer · Release to stop")
+                        .font(.caption)
+                        .foregroundStyle(Ink.muted)
+                        .padding(8)
+                        .background(Ink.ground.opacity(0.9), in: PixelPanel())
+                        .padding(.bottom, 8)
+                        .allowsHitTesting(false)
+                }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let parent {

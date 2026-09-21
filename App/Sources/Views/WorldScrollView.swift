@@ -45,7 +45,7 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate, UIGes
     private var constraining = false
     private var gameView: MazeGameLayerView?
     private var beforeGame: (center: CGPoint, zoom: CGFloat)?
-    private var gameSwipes: [UISwipeGestureRecognizer] = []
+    private var gameJoystick: MazeJoystickView?
     private let brainHold = UILongPressGestureRecognizer()
     private var brainFrame: CGRect?
     private var startGame: (() -> Void)?
@@ -85,11 +85,6 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate, UIGes
         brainHold.delegate = self
         brainHold.addTarget(self, action: #selector(holdBrain(_:)))
         view.addGestureRecognizer(brainHold)
-        for direction: UISwipeGestureRecognizer.Direction in [.up, .right, .down, .left] {
-            let swipe = UISwipeGestureRecognizer(target: self, action: #selector(steerGame(_:)))
-            swipe.direction = direction; swipe.isEnabled = false
-            view.addGestureRecognizer(swipe); gameSwipes.append(swipe)
-        }
     }
 
     func update(content: WorldMapContent, size: CGSize, camera: WorldCamera, animated: Bool) {
@@ -173,13 +168,19 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate, UIGes
             host.view.addSubview(game)
             scroll.setZoomScale(max(1.35, scroll.minimumZoomScale), animated: !UIAccessibility.isReduceMotionEnabled)
             place(board.doorway)
-            gameSwipes.forEach { $0.isEnabled = true }
+            let joystick = MazeJoystickView(frame: view.bounds)
+            joystick.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            joystick.onInput = { [weak game] input in game?.control(input) }
+            view.addSubview(joystick)
+            gameJoystick = joystick
         } else if !playing, let game = gameView {
             game.removeFromSuperview(); gameView = nil
             scroll.panGestureRecognizer.isEnabled = true
             scroll.pinchGestureRecognizer?.isEnabled = true
             host.view.isUserInteractionEnabled = true
-            gameSwipes.forEach { $0.isEnabled = false }
+            gameJoystick?.reset()
+            gameJoystick?.removeFromSuperview()
+            gameJoystick = nil
             if let saved = beforeGame {
                 scroll.setZoomScale(saved.zoom, animated: false)
                 place(saved.center)
@@ -208,21 +209,13 @@ final class WorldScrollController: UIViewController, UIScrollViewDelegate, UIGes
         startGame?()
     }
 
-    @objc private func steerGame(_ gesture: UISwipeGestureRecognizer) {
-        switch gesture.direction {
-        case .up: gameView?.steer(.up)
-        case .right: gameView?.steer(.right)
-        case .down: gameView?.steer(.down)
-        case .left: gameView?.steer(.left)
-        default: break
-        }
-    }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         gameView?.paused = false
     }
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        gameJoystick?.reset()
         gameView?.paused = true
     }
 
