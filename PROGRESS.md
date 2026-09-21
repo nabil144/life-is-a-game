@@ -81,6 +81,8 @@ One line per session, newest at the bottom. Date, what changed, what is next.
 
 - 2026-09-21. Build 99 makes Today’s Recently section secondary with muted, smaller text, unboxed checkmarks, and clear row backgrounds. Routine rows retain a 44-point minimum height and show a quiet undo icon. Swift syntax and diff checks passed; iPhone appearance remains unverified.
 
+- 2026-09-21. Build 100 passes Today’s selected filter path to the top-right Capture button. All paths keeps the existing default selection. Verified the request-to-picker code path and Swift syntax; iPhone interaction remains unverified.
+
 ## How to keep this file true
 
 At the end of a session, add one line to the session log and update the Status section if anything moved between Done, Blocked, and Next. Put the reasoning behind a choice in `DECISIONS.md`, not here.

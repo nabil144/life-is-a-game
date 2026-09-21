@@ -96,7 +96,7 @@ struct TodayView: View {
                 HStack {
                     reminderControl
                     Spacer()
-                    Button { capture = CaptureRequest() } label: {
+                    Button { capture = CaptureRequest(pathID: filteredPath?.id) } label: {
                         Image(systemName: "plus")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Ink.brass)
