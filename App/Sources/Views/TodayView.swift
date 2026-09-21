@@ -16,6 +16,13 @@ enum TodayStyle: String, CaseIterable, Identifiable {
 enum TodaySort: String, CaseIterable, Identifiable {
     case quests, practices, when
     var id: String { rawValue }
+    var captureKind: NodeKind? {
+        switch self {
+        case .quests: .quest
+        case .practices: .practice
+        case .when: nil
+        }
+    }
     var label: String {
         switch self {
         case .quests: "Quests"
@@ -96,7 +103,7 @@ struct TodayView: View {
                 HStack {
                     reminderControl
                     Spacer()
-                    Button { capture = CaptureRequest(pathID: filteredPath?.id) } label: {
+                    Button { capture = CaptureRequest(pathID: filteredPath?.id, kind: sort.captureKind) } label: {
                         Image(systemName: "plus")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Ink.brass)

@@ -64,6 +64,7 @@ struct CaptureView: View {
             .onAppear {
                 title = request.prefill
                 pathID = request.pathID ?? store.activePaths.first?.id
+                kind = request.kind ?? .quest
             }
         }
     }

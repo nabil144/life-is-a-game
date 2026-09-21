@@ -107,4 +107,5 @@ struct CaptureRequest: Identifiable, Hashable {
     var id = UUID()
     var pathID: UUID?
     var prefill: String = ""
+    var kind: NodeKind?
 }
